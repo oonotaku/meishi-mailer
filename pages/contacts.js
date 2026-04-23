@@ -5,27 +5,25 @@ import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
 export default function Contacts() {
-  const { user, profile, loading: authLoading } = useRequireAuth()
+  const { user, loading: authLoading } = useRequireAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     if (!user) return
-    // 自分の名刺（visibility問わず） + チームメンバーのteam公開名刺
-    const filter = profile?.organization_id
-      ? `owner_id.eq.${user.id},and(organization_id.eq.${profile.organization_id},visibility.eq.team)`
-      : `owner_id.eq.${user.id}`
-    supabase
-      .from('contacts')
-      .select('*')
-      .or(filter)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setContacts(data || [])
-        setLoading(false)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      fetch('/api/contacts/list', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
       })
-  }, [user, profile])
+        .then(r => r.json())
+        .then(({ data }) => {
+          setContacts(data || [])
+          setLoading(false)
+        })
+    })
+  }, [user])
 
   const initials = (name) => {
     if (!name) return '?'

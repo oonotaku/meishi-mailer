@@ -124,27 +124,31 @@ export default function Home() {
   }
 
   async function saveContact(card_image_urls, mail_sent_at) {
-    const { data } = await supabase.from('contacts').insert({
-      owner_id: user?.id,
-      organization_id: profile?.organization_id || null,
-      name: contact?.name || null,
-      company: contact?.company || null,
-      department: contact?.department || null,
-      title: contact?.title || null,
-      email: contact?.email || null,
-      phone: contact?.phone || null,
-      card_image_urls,
-      subject,
-      body,
-      mail_sent_at,
-      location: location || null,
-      event_name: eventName || null,
-      met_at: new Date().toISOString().slice(0, 10),
-      temperature,
-      memo: memo || null,
-      visibility: 'private',
-    }).select().single()
-    return data
+    const { data: { session } } = await supabase.auth.getSession()
+    const r = await fetch('/api/contacts/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({
+        name: contact?.name || null,
+        company: contact?.company || null,
+        department: contact?.department || null,
+        title: contact?.title || null,
+        email: contact?.email || null,
+        phone: contact?.phone || null,
+        card_image_urls,
+        subject,
+        body,
+        mail_sent_at,
+        location: location || null,
+        event_name: eventName || null,
+        met_at: new Date().toISOString().slice(0, 10),
+        temperature,
+        memo: memo || null,
+      }),
+    })
+    const json = await r.json()
+    if (!r.ok) throw new Error(json.error)
+    return json.data
   }
 
   async function onSendNow() {
