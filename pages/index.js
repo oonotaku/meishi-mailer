@@ -32,7 +32,7 @@ async function compressImage(file) {
 }
 
 export default function Home() {
-  const { user, loading: authLoading } = useRequireAuth()
+  const { user, profile, loading: authLoading } = useRequireAuth()
   const [step, setStep] = useState(STEPS.UPLOAD)
   const [images, setImages] = useState([])
   const [contact, setContact] = useState(null)
@@ -126,6 +126,7 @@ export default function Home() {
   async function saveContact(card_image_urls, mail_sent_at) {
     const { data } = await supabase.from('contacts').insert({
       owner_id: user?.id,
+      organization_id: profile?.organization_id || null,
       name: contact?.name || null,
       company: contact?.company || null,
       department: contact?.department || null,
@@ -268,6 +269,9 @@ export default function Home() {
 
             <button className="list-btn" onClick={() => router.push('/contacts')}>
               保存済み名刺一覧 →
+            </button>
+            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/team')}>
+              チーム設定 →
             </button>
           </div>
         )}

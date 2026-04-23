@@ -5,23 +5,27 @@ import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
 export default function Contacts() {
-  const { user, loading: authLoading } = useRequireAuth()
+  const { user, profile, loading: authLoading } = useRequireAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
     if (!user) return
+    // 自分のcontact + 同じ組織のメンバーのcontactを取得
+    const filter = profile?.organization_id
+      ? `owner_id.eq.${user.id},organization_id.eq.${profile.organization_id}`
+      : `owner_id.eq.${user.id}`
     supabase
       .from('contacts')
       .select('*')
-      .eq('owner_id', user.id)
+      .or(filter)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         setContacts(data || [])
         setLoading(false)
       })
-  }, [user])
+  }, [user, profile])
 
   const initials = (name) => {
     if (!name) return '?'
