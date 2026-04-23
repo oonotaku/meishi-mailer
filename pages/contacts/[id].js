@@ -11,7 +11,7 @@ const TEMP_OPTIONS = [
 ]
 
 export default function ContactDetail() {
-  const { loading: authLoading } = useRequireAuth()
+  const { user, loading: authLoading } = useRequireAuth()
   const router = useRouter()
   const { id } = router.query
   const [contact, setContact] = useState(null)
@@ -27,6 +27,9 @@ export default function ContactDetail() {
   const [ctxForm, setCtxForm] = useState({ event_name: '', location: '', met_at: '', temperature: 'normal', memo: '' })
   const [ctxSaving, setCtxSaving] = useState(false)
   const [ctxMsg, setCtxMsg] = useState(null)
+  const [visibility, setVisibility] = useState('private')
+  const [visSaving, setVisSaving] = useState(false)
+  const [visError, setVisError] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -44,6 +47,7 @@ export default function ContactDetail() {
           temperature: data.temperature || 'normal',
           memo:        data.memo        || '',
         })
+        setVisibility(data.visibility || 'private')
       }
       setLoading(false)
     })
@@ -70,6 +74,28 @@ export default function ContactDetail() {
       setCtxMsg({ ok: false, text: err.message })
     } finally {
       setCtxSaving(false)
+    }
+  }
+
+  async function handleToggleVisibility() {
+    const next = visibility === 'private' ? 'team' : 'private'
+    setVisSaving(true)
+    setVisError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/update-visibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contactId: id, visibility: next }),
+      })
+      const json = await r.json()
+      if (!r.ok) throw new Error(json.error)
+      setVisibility(next)
+      setContact(prev => ({ ...prev, visibility: next }))
+    } catch (err) {
+      setVisError(err.message)
+    } finally {
+      setVisSaving(false)
     }
   }
 
@@ -188,6 +214,24 @@ export default function ContactDetail() {
                   <span className="info-val mono">{contact.phone}</span>
                 </div>
               )}
+            </div>
+
+            {/* 共有範囲 */}
+            <div className="vis-row">
+              {user?.id === contact.owner_id ? (
+                <button
+                  className={`vis-toggle ${visibility}`}
+                  onClick={handleToggleVisibility}
+                  disabled={visSaving}
+                >
+                  {visSaving ? '…' : visibility === 'team' ? '👥 チーム共有' : '🔒 自分のみ'}
+                </button>
+              ) : (
+                <span className={`vis-badge-detail ${visibility}`}>
+                  {visibility === 'team' ? '👥 チーム共有' : '🔒 自分のみ'}
+                </span>
+              )}
+              {visError && <span className="vis-error">{visError}</span>}
             </div>
           </div>
 
@@ -466,6 +510,55 @@ export default function ContactDetail() {
           word-break: break-all;
         }
         .mono { font-family: 'DM Mono', monospace; }
+
+        /* 共有範囲 */
+        .vis-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 12px;
+        }
+        .vis-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 12px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          transition: opacity .15s, background .15s, color .15s, border-color .15s;
+          border: 1px solid;
+        }
+        .vis-toggle.private {
+          background: #12121a;
+          color: #5a5650;
+          border-color: #1e1e2a;
+        }
+        .vis-toggle.private:hover:not(:disabled) {
+          color: #8a8680;
+          border-color: #3a3a4a;
+        }
+        .vis-toggle.team {
+          background: #0d1f15;
+          color: #7b9e87;
+          border-color: #1a3525;
+        }
+        .vis-toggle.team:hover:not(:disabled) {
+          opacity: .8;
+        }
+        .vis-toggle:disabled { opacity: .6; cursor: not-allowed; }
+        .vis-badge-detail {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-family: 'DM Mono', monospace;
+          border: 1px solid;
+        }
+        .vis-badge-detail.private { background: #12121a; color: #5a5650; border-color: #1e1e2a; }
+        .vis-badge-detail.team    { background: #0d1f15; color: #7b9e87;  border-color: #1a3525; }
+        .vis-error { font-size: 11px; color: #c08080; }
 
         /* 区切り線 */
         .divider {

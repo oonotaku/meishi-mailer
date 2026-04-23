@@ -12,9 +12,9 @@ export default function Contacts() {
 
   useEffect(() => {
     if (!user) return
-    // 自分のcontact + 同じ組織のメンバーのcontactを取得
+    // 自分の名刺（visibility問わず） + チームメンバーのteam公開名刺
     const filter = profile?.organization_id
-      ? `owner_id.eq.${user.id},organization_id.eq.${profile.organization_id}`
+      ? `owner_id.eq.${user.id},and(organization_id.eq.${profile.organization_id},visibility.eq.team)`
       : `owner_id.eq.${user.id}`
     supabase
       .from('contacts')
@@ -75,8 +75,13 @@ export default function Contacts() {
                   <div className="name">{c.name || '（名前なし）'}</div>
                   <div className="meta">{c.company || '—'}</div>
                 </div>
-                <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
-                  {c.mail_sent_at ? '送信済み' : '未送信'}
+                <div className="badges">
+                  <div className={`vis-badge ${c.visibility === 'team' ? 'team' : 'private'}`}>
+                    {c.visibility === 'team' ? '👥' : '🔒'}
+                  </div>
+                  <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
+                    {c.mail_sent_at ? '送信済み' : '未送信'}
+                  </div>
                 </div>
               </button>
             ))}
@@ -196,6 +201,17 @@ export default function Contacts() {
         }
         .badge.sent { background: #0d1f15; color: #7b9e87; border: 1px solid #1a3525; }
         .badge.unsent { background: #1a1408; color: #8a6a30; border: 1px solid #2a2010; }
+        .badges {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+        .vis-badge {
+          font-size: 12px;
+          line-height: 1;
+        }
       `}</style>
     </>
   )
