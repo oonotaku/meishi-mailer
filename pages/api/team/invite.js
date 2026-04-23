@@ -29,8 +29,10 @@ export default async function handler(req, res) {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'メールアドレスが必要です' })
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     data: { organization_id: profile.current_organization_id },
+    redirectTo: `${siteUrl}/auth/confirm`,
   })
 
   if (error) return res.status(400).json({ error: error.message })
