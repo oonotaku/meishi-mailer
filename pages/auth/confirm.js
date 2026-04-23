@@ -14,50 +14,67 @@ export default function AuthConfirm() {
   const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
-    if (!router.isReady) return
+    let cancelled = false
 
-    // PKCE フロー: ?code=... がある場合
-    const code = router.query.code
-    if (code) {
-      supabase.auth.exchangeCodeForSession(String(code))
-        .then(({ error }) => {
-          if (error) {
-            setInitError(error.message)
-            setStage('error')
-          } else {
-            setStage('form')
-          }
-        })
-      return
+    async function init() {
+      // ── PKCE フロー: ?code=xxx ──────────────────────────────────────
+      if (router.isReady && router.query.code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(String(router.query.code))
+        if (cancelled) return
+        if (error) { setInitError(error.message); setStage('error') }
+        else setStage('form')
+        return
+      }
+
+      // ── Implicit フロー: #access_token=xxx&type=invite ───────────────
+      // Next.js router は fragment を持たないので window.location.hash を直接読む
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash.slice(1)
+        const params = new URLSearchParams(hash)
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+
+        if (accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          if (cancelled) return
+          if (error) { setInitError(error.message); setStage('error') }
+          else setStage('form')
+          return
+        }
+      }
+
+      // ── すでにセッションがある場合（ページリロード等）────────────────
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+      if (session) { setStage('form'); return }
+
+      // ── onAuthStateChange で待機（上記に該当しない場合の保険）─────────
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+        if (cancelled) return
+        if (event === 'SIGNED_IN' && s) {
+          setStage('form')
+          subscription.unsubscribe()
+        }
+      })
+
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          subscription.unsubscribe()
+          setInitError('招待リンクが無効か期限切れです。再度招待を依頼してください。')
+          setStage('error')
+        }
+      }, 20000)
+
+      return () => {
+        subscription.unsubscribe()
+        clearTimeout(timeout)
+      }
     }
 
-    // Implicit フロー: #access_token=... は supabase-js が自動処理
-    // onAuthStateChange で SIGNED_IN を待つ
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setStage('form')
-        subscription.unsubscribe()
-      }
-    })
-
-    // すでにセッションがある場合（リロード等）
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setStage('form')
-        subscription.unsubscribe()
-      }
-    })
-
-    // 30秒待ってもセッションが来なければタイムアウト
-    const timeout = setTimeout(() => {
-      setInitError('招待リンクが無効か期限切れです。再度招待を依頼してください。')
-      setStage('error')
-      subscription.unsubscribe()
-    }, 30000)
-
+    const cleanup = init()
     return () => {
-      clearTimeout(timeout)
-      subscription.unsubscribe()
+      cancelled = true
+      cleanup?.then?.(fn => fn?.())
     }
   }, [router.isReady, router.query.code]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -65,21 +82,14 @@ export default function AuthConfirm() {
     e.preventDefault()
     setSaveError('')
 
-    if (password.length < 8) {
-      setSaveError('パスワードは8文字以上で入力してください')
-      return
-    }
-    if (password !== passwordConfirm) {
-      setSaveError('パスワードが一致しません')
-      return
-    }
+    if (password.length < 8) { setSaveError('パスワードは8文字以上で入力してください'); return }
+    if (password !== passwordConfirm) { setSaveError('パスワードが一致しません'); return }
 
     setSaving(true)
     try {
       const { error: updateErr } = await supabase.auth.updateUser({ password })
       if (updateErr) throw updateErr
 
-      // プロフィール・チーム所属を確定
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         await fetch('/api/auth/ensure-profile', {
@@ -151,9 +161,7 @@ export default function AuthConfirm() {
                 autoComplete="new-password"
               />
 
-              {saveError && (
-                <div className="error-box">{saveError}</div>
-              )}
+              {saveError && <div className="error-box">{saveError}</div>}
 
               <button type="submit" className="submit-btn" disabled={saving}>
                 {saving ? '設定中...' : 'パスワードを設定してチームに参加'}
@@ -191,11 +199,7 @@ export default function AuthConfirm() {
           border-radius: 50%;
           animation: spin .7s linear infinite;
         }
-        .hint {
-          font-size: 13px;
-          color: #5a5650;
-          font-family: 'DM Mono', monospace;
-        }
+        .hint { font-size: 13px; color: #5a5650; font-family: 'DM Mono', monospace; }
         .error-icon {
           width: 48px; height: 48px;
           border-radius: 50%;
@@ -205,12 +209,7 @@ export default function AuthConfirm() {
           display: flex; align-items: center; justify-content: center;
           font-size: 20px;
         }
-        .error-text {
-          font-size: 14px;
-          color: #c08080;
-          max-width: 300px;
-          line-height: 1.6;
-        }
+        .error-text { font-size: 14px; color: #c08080; max-width: 300px; line-height: 1.6; }
         .ghost-btn {
           background: none;
           border: 1px solid #1e1e2a;
@@ -223,7 +222,6 @@ export default function AuthConfirm() {
           transition: border-color .15s;
         }
         .ghost-btn:hover { border-color: #7b9e87; }
-
         .card {
           width: 100%;
           max-width: 400px;
@@ -240,22 +238,9 @@ export default function AuthConfirm() {
           text-transform: uppercase;
           margin-bottom: 1.5rem;
         }
-        .title {
-          font-size: 22px;
-          font-weight: 700;
-          color: #f0ede8;
-          margin-bottom: 8px;
-        }
-        .desc {
-          font-size: 13px;
-          color: #5a5650;
-          line-height: 1.7;
-          margin-bottom: 1.5rem;
-        }
-        .form {
-          display: flex;
-          flex-direction: column;
-        }
+        .title { font-size: 22px; font-weight: 700; color: #f0ede8; margin-bottom: 8px; }
+        .desc { font-size: 13px; color: #5a5650; line-height: 1.7; margin-bottom: 1.5rem; }
+        .form { display: flex; flex-direction: column; }
         .label {
           display: block;
           font-size: 11px;
