@@ -85,11 +85,17 @@ export default function TeamSettings() {
     setMyNameSaving(true)
     setMyNameMsg(null)
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ name: trimmed })
-        .eq('id', user.id)
-      if (error) throw error
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/update-name', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
       setMembers(prev => prev.map(m =>
         m.profiles?.id === user.id ? { ...m, profiles: { ...m.profiles, name: trimmed } } : m
       ))
