@@ -27,16 +27,20 @@ export default function TeamSettings() {
       setMembersLoading(false)
       return
     }
-    supabase
-      .from('profiles')
-      .select('id, name, email, role, created_at')
-      .eq('organization_id', profile.organization_id)
-      .order('created_at', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) console.error('members fetch error:', error)
-        setMembers(data || [])
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      try {
+        const r = await fetch('/api/team/members', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        const json = await r.json()
+        if (!r.ok) throw new Error(json.error)
+        setMembers(json.members || [])
+      } catch (err) {
+        console.error('members fetch error:', err)
+      } finally {
         setMembersLoading(false)
-      })
+      }
+    })
   }, [authLoading, profile])
 
   function startEditName() {
@@ -86,7 +90,9 @@ export default function TeamSettings() {
         .update({ name: trimmed })
         .eq('id', user.id)
       if (error) throw error
-      setMembers(prev => prev.map(m => m.id === user.id ? { ...m, name: trimmed } : m))
+      setMembers(prev => prev.map(m =>
+        m.profiles?.id === user.id ? { ...m, profiles: { ...m.profiles, name: trimmed } } : m
+      ))
       setMyNameMsg({ ok: true, text: '表示名を更新しました' })
       setEditingMyName(false)
     } catch (err) {
@@ -214,12 +220,13 @@ export default function TeamSettings() {
             ) : (
               <div className="member-list">
                 {members.map(m => {
-                  const isMe = m.id === user?.id
+                  const mp = m.profiles || {}
+                  const isMe = mp.id === user?.id
                   const isEditingThisRow = isMe && editingMyName
                   return (
-                    <div key={m.id} className={`member-row${isEditingThisRow ? ' editing' : ''}`}>
+                    <div key={mp.id || m.created_at} className={`member-row${isEditingThisRow ? ' editing' : ''}`}>
                       <div className="member-avatar">
-                        {initials(isMe && editingMyName ? myNameInput : m.name)}
+                        {initials(isMe && editingMyName ? myNameInput : mp.name)}
                       </div>
                       <div className="member-info">
                         {isEditingThisRow ? (
@@ -248,13 +255,13 @@ export default function TeamSettings() {
                         ) : (
                           <>
                             <div className="member-name">
-                              {m.name || m.email?.split('@')[0] || '—'}
+                              {mp.name || mp.email?.split('@')[0] || '—'}
                               {isMe && <span className="you-badge"> (you)</span>}
                               {isMe && (
                                 <button className="myname-edit-btn" onClick={startEditMyName}>編集</button>
                               )}
                             </div>
-                            <div className="member-email">{m.email || '—'}</div>
+                            <div className="member-email">{mp.email || '—'}</div>
                           </>
                         )}
                       </div>

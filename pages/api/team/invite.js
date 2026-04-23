@@ -11,18 +11,26 @@ export default async function handler(req, res) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('role, organization_id')
+    .select('current_organization_id')
     .eq('id', user.id)
     .single()
 
-  if (!profile) return res.status(403).json({ error: 'プロフィールが見つかりません' })
-  if (profile.role !== 'owner') return res.status(403).json({ error: 'オーナーのみ招待できます' })
+  if (!profile?.current_organization_id) return res.status(403).json({ error: 'チームに所属していません' })
+
+  const { data: mem } = await supabaseAdmin
+    .from('user_organizations')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('organization_id', profile.current_organization_id)
+    .single()
+
+  if (mem?.role !== 'owner') return res.status(403).json({ error: 'オーナーのみ招待できます' })
 
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'メールアドレスが必要です' })
 
   const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-    data: { organization_id: profile.organization_id },
+    data: { organization_id: profile.current_organization_id },
   })
 
   if (error) return res.status(400).json({ error: error.message })

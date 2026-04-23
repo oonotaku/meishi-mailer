@@ -4,6 +4,12 @@ import { useRouter } from 'next/router'
 import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 
+const TEMP_OPTIONS = [
+  { value: 'hot',    label: '熱い',   emoji: '🔥' },
+  { value: 'normal', label: '普通',   emoji: '🤝' },
+  { value: 'watch',  label: '様子見', emoji: '👀' },
+]
+
 export default function ContactDetail() {
   const { loading: authLoading } = useRequireAuth()
   const router = useRouter()
@@ -17,6 +23,10 @@ export default function ContactDetail() {
   const [sentAt, setSentAt] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [resendMode, setResendMode] = useState(false)
+  const [editingCtx, setEditingCtx] = useState(false)
+  const [ctxForm, setCtxForm] = useState({ event_name: '', location: '', met_at: '', temperature: 'normal', memo: '' })
+  const [ctxSaving, setCtxSaving] = useState(false)
+  const [ctxMsg, setCtxMsg] = useState(null)
 
   useEffect(() => {
     if (!id) return
@@ -27,10 +37,41 @@ export default function ContactDetail() {
         setBody(data.body || '')
         setSent(!!data.mail_sent_at)
         setSentAt(data.mail_sent_at || null)
+        setCtxForm({
+          event_name:  data.event_name  || '',
+          location:    data.location    || '',
+          met_at:      data.met_at      || '',
+          temperature: data.temperature || 'normal',
+          memo:        data.memo        || '',
+        })
       }
       setLoading(false)
     })
   }, [id])
+
+  async function handleSaveCtx(e) {
+    e.preventDefault()
+    setCtxSaving(true)
+    setCtxMsg(null)
+    try {
+      const patch = {
+        event_name:  ctxForm.event_name.trim()  || null,
+        location:    ctxForm.location.trim()    || null,
+        met_at:      ctxForm.met_at             || null,
+        temperature: ctxForm.temperature        || null,
+        memo:        ctxForm.memo.trim()        || null,
+      }
+      const { error } = await supabase.from('contacts').update(patch).eq('id', id)
+      if (error) throw error
+      setContact(prev => ({ ...prev, ...patch }))
+      setCtxMsg({ ok: true, text: '保存しました' })
+      setEditingCtx(false)
+    } catch (err) {
+      setCtxMsg({ ok: false, text: err.message })
+    } finally {
+      setCtxSaving(false)
+    }
+  }
 
   // card_image_urls(配列) と旧 card_image_url(文字列) の両方に対応
   const cardImages = (contact) => {
@@ -153,7 +194,93 @@ export default function ContactDetail() {
           {/* 3. 区切り線 */}
           <div className="divider" />
 
-          {/* 4・5. 送信済み / 未送信で切り替え */}
+          {/* 4. 出会い・メモ */}
+          <div className="ctx-section">
+            <div className="ctx-header">
+              <div className="section-label">CONTEXT</div>
+              {!editingCtx && (
+                <button className="ctx-edit-btn" onClick={() => { setCtxMsg(null); setEditingCtx(true) }}>編集</button>
+              )}
+            </div>
+
+            {editingCtx ? (
+              <form onSubmit={handleSaveCtx} className="ctx-form">
+                <label className="field-label">イベント名</label>
+                <input type="text" className="text-input" maxLength={100} placeholder="展示会・交流会 など"
+                  value={ctxForm.event_name} onChange={e => setCtxForm(f => ({ ...f, event_name: e.target.value }))} />
+
+                <label className="field-label" style={{ marginTop: 10 }}>場所</label>
+                <input type="text" className="text-input" maxLength={100} placeholder="東京・オンライン など"
+                  value={ctxForm.location} onChange={e => setCtxForm(f => ({ ...f, location: e.target.value }))} />
+
+                <label className="field-label" style={{ marginTop: 10 }}>出会った日</label>
+                <input type="date" className="text-input"
+                  value={ctxForm.met_at} onChange={e => setCtxForm(f => ({ ...f, met_at: e.target.value }))} />
+
+                <label className="field-label" style={{ marginTop: 10 }}>温度感</label>
+                <div className="temp-row">
+                  {TEMP_OPTIONS.map(opt => (
+                    <button key={opt.value} type="button"
+                      className={`temp-btn ${ctxForm.temperature === opt.value ? 'active' : ''}`}
+                      onClick={() => setCtxForm(f => ({ ...f, temperature: opt.value }))}>
+                      {opt.emoji} {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="field-label" style={{ marginTop: 10 }}>メモ</label>
+                <textarea className="textarea" rows={4} maxLength={1000} placeholder="自由記述"
+                  value={ctxForm.memo} onChange={e => setCtxForm(f => ({ ...f, memo: e.target.value }))} />
+
+                {ctxMsg && (
+                  <div className={`ctx-msg ${ctxMsg.ok ? 'success' : 'error'}`}>{ctxMsg.text}</div>
+                )}
+                <div className="ctx-actions">
+                  <button type="submit" className="ctx-save-btn" disabled={ctxSaving}>
+                    {ctxSaving ? '保存中...' : '保存'}
+                  </button>
+                  <button type="button" className="ghost-btn" style={{ marginTop: 0 }}
+                    onClick={() => {
+                      setEditingCtx(false)
+                      setCtxMsg(null)
+                      setCtxForm({
+                        event_name:  contact.event_name  || '',
+                        location:    contact.location    || '',
+                        met_at:      contact.met_at      || '',
+                        temperature: contact.temperature || 'normal',
+                        memo:        contact.memo        || '',
+                      })
+                    }}
+                    disabled={ctxSaving}>キャンセル</button>
+                </div>
+              </form>
+            ) : (
+              <div className="ctx-display">
+                {(contact.event_name || contact.location || contact.met_at) ? (
+                  <div className="ctx-meta">
+                    {contact.event_name && <span className="ctx-tag">{contact.event_name}</span>}
+                    {contact.location   && <span className="ctx-tag">{contact.location}</span>}
+                    {contact.met_at     && <span className="ctx-date">{contact.met_at}</span>}
+                  </div>
+                ) : null}
+                {contact.temperature && (
+                  <div className="ctx-temp">
+                    {TEMP_OPTIONS.find(o => o.value === contact.temperature)?.emoji}{' '}
+                    {TEMP_OPTIONS.find(o => o.value === contact.temperature)?.label}
+                  </div>
+                )}
+                {contact.memo ? (
+                  <div className="ctx-memo">{contact.memo}</div>
+                ) : (!contact.event_name && !contact.location && !contact.met_at && !contact.temperature) ? (
+                  <div className="ctx-empty">未入力 — 編集して追加できます</div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="divider" />
+
+          {/* 5・6. 送信済み / 未送信で切り替え */}
           {sent && !resendMode ? (
             <div className="sent-section">
               <div className="sent-header">
@@ -408,6 +535,134 @@ export default function ContactDetail() {
           transition: background .15s;
         }
         .resend-btn:active { background: #0d1f15; }
+
+        /* CONTEXT セクション */
+        .ctx-section {
+          padding: 1rem 1.5rem 1.25rem;
+        }
+        .ctx-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: .75rem;
+        }
+        .section-label {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          letter-spacing: .1em;
+          color: #5a5650;
+          text-transform: uppercase;
+        }
+        .ctx-edit-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 6px;
+          color: #5a5650;
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          padding: 3px 9px;
+          cursor: pointer;
+          transition: color .15s, border-color .15s;
+        }
+        .ctx-edit-btn:hover { color: #7b9e87; border-color: #7b9e87; }
+        .ctx-display {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .ctx-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          align-items: center;
+        }
+        .ctx-tag {
+          font-size: 12px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 6px;
+          padding: 3px 9px;
+          color: #8a8680;
+          font-family: 'Noto Sans JP', sans-serif;
+        }
+        .ctx-date {
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          color: #5a5650;
+        }
+        .ctx-temp {
+          font-size: 13px;
+          color: #8a8680;
+        }
+        .ctx-memo {
+          font-size: 13px;
+          color: #8a8680;
+          line-height: 1.75;
+          white-space: pre-wrap;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          padding: .75rem 1rem;
+        }
+        .ctx-empty {
+          font-size: 12px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+        }
+        .ctx-form {
+          display: flex;
+          flex-direction: column;
+        }
+        .temp-row {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 4px;
+        }
+        .temp-btn {
+          flex: 1;
+          padding: 9px 4px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 8px;
+          color: #5a5650;
+          font-size: 13px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: border-color .15s, color .15s;
+        }
+        .temp-btn.active {
+          border-color: #7b9e87;
+          color: #f0ede8;
+          background: #0d1f15;
+        }
+        .ctx-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .ctx-save-btn {
+          width: 100%;
+          padding: 14px;
+          background: #7b9e87;
+          color: #0a0a0f;
+          border: none;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: opacity .15s;
+        }
+        .ctx-save-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .ctx-msg {
+          margin-top: 8px;
+          padding: 9px 12px;
+          border-radius: 8px;
+          font-size: 13px;
+        }
+        .ctx-msg.success { background: #0d1f15; border: 1px solid #1a3525; color: #7b9e87; }
+        .ctx-msg.error   { background: #1a0a0a; border: 1px solid #2a1010; color: #c08080; }
 
         /* 未送信フォーム */
         .mail-section {
