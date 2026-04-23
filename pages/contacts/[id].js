@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { supabase } from '../../lib/supabase'
+import { useRequireAuth } from '../../lib/useRequireAuth'
 
 export default function ContactDetail() {
+  const { loading: authLoading } = useRequireAuth()
   const router = useRouter()
   const { id } = router.query
   const [contact, setContact] = useState(null)
@@ -29,6 +31,13 @@ export default function ContactDetail() {
       setLoading(false)
     })
   }, [id])
+
+  // card_image_urls(配列) と旧 card_image_url(文字列) の両方に対応
+  const cardImages = (contact) => {
+    if (contact?.card_image_urls?.length) return contact.card_image_urls
+    if (contact?.card_image_url) return [contact.card_image_url]
+    return []
+  }
 
   async function onSend() {
     if (!contact?.email) { alert('メールアドレスがありません'); return }
@@ -59,7 +68,7 @@ export default function ContactDetail() {
     return new Date(iso).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f' }}>
         <div style={{ width: 32, height: 32, border: '2px solid #1e1e2a', borderTopColor: '#7b9e87', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
@@ -99,12 +108,19 @@ export default function ContactDetail() {
 
         <div className="page">
 
-          {/* 1. 名刺写真（全幅） */}
-          {/* cardsバケットがSupabase DashboardでPublicになっていないと表示されません */}
-          {contact.card_image_url ? (
-            <div className="card-img-wrap">
-              <img src={contact.card_image_url} className="card-img" alt="名刺" />
-            </div>
+          {/* 1. 名刺写真 */}
+          {cardImages(contact).length > 0 ? (
+            cardImages(contact).length === 1 ? (
+              <div className="card-img-wrap">
+                <img src={cardImages(contact)[0]} className="card-img" alt="名刺" />
+              </div>
+            ) : (
+              <div className="card-imgs-scroll">
+                {cardImages(contact).map((url, i) => (
+                  <img key={i} src={url} className="card-img-scroll-item" alt={`名刺${i + 1}`} />
+                ))}
+              </div>
+            )
           ) : (
             <div className="card-img-placeholder">
               <span>名刺画像なし</span>
@@ -247,6 +263,27 @@ export default function ContactDetail() {
           display: block;
           max-height: 260px;
           object-fit: contain;
+        }
+        .card-imgs-scroll {
+          display: flex;
+          overflow-x: auto;
+          gap: 8px;
+          padding: 10px 12px;
+          background: #0d0d14;
+          border-bottom: 1px solid #1e1e2a;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+        }
+        .card-imgs-scroll::-webkit-scrollbar { display: none; }
+        .card-img-scroll-item {
+          flex-shrink: 0;
+          height: 200px;
+          width: auto;
+          border-radius: 8px;
+          border: 1px solid #1e1e2a;
+          scroll-snap-align: start;
+          object-fit: contain;
+          background: #12121a;
         }
         .card-img-placeholder {
           height: 120px;

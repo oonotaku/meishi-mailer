@@ -2,27 +2,38 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
+import { useRequireAuth } from '../lib/useRequireAuth'
 
 export default function Contacts() {
+  const { user, loading: authLoading } = useRequireAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
+    if (!user) return
     supabase
       .from('contacts')
       .select('*')
+      .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         setContacts(data || [])
         setLoading(false)
       })
-  }, [])
+  }, [user])
 
   const initials = (name) => {
     if (!name) return '?'
     return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
   }
+
+  if (authLoading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f' }}>
+      <div style={{ width: 32, height: 32, border: '2px solid #1e1e2a', borderTopColor: '#7b9e87', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
 
   return (
     <>
