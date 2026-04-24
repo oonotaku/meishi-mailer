@@ -111,9 +111,13 @@ export default function ContactDetail() {
     setSending(true)
     setErrorMsg('')
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ to: contact.email, subject, body })
       })
       const data = await r.json()
@@ -129,6 +133,8 @@ export default function ContactDetail() {
       setSending(false)
     }
   }
+
+  const isOwner = user?.id === contact?.owner_id
 
   const formatDate = (iso) => {
     if (!iso) return ''
@@ -337,9 +343,11 @@ export default function ContactDetail() {
                 <div className="preview-label" style={{ marginTop: 12 }}>本文</div>
                 <div className="preview-body">{body}</div>
               </div>
-              <button className="resend-btn" onClick={() => setResendMode(true)}>
-                再送信する
-              </button>
+              {isOwner && (
+                <button className="resend-btn" onClick={() => setResendMode(true)}>
+                  再送信する
+                </button>
+              )}
             </div>
           ) : (
             <div className="mail-section">
@@ -367,11 +375,15 @@ export default function ContactDetail() {
                 </div>
               )}
 
-              <button className="send-btn" onClick={onSend} disabled={sending || !contact.email}>
-                {sending ? '送信中...' : 'メールを送信する →'}
-              </button>
-              {resendMode && (
-                <button className="ghost-btn" onClick={() => setResendMode(false)}>キャンセル</button>
+              {isOwner && (
+                <>
+                  <button className="send-btn" onClick={onSend} disabled={sending || !contact.email}>
+                    {sending ? '送信中...' : 'メールを送信する →'}
+                  </button>
+                  {resendMode && (
+                    <button className="ghost-btn" onClick={() => setResendMode(false)}>キャンセル</button>
+                  )}
+                </>
               )}
             </div>
           )}

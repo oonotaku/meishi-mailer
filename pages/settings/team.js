@@ -5,43 +5,44 @@ import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 
 export default function TeamSettings() {
-  const { user, profile, loading: authLoading } = useRequireAuth()
-  const [members, setMembers] = useState([])
+  const { user, loading: authLoading } = useRequireAuth()
+  const [ownTeam, setOwnTeam] = useState(null)
+  const [memberTeams, setMemberTeams] = useState([])
   const [membersLoading, setMembersLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
-  const [inviteMsg, setInviteMsg] = useState(null) // { ok: bool, text: string }
+  const [inviteMsg, setInviteMsg] = useState(null)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [nameSaving, setNameSaving] = useState(false)
-  const [nameMsg, setNameMsg] = useState(null) // { ok: bool, text: string }
+  const [nameMsg, setNameMsg] = useState(null)
   const [editingMyName, setEditingMyName] = useState(false)
   const [myNameInput, setMyNameInput] = useState('')
   const [myNameSaving, setMyNameSaving] = useState(false)
-  const [myNameMsg, setMyNameMsg] = useState(null) // { ok: bool, text: string }
+  const [myNameMsg, setMyNameMsg] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
     if (authLoading) return
-    if (!profile?.organization_id) {
-      setMembersLoading(false)
-      return
-    }
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return
       try {
         const r = await fetch('/api/team/members', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         })
         const json = await r.json()
         if (!r.ok) throw new Error(json.error)
-        setMembers(json.members || [])
+        setOwnTeam(json.ownTeam || null)
+        setMemberTeams(json.memberTeams || [])
       } catch (err) {
         console.error('members fetch error:', err)
       } finally {
         setMembersLoading(false)
       }
     })
-  }, [authLoading, profile])
+  }, [authLoading])
+
+  const orgName = ownTeam?.organization?.name || 'マイチーム'
 
   function startEditName() {
     setNameInput(orgName)
@@ -56,16 +57,20 @@ export default function TeamSettings() {
     setNameSaving(true)
     setNameMsg(null)
     try {
-      const { error } = await supabase
-        .from('organizations')
-        .update({ name: trimmed })
-        .eq('id', profile.organization_id)
-      if (error) throw error
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/team/update-name', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ name: trimmed }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setOwnTeam(prev => ({ ...prev, organization: { ...prev.organization, name: trimmed } }))
       setNameMsg({ ok: true, text: 'チーム名を更新しました' })
       setEditingName(false)
-      // profile の organizations.name を更新するためページリロード相当にstale回避
-      await supabase.auth.refreshSession()
-      router.replace(router.asPath)
     } catch (err) {
       setNameMsg({ ok: false, text: err.message })
     } finally {
@@ -73,8 +78,8 @@ export default function TeamSettings() {
     }
   }
 
-  function startEditMyName() {
-    setMyNameInput(profile?.name || '')
+  function startEditMyName(currentName) {
+    setMyNameInput(currentName || '')
     setMyNameMsg(null)
     setEditingMyName(true)
   }
@@ -96,9 +101,12 @@ export default function TeamSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      setMembers(prev => prev.map(m =>
-        m.profiles?.id === user.id ? { ...m, profiles: { ...m.profiles, name: trimmed } } : m
-      ))
+      setOwnTeam(prev => ({
+        ...prev,
+        members: prev.members.map(m =>
+          m.profiles?.id === user.id ? { ...m, profiles: { ...m.profiles, name: trimmed } } : m
+        ),
+      }))
       setMyNameMsg({ ok: true, text: '表示名を更新しました' })
       setEditingMyName(false)
     } catch (err) {
@@ -145,8 +153,7 @@ export default function TeamSettings() {
     </div>
   )
 
-  const orgName = profile?.organizations?.name || 'マイチーム'
-  const isOwner = profile?.role === 'owner'
+  const members = ownTeam?.members || []
 
   return (
     <>
@@ -164,7 +171,12 @@ export default function TeamSettings() {
 
         <div className="page">
 
-          {/* 組織名 */}
+          {/* ========== 自分のチーム ========== */}
+          <div className="section-header-row">
+            <div className="section-group-label">自分のチーム</div>
+          </div>
+
+          {/* チーム名 */}
           <div className="section">
             <div className="section-label">TEAM</div>
             {editingName ? (
@@ -193,16 +205,12 @@ export default function TeamSettings() {
             ) : (
               <div className="org-name-row">
                 <div className="org-name">{orgName}</div>
-                {isOwner && (
-                  <button className="edit-name-btn" onClick={startEditName} title="チーム名を編集">
-                    編集
-                  </button>
-                )}
+                <button className="edit-name-btn" onClick={startEditName} title="チーム名を編集">
+                  編集
+                </button>
               </div>
             )}
-            <div className="org-role-badge" style={{ marginTop: editingName ? 10 : 8 }}>
-              {isOwner ? 'オーナー' : 'メンバー'}
-            </div>
+            <div className="org-role-badge" style={{ marginTop: editingName ? 10 : 8 }}>オーナー</div>
           </div>
 
           <div className="divider" />
@@ -216,11 +224,6 @@ export default function TeamSettings() {
 
             {membersLoading ? (
               <div className="spinner-wrap"><div className="spinner" /></div>
-            ) : !profile ? (
-              <div className="setup-notice">
-                <p>Supabase に <code>profiles</code> / <code>organizations</code> テーブルが必要です。</p>
-                <p style={{ marginTop: 6 }}>仕様書の SQL を実行してからページを再読み込みしてください。</p>
-              </div>
             ) : members.length === 0 ? (
               <p className="empty-members">メンバーがいません</p>
             ) : (
@@ -264,7 +267,7 @@ export default function TeamSettings() {
                               {mp.name || mp.email?.split('@')[0] || '—'}
                               {isMe && <span className="you-badge"> (you)</span>}
                               {isMe && (
-                                <button className="myname-edit-btn" onClick={startEditMyName}>編集</button>
+                                <button className="myname-edit-btn" onClick={() => startEditMyName(mp.name)}>編集</button>
                               )}
                             </div>
                             <div className="member-email">{mp.email || '—'}</div>
@@ -283,35 +286,50 @@ export default function TeamSettings() {
             )}
           </div>
 
-          {/* 招待フォーム（オーナーのみ） */}
-          {isOwner && (
-            <>
-              <div className="divider" />
-              <div className="section">
-                <div className="section-label">招待</div>
-                <p className="invite-desc">
-                  メールアドレスを入力してチームメンバーを招待します。
-                  招待されたメンバーには参加用のリンクが届きます。
-                </p>
-                <form onSubmit={handleInvite} className="invite-form">
-                  <input
-                    type="email"
-                    placeholder="colleague@example.com"
-                    value={inviteEmail}
-                    onChange={e => setInviteEmail(e.target.value)}
-                    required
-                    className="text-input"
-                  />
-                  <button type="submit" className="invite-btn" disabled={inviting}>
-                    {inviting ? '送信中...' : '招待メールを送る'}
-                  </button>
-                </form>
+          {/* 招待フォーム */}
+          <div className="divider" />
+          <div className="section">
+            <div className="section-label">招待</div>
+            <p className="invite-desc">
+              メールアドレスを入力してチームメンバーを招待します。
+              招待されたメンバーには参加用のリンクが届きます。
+            </p>
+            <form onSubmit={handleInvite} className="invite-form">
+              <input
+                type="email"
+                placeholder="colleague@example.com"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                required
+                className="text-input"
+              />
+              <button type="submit" className="invite-btn" disabled={inviting}>
+                {inviting ? '送信中...' : '招待メールを送る'}
+              </button>
+            </form>
+            {inviteMsg && (
+              <div className={`invite-msg ${inviteMsg.ok ? 'success' : 'error'}`}>
+                {inviteMsg.text}
+              </div>
+            )}
+          </div>
 
-                {inviteMsg && (
-                  <div className={`invite-msg ${inviteMsg.ok ? 'success' : 'error'}`}>
-                    {inviteMsg.text}
-                  </div>
-                )}
+          {/* ========== 参加中のチーム ========== */}
+          {!membersLoading && memberTeams.length > 0 && (
+            <>
+              <div className="divider thick" />
+              <div className="section-header-row">
+                <div className="section-group-label">参加中のチーム</div>
+              </div>
+              <div className="section">
+                <div className="member-teams-list">
+                  {memberTeams.map(t => (
+                    <div key={t.organization?.id} className="member-team-row">
+                      <div className="member-team-name">{t.organization?.name || '—'}</div>
+                      <div className="role-badge member">メンバー</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           )}
@@ -360,8 +378,18 @@ export default function TeamSettings() {
           flex-direction: column;
           padding-bottom: 2rem;
         }
+
+        .section-header-row {
+          padding: 1.25rem 1.5rem .25rem;
+        }
+        .section-group-label {
+          font-size: 13px;
+          font-weight: 700;
+          color: #f0ede8;
+        }
+
         .section {
-          padding: 1.25rem 1.5rem;
+          padding: 1rem 1.5rem 1.25rem;
         }
         .section-label {
           font-family: 'DM Mono', monospace;
@@ -378,6 +406,13 @@ export default function TeamSettings() {
           height: 1px;
           background: #1e1e2a;
           margin: 0 1.5rem;
+        }
+        .divider.thick {
+          height: 4px;
+          background: #0d0d14;
+          margin: .5rem 0;
+          border-top: 1px solid #1e1e2a;
+          border-bottom: 1px solid #1e1e2a;
         }
 
         /* 組織 */
@@ -536,6 +571,27 @@ export default function TeamSettings() {
           border: 1px solid #1e1e2a;
         }
 
+        /* 参加中チーム一覧 */
+        .member-teams-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .member-team-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 12px;
+          padding: .875rem 1rem;
+        }
+        .member-team-name {
+          font-size: 15px;
+          font-weight: 700;
+          color: #f0ede8;
+        }
+
         /* 招待フォーム */
         .invite-desc {
           font-size: 13px;
@@ -592,22 +648,6 @@ export default function TeamSettings() {
           background: #1a0a0a;
           border: 1px solid #2a1010;
           color: #c08080;
-        }
-        .setup-notice {
-          background: #1a1408;
-          border: 1px solid #2a2010;
-          border-radius: 10px;
-          padding: 12px 14px;
-          font-size: 13px;
-          color: #8a6a30;
-          line-height: 1.7;
-        }
-        .setup-notice code {
-          font-family: 'DM Mono', monospace;
-          font-size: 12px;
-          background: #2a2010;
-          padding: 1px 5px;
-          border-radius: 4px;
         }
         .empty-members {
           font-size: 13px;

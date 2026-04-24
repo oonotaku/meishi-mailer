@@ -9,118 +9,56 @@ export default async function handler(req, res) {
   const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
   if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
 
-  // 1. user_organizations を先に確認（招待済みメンバーの判定）
-  const { data: membership } = await supabaseAdmin
+  // 現在の全メンバーシップを取得
+  let { data: memberships } = await supabaseAdmin
     .from('user_organizations')
     .select('organization_id, role, organizations(id, name)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
-    .limit(1)
-    .single()
+  memberships = memberships || []
 
-  if (membership) {
-    // 2. 既存メンバーシップあり → current_organization_id をセット（upsert）
-    const orgId = membership.organization_id
+  let ownerMembership = memberships.find(m => m.role === 'owner')
 
-    const { data: existingProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('name')
-      .eq('id', user.id)
-      .maybeSingle()
+  if (!ownerMembership) {
+    // 招待経由: metadata の organization_id を member として登録（未登録なら）
+    const orgIdFromMeta = user.user_metadata?.organization_id
+    if (orgIdFromMeta && !memberships.some(m => m.organization_id === orgIdFromMeta)) {
+      await supabaseAdmin
+        .from('user_organizations')
+        .insert({ user_id: user.id, organization_id: orgIdFromMeta, role: 'member' })
+    }
 
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        email: user.email,
-        name: existingProfile?.name || user.email.split('@')[0],
-        current_organization_id: orgId,
-      }, { onConflict: 'id' })
-      .select('id, email, name, current_organization_id')
+    // 自分のチームを新規作成して owner になる
+    const { data: org, error: orgErr } = await supabaseAdmin
+      .from('organizations')
+      .insert({ name: 'マイチーム' })
+      .select('id, name')
       .single()
-
-    if (profileErr) return res.status(500).json({ error: profileErr.message })
-
-    return res.status(200).json({
-      profile: {
-        ...profile,
-        organization_id: orgId,
-        role: membership.role,
-        organizations: membership.organizations,
-      },
-    })
-  }
-
-  // 3. user_organizations にレコードなし
-  //    招待経由（初回）: user_metadata に organization_id が入っている
-  const orgIdFromMeta = user.user_metadata?.organization_id
-  if (orgIdFromMeta) {
-    const { data: existingProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('name')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        email: user.email,
-        name: existingProfile?.name || user.email.split('@')[0],
-        current_organization_id: orgIdFromMeta,
-      }, { onConflict: 'id' })
-      .select('id, email, name, current_organization_id')
-      .single()
-
-    if (profileErr) return res.status(500).json({ error: profileErr.message })
+    if (orgErr) return res.status(500).json({ error: orgErr.message })
 
     const { error: memErr } = await supabaseAdmin
       .from('user_organizations')
-      .insert({ user_id: user.id, organization_id: orgIdFromMeta, role: 'member' })
+      .insert({ user_id: user.id, organization_id: org.id, role: 'owner' })
     if (memErr) return res.status(500).json({ error: memErr.message })
 
-    const { data: mem } = await supabaseAdmin
+    // 最新のメンバーシップを再取得
+    const { data: refreshed } = await supabaseAdmin
       .from('user_organizations')
-      .select('role, organizations(id, name)')
+      .select('organization_id, role, organizations(id, name)')
       .eq('user_id', user.id)
-      .eq('organization_id', orgIdFromMeta)
-      .single()
-
-    return res.status(200).json({
-      profile: {
-        ...profile,
-        organization_id: orgIdFromMeta,
-        role: mem?.role ?? 'member',
-        organizations: mem?.organizations ?? null,
-      },
-    })
+      .order('created_at', { ascending: true })
+    memberships = refreshed || []
+    ownerMembership = memberships.find(m => m.role === 'owner')
   }
 
-  // 4. 新規スタンドアロンユーザー（招待なし）→ 新しい organization を作成
+  const ownerOrgId = ownerMembership.organization_id
+
+  // プロフィールを upsert（current_organization_id は常に owner のチームを指す）
   const { data: existingProfile } = await supabaseAdmin
     .from('profiles')
-    .select('id, email, name, current_organization_id')
+    .select('name')
     .eq('id', user.id)
     .maybeSingle()
-
-  // 既にセットアップ済み（念のため）
-  if (existingProfile?.current_organization_id) {
-    return res.status(200).json({
-      profile: {
-        ...existingProfile,
-        organization_id: existingProfile.current_organization_id,
-        role: null,
-        organizations: null,
-      },
-    })
-  }
-
-  const { data: org, error: orgErr } = await supabaseAdmin
-    .from('organizations')
-    .insert({ name: 'マイチーム' })
-    .select()
-    .single()
-  if (orgErr) return res.status(500).json({ error: orgErr.message })
 
   const { data: profile, error: profileErr } = await supabaseAdmin
     .from('profiles')
@@ -128,23 +66,25 @@ export default async function handler(req, res) {
       id: user.id,
       email: user.email,
       name: existingProfile?.name || user.email.split('@')[0],
-      current_organization_id: org.id,
+      current_organization_id: ownerOrgId,
     }, { onConflict: 'id' })
-    .select('id, email, name, current_organization_id')
+    .select('id, email, name, current_organization_id, sender_email')
     .single()
+
   if (profileErr) return res.status(500).json({ error: profileErr.message })
 
-  const { error: memErr } = await supabaseAdmin
-    .from('user_organizations')
-    .insert({ user_id: user.id, organization_id: org.id, role: 'owner' })
-  if (memErr) return res.status(500).json({ error: memErr.message })
+  const organizations = memberships.map(m => ({
+    organization_id: m.organization_id,
+    name: m.organizations?.name,
+    role: m.role,
+  }))
 
   return res.status(200).json({
     profile: {
       ...profile,
-      organization_id: org.id,
+      organization_id: ownerOrgId,
       role: 'owner',
-      organizations: { id: org.id, name: org.name },
+      organizations,
     },
   })
 }

@@ -1,4 +1,4 @@
-# MeishiAI 仕様書 v2.0
+# MeishiAI 仕様書 v2.1
 
 > 「出会いを記録し、関係を動かし、人をつなぐOS」
 
@@ -30,11 +30,15 @@
 - メールアドレス + パスワードでログイン（Supabase Auth）
 - オーナーによるメンバー招待（メール + `/auth/confirm` パスワード設定画面）
 
-**組織（チーム）**
-- 1ユーザーは複数組織に所属可能（`user_organizations` 中間テーブル）
-- `profiles.current_organization_id` でアクティブ組織を管理
-- ロール：オーナー / メンバー
-- `/settings/team` でチーム名・メンバー表示名の編集、メンバー招待
+**組織（チーム）設計**
+- 1ユーザーは必ず1つの「自分のチーム（owner org）」を持つ
+- 招待で参加したチームは別途 `role='member'` で保持（複数可）
+- `profiles.current_organization_id` は常に自分がownerのチームを指す
+- `/settings/team` で「自分のチーム」（編集可）と「参加中のチーム」（読み取り専用）を2セクション表示
+
+**送信権限**
+- メール送信ボタンは Contact の `owner_id === user.id` のときのみ表示
+- チームメンバーが共有Contactを閲覧しても送信・再送はできない
 
 ---
 
@@ -55,15 +59,26 @@
 
 **初動**
 - お礼メール：今すぐ送信 or 保存して後で送る
-- 当日送信 → 「先ほどは」、日を跨いだら → 「先日は」で自動切替
+- SendGrid経由で送信者のアドレスから送信
 
 **共有範囲（visibility）**
 - `private`（自分だけ） / `team`（チーム全体）を後から切り替え可能
 - デフォルトは `private`
+- 一覧画面で他チームのContactにはチーム名バッジを表示
 
 ---
 
-### 3. チーム内引き継ぎ（未実装）
+### 3. プロフィール・送信設定 ✅ 完了
+
+**`/settings/profile`**
+- ログイン中のメールアドレス・表示名を表示
+- SendGrid APIキーと送信元メールアドレスを設定
+- 設定済み/未設定バッジ表示
+- 未設定の場合、メール送信時に設定を促すエラーを返す
+
+---
+
+### 4. チーム内引き継ぎ（未実装）
 
 - Contactを別メンバーにアサイン
 - 引き継ぎ時にAIが「文脈サマリー」を自動生成
@@ -75,7 +90,7 @@
 
 ---
 
-### 4. 組織外共有（未実装）
+### 5. 組織外共有（未実装）
 
 **A. リンク共有**
 - ContactページをURLで共有（期限付きトークン）
@@ -87,7 +102,7 @@
 
 ---
 
-### 5. AIフォローサポート（未実装）
+### 6. AIフォローサポート（未実装）
 
 **リマインド通知**
 - 接触から3日後・1週間後などに通知（設定可能）
@@ -115,19 +130,23 @@
 保存済み名刺一覧（/contacts）
   - 自分の名刺（全visibility）
   - チームメンバーのteam共有名刺
+  - 他チームのContactにはチーム名バッジ表示
   - 🔒/👥 バッジ表示
   ↓
 Contact詳細（/contacts/[id]）
   - 名刺写真
   - 基本情報
   - 文脈情報・メモ（後から編集可）
-  - お礼メール送信状況・再送
-  - 共有範囲トグル（オーナーのみ）
+  - お礼メール送信状況・再送（owner_idのユーザーのみ表示）
+  - 共有範囲トグル（owner_idのユーザーのみ表示）
   ↓
 チーム管理（/settings/team）
-  - チーム名編集（オーナーのみ）
-  - メンバー一覧・表示名編集（自分のみ）
-  - メンバー招待
+  - 自分のチーム: チーム名編集、メンバー一覧、表示名編集、メンバー招待
+  - 参加中のチーム: チーム名一覧（読み取り専用）
+  ↓
+プロフィール設定（/settings/profile）
+  - ログイン中のメールアドレス・表示名
+  - SendGrid APIキー・送信元メールアドレス設定
   ↓
 パスワード設定（/auth/confirm）
   - 招待メール経由のユーザー向け
@@ -145,7 +164,7 @@ Contact詳細（/contacts/[id]）
 | 認証 | Supabase Auth |
 | ストレージ | Supabase Storage (`cards` bucket) |
 | AI | Anthropic Claude API (claude-opus-4-5, Vision + Text) |
-| メール送信 | Nodemailer + Gmail SMTP |
+| メール送信 | SendGrid (`@sendgrid/mail`、APIキーはDBにユーザーごとに保存） |
 | 通知 | 未実装（将来: Vercel Cron + メール/Push）|
 
 ---
@@ -157,11 +176,19 @@ Contact詳細（/contacts/[id]）
 organizations (id, name, created_at)
 
 -- ユーザープロフィール（Supabase auth.users と 1:1）
-profiles (id, email, name, current_organization_id → organizations)
+profiles (
+  id,
+  email,
+  name,
+  current_organization_id → organizations,  -- 常に自分がownerのorg
+  sender_email,        -- SendGrid送信元アドレス
+  sendgrid_api_key     -- SendGrid APIキー（クライアントには返さない）
+)
 
 -- ユーザー×組織 中間テーブル（多対多）
 user_organizations (user_id → profiles, organization_id → organizations, role text, created_at)
 -- role: 'owner' | 'member'
+-- 各ユーザーは必ず1件のrole='owner'レコードを持つ
 
 -- Contact
 contacts (
@@ -206,8 +233,14 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] チーム内visibility機能（private / team）
 - [x] 全DB操作をsupabaseAdmin経由のAPI routeに統一
 
-### Phase 3（次のステップ）
-- [ ] 複数チーム対応UI（チーム切替セレクター）
+### Phase 3 ✅ 完了（一部）
+- [x] チーム設計簡略化（1ユーザー = 1 owner org、複数チーム切替UIは廃止）
+- [x] 全ユーザーが必ず自分のowner orgを持つ（招待メンバーも自動作成）
+- [x] チーム管理画面を「自分のチーム」「参加中のチーム」2セクションに分離
+- [x] 他チームのContactに組織名バッジを表示
+- [x] 送信権限制御（owner_idのユーザーのみ送信・再送ボタンを表示）
+- [x] メール送信をGmail SMTPからSendGridに切り替え
+- [x] プロフィール設定画面（`/settings/profile`）— SendGrid APIキー・送信元アドレス設定
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）

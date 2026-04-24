@@ -9,21 +9,34 @@ export default async function handler(req, res) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return res.status(401).json({ error: '認証が必要です' })
 
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('current_organization_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.current_organization_id) return res.status(200).json({ members: [] })
-
-  const { data, error } = await supabaseAdmin
+  // ユーザーの全所属組織を取得
+  const { data: memberships } = await supabaseAdmin
     .from('user_organizations')
-    .select('role, created_at, profiles(id, name, email)')
-    .eq('organization_id', profile.current_organization_id)
+    .select('organization_id, role, organizations(id, name)')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: true })
 
-  if (error) return res.status(500).json({ error: error.message })
+  const ownerMembership = (memberships || []).find(m => m.role === 'owner')
+  const memberMemberships = (memberships || []).filter(m => m.role !== 'owner')
 
-  res.json({ members: data || [] })
+  // 自チームのメンバー一覧を取得
+  let ownTeamMembers = []
+  if (ownerMembership) {
+    const { data } = await supabaseAdmin
+      .from('user_organizations')
+      .select('role, created_at, profiles(id, name, email)')
+      .eq('organization_id', ownerMembership.organization_id)
+      .order('created_at', { ascending: true })
+    ownTeamMembers = data || []
+  }
+
+  res.json({
+    ownTeam: ownerMembership ? {
+      organization: ownerMembership.organizations,
+      members: ownTeamMembers,
+    } : null,
+    memberTeams: memberMemberships.map(m => ({
+      organization: m.organizations,
+    })),
+  })
 }

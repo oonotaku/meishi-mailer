@@ -157,9 +157,13 @@ export default function Home() {
     setStep(STEPS.SENDING)
     try {
       const card_image_urls = await uploadAllImages()
+      const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ to: email, subject, body })
       })
       const data = await r.json()
@@ -232,7 +236,10 @@ export default function Home() {
 
             <div className="top-bar">
               <div className="eyebrow">AI名刺スキャナー</div>
-              <button className="logout-btn" onClick={handleLogout}>ログアウト</button>
+              <div className="top-right">
+                {user?.email && <span className="user-email">{user.email}</span>}
+                <button className="logout-btn" onClick={handleLogout}>ログアウト</button>
+              </div>
             </div>
 
             {images.length === 0 ? (
@@ -277,6 +284,9 @@ export default function Home() {
             </button>
             <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/team')}>
               チーム設定 →
+            </button>
+            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/profile')}>
+              プロフィール設定 →
             </button>
           </div>
         )}
@@ -502,6 +512,20 @@ export default function Home() {
           color: #7b9e87;
           text-transform: uppercase;
         }
+        .top-right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .user-email {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          max-width: 160px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
         .logout-btn {
           background: none;
           border: none;
@@ -510,6 +534,7 @@ export default function Home() {
           font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
           padding: 4px 0;
+          flex-shrink: 0;
         }
         .logout-btn:active { color: #7b9e87; }
 

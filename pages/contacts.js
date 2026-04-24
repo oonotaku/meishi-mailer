@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
 export default function Contacts() {
-  const { user, loading: authLoading } = useRequireAuth()
+  const { user, profile, loading: authLoading } = useRequireAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -49,6 +49,7 @@ export default function Contacts() {
         <div className="header">
           <button className="back-btn" onClick={() => router.push('/')}>← 戻る</button>
           <div className="header-title">保存済み名刺</div>
+          {user?.email && <span className="header-email">{user.email}</span>}
         </div>
 
         {loading && (
@@ -66,23 +67,29 @@ export default function Contacts() {
 
         {!loading && contacts.length > 0 && (
           <div className="list">
-            {contacts.map(c => (
-              <button key={c.id} className="card" onClick={() => router.push(`/contacts/${c.id}`)}>
-                <div className="avatar">{initials(c.name)}</div>
-                <div className="info">
-                  <div className="name">{c.name || '（名前なし）'}</div>
-                  <div className="meta">{c.company || '—'}</div>
-                </div>
-                <div className="badges">
-                  <div className={`vis-badge ${c.visibility === 'team' ? 'team' : 'private'}`}>
-                    {c.visibility === 'team' ? '👥' : '🔒'}
+            {contacts.map(c => {
+              const isOtherTeam = c.organization_id && profile?.organization_id && c.organization_id !== profile.organization_id
+              return (
+                <button key={c.id} className="card" onClick={() => router.push(`/contacts/${c.id}`)}>
+                  <div className="avatar">{initials(c.name)}</div>
+                  <div className="info">
+                    <div className="name">{c.name || '（名前なし）'}</div>
+                    <div className="meta">{c.company || '—'}</div>
+                    {isOtherTeam && c.organization_name && (
+                      <div className="team-label">{c.organization_name}</div>
+                    )}
                   </div>
-                  <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
-                    {c.mail_sent_at ? '送信済み' : '未送信'}
+                  <div className="badges">
+                    <div className={`vis-badge ${c.visibility === 'team' ? 'team' : 'private'}`}>
+                      {c.visibility === 'team' ? '👥' : '🔒'}
+                    </div>
+                    <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
+                      {c.mail_sent_at ? '送信済み' : '未送信'}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>
@@ -106,6 +113,16 @@ export default function Contacts() {
           gap: 12px;
           padding: 1.25rem 1.5rem;
           border-bottom: 1px solid #1e1e2a;
+        }
+        .header-email {
+          margin-left: auto;
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          max-width: 140px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         .back-btn {
           background: none;
@@ -190,6 +207,17 @@ export default function Contacts() {
         .info { flex: 1; min-width: 0; }
         .name { font-size: 15px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .meta { font-size: 12px; color: #5a5650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .team-label {
+          display: inline-block;
+          margin-top: 4px;
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          color: #7b9e87;
+          background: #0d1f15;
+          border: 1px solid #1a3525;
+          border-radius: 4px;
+          padding: 1px 6px;
+        }
         .badge {
           font-size: 11px;
           font-family: 'DM Mono', monospace;
