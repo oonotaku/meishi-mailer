@@ -99,7 +99,7 @@ export default async function handler(req, res) {
     },
   }
 
-  console.log('ensure-profile response:', JSON.stringify(responseObject))
+  console.error('ensure-profile response:', JSON.stringify(responseObject))
 
   return res.status(200).json(responseObject)
 }
