@@ -70,10 +70,17 @@ export default async function handler(req, res) {
       name: existingProfile?.name || user.email.split('@')[0],
       current_organization_id: ownerOrgId,
     }, { onConflict: 'id' })
-    .select('id, email, name, current_organization_id, sender_email, plan, scan_count_month')
+    .select('id, email, name, current_organization_id, sender_email')
     .single()
 
   if (profileErr) return res.status(500).json({ error: profileErr.message })
+
+  // plan / scan_count_month を別 SELECT で取得（カラム追加前の環境でも upsert が壊れないよう分離）
+  const { data: billingData } = await supabaseAdmin
+    .from('profiles')
+    .select('plan, scan_count_month')
+    .eq('id', user.id)
+    .single()
 
   const organizations = memberships.map(m => ({
     organization_id: m.organization_id,
@@ -84,6 +91,8 @@ export default async function handler(req, res) {
   return res.status(200).json({
     profile: {
       ...profile,
+      plan: billingData?.plan ?? 'free',
+      scan_count_month: billingData?.scan_count_month ?? 0,
       organization_id: ownerOrgId,
       role: 'owner',
       organizations,
