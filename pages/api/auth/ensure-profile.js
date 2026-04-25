@@ -88,7 +88,7 @@ export default async function handler(req, res) {
     role: m.role,
   }))
 
-  return res.status(200).json({
+  const responseObject = {
     profile: {
       ...profile,
       plan: billingData?.plan ?? 'free',
@@ -97,5 +97,9 @@ export default async function handler(req, res) {
       role: 'owner',
       organizations,
     },
-  })
+  }
+
+  console.log('ensure-profile response:', JSON.stringify(responseObject))
+
+  return res.status(200).json(responseObject)
 }
