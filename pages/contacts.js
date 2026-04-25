@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
 export default function Contacts() {
+  const { t, i18n } = useTranslation('common')
   const { user, profile, loading: authLoading } = useRequireAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -25,6 +28,11 @@ export default function Contacts() {
     })
   }, [user])
 
+  function switchLocale() {
+    const next = i18n.language === 'ja' ? 'en' : 'ja'
+    router.push(router.pathname, router.asPath, { locale: next })
+  }
+
   const initials = (name) => {
     if (!name) return '?'
     return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
@@ -40,16 +48,19 @@ export default function Contacts() {
   return (
     <>
       <Head>
-        <title>保存済み名刺 — 名刺メーラー</title>
+        <title>{t('contacts.page_title')}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
       <div className="shell">
         <div className="header">
-          <button className="back-btn" onClick={() => router.push('/')}>← 戻る</button>
-          <div className="header-title">保存済み名刺</div>
-          {user?.email && <span className="header-email">{user.email}</span>}
+          <button className="back-btn" onClick={() => router.push('/')}>{t('nav.back')}</button>
+          <div className="header-title">{t('contacts.header')}</div>
+          <div className="header-right">
+            {user?.email && <span className="header-email">{user.email}</span>}
+            <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
+          </div>
         </div>
 
         {loading && (
@@ -60,8 +71,8 @@ export default function Contacts() {
 
         {!loading && contacts.length === 0 && (
           <div className="empty">
-            <p>保存された名刺はありません</p>
-            <button className="upload-btn" onClick={() => router.push('/')}>名刺を撮影する</button>
+            <p>{t('contacts.empty')}</p>
+            <button className="upload-btn" onClick={() => router.push('/')}>{t('contacts.capture')}</button>
           </div>
         )}
 
@@ -73,7 +84,7 @@ export default function Contacts() {
                 <button key={c.id} className="card" onClick={() => router.push(`/contacts/${c.id}`)}>
                   <div className="avatar">{initials(c.name)}</div>
                   <div className="info">
-                    <div className="name">{c.name || '（名前なし）'}</div>
+                    <div className="name">{c.name || t('contacts.no_name')}</div>
                     <div className="meta">{c.company || '—'}</div>
                     {isOtherTeam && c.organization_name && (
                       <div className="team-label">{c.organization_name}</div>
@@ -84,7 +95,7 @@ export default function Contacts() {
                       {c.visibility === 'team' ? '👥' : '🔒'}
                     </div>
                     <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
-                      {c.mail_sent_at ? '送信済み' : '未送信'}
+                      {c.mail_sent_at ? t('contacts.sent') : t('contacts.unsent')}
                     </div>
                   </div>
                 </button>
@@ -114,16 +125,34 @@ export default function Contacts() {
           padding: 1.25rem 1.5rem;
           border-bottom: 1px solid #1e1e2a;
         }
-        .header-email {
+        .header-right {
           margin-left: auto;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .header-email {
           font-size: 11px;
           color: #3a3a4a;
           font-family: 'DM Mono', monospace;
-          max-width: 140px;
+          max-width: 120px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
+        .lang-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 4px;
+          color: #5a5650;
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          padding: 2px 6px;
+          letter-spacing: .06em;
+          flex-shrink: 0;
+        }
+        .lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
         .back-btn {
           background: none;
           border: none;
@@ -242,3 +271,9 @@ export default function Contacts() {
     </>
   )
 }
+
+export const getStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale, ['common'])),
+  },
+})

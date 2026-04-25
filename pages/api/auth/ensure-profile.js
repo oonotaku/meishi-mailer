@@ -29,9 +29,11 @@ export default async function handler(req, res) {
     }
 
     // 自分のチームを新規作成して owner になる
+    const acceptLang = req.headers['accept-language'] || 'ja'
+    const defaultOrgName = acceptLang.startsWith('en') ? 'My Team' : 'マイチーム'
     const { data: org, error: orgErr } = await supabaseAdmin
       .from('organizations')
-      .insert({ name: 'マイチーム' })
+      .insert({ name: defaultOrgName })
       .select('id, name')
       .single()
     if (orgErr) return res.status(500).json({ error: orgErr.message })
@@ -68,7 +70,7 @@ export default async function handler(req, res) {
       name: existingProfile?.name || user.email.split('@')[0],
       current_organization_id: ownerOrgId,
     }, { onConflict: 'id' })
-    .select('id, email, name, current_organization_id, sender_email')
+    .select('id, email, name, current_organization_id, sender_email, plan, scan_count_month')
     .single()
 
   if (profileErr) return res.status(500).json({ error: profileErr.message })

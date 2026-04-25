@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
+  const { t, i18n } = useTranslation('common')
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -11,6 +14,11 @@ export default function Login() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const router = useRouter()
+
+  function switchLocale() {
+    const next = i18n.language === 'ja' ? 'en' : 'ja'
+    router.push(router.pathname, router.asPath, { locale: next })
+  }
 
   function switchMode(m) {
     setMode(m)
@@ -36,7 +44,7 @@ export default function Login() {
       if (err) {
         setError(err.message)
       } else {
-        setInfo('確認メールを送りました。受信トレイをご確認ください。')
+        setInfo(t('login.confirm_sent'))
       }
     }
 
@@ -46,16 +54,19 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>ログイン — 名刺メーラー</title>
+        <title>{t('login.page_title')}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
       <div className="shell">
         <div className="page">
-          <div className="eyebrow">AI名刺スキャナー</div>
-          <h1 className="title">名刺メーラー</h1>
-          <p className="sub">出会いを記録し、<br/>関係を動かす</p>
+          <div className="top-lang">
+            <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
+          </div>
+          <div className="eyebrow">{t('app.tagline')}</div>
+          <h1 className="title">{t('app.name')}</h1>
+          <p className="sub">{t('login.sub_line1')}<br/>{t('login.sub_line2')}</p>
 
           <div className="tab-row">
             <button
@@ -63,19 +74,19 @@ export default function Login() {
               className={`tab ${mode === 'login' ? 'active' : ''}`}
               onClick={() => switchMode('login')}
             >
-              ログイン
+              {t('login.tab_login')}
             </button>
             <button
               type="button"
               className={`tab ${mode === 'register' ? 'active' : ''}`}
               onClick={() => switchMode('register')}
             >
-              新規登録
+              {t('login.tab_register')}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="form">
-            <label className="field-label">メールアドレス</label>
+            <label className="field-label">{t('login.email_label')}</label>
             <input
               type="email"
               value={email}
@@ -86,12 +97,12 @@ export default function Login() {
               className="text-input"
             />
 
-            <label className="field-label" style={{ marginTop: 14 }}>パスワード</label>
+            <label className="field-label" style={{ marginTop: 14 }}>{t('login.password_label')}</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder={mode === 'register' ? '6文字以上' : ''}
+              placeholder={mode === 'register' ? t('login.password_hint_register') : ''}
               required
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               className="text-input"
@@ -99,7 +110,7 @@ export default function Login() {
 
             {error && (
               <div className="error-box">
-                <span className="error-label">エラー</span>
+                <span className="error-label">{t('error.label')}</span>
                 <p className="error-msg">{error}</p>
               </div>
             )}
@@ -112,8 +123,8 @@ export default function Login() {
 
             <button type="submit" className="submit-btn" disabled={loading}>
               {loading
-                ? '処理中...'
-                : mode === 'login' ? 'ログイン →' : 'アカウントを作成 →'}
+                ? t('login.loading')
+                : mode === 'login' ? t('login.submit_login') : t('login.submit_register')}
             </button>
           </form>
         </div>
@@ -134,10 +145,27 @@ export default function Login() {
         }
         .page {
           flex: 1;
-          padding: 4rem 1.5rem 2rem;
+          padding: 3rem 1.5rem 2rem;
           display: flex;
           flex-direction: column;
         }
+        .top-lang {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 1rem;
+        }
+        .lang-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 4px;
+          color: #5a5650;
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          padding: 2px 6px;
+          letter-spacing: .06em;
+        }
+        .lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
         .eyebrow {
           font-family: 'DM Mono', monospace;
           font-size: 11px;
@@ -255,3 +283,9 @@ export default function Login() {
     </>
   )
 }
+
+export const getStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale, ['common'])),
+  },
+})

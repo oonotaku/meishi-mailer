@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../../lib/supabase'
 
 export default function AuthConfirm() {
+  const { t, i18n } = useTranslation('common')
   const router = useRouter()
-  // 'loading' | 'form' | 'error'
   const [stage, setStage] = useState('loading')
   const [initError, setInitError] = useState('')
   const [password, setPassword] = useState('')
@@ -17,7 +19,6 @@ export default function AuthConfirm() {
     let cancelled = false
 
     async function init() {
-      // ── PKCE フロー: ?code=xxx ──────────────────────────────────────
       if (router.isReady && router.query.code) {
         const { error } = await supabase.auth.exchangeCodeForSession(String(router.query.code))
         if (cancelled) return
@@ -26,8 +27,6 @@ export default function AuthConfirm() {
         return
       }
 
-      // ── Implicit フロー: #access_token=xxx&type=invite ───────────────
-      // Next.js router は fragment を持たないので window.location.hash を直接読む
       if (typeof window !== 'undefined') {
         const hash = window.location.hash.slice(1)
         const params = new URLSearchParams(hash)
@@ -43,12 +42,10 @@ export default function AuthConfirm() {
         }
       }
 
-      // ── すでにセッションがある場合（ページリロード等）────────────────
       const { data: { session } } = await supabase.auth.getSession()
       if (cancelled) return
       if (session) { setStage('form'); return }
 
-      // ── onAuthStateChange で待機（上記に該当しない場合の保険）─────────
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
         if (cancelled) return
         if (event === 'SIGNED_IN' && s) {
@@ -60,7 +57,7 @@ export default function AuthConfirm() {
       const timeout = setTimeout(() => {
         if (!cancelled) {
           subscription.unsubscribe()
-          setInitError('招待リンクが無効か期限切れです。再度招待を依頼してください。')
+          setInitError(t('auth_confirm.invalid_link'))
           setStage('error')
         }
       }, 20000)
@@ -78,12 +75,17 @@ export default function AuthConfirm() {
     }
   }, [router.isReady, router.query.code]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  function switchLocale() {
+    const next = i18n.language === 'ja' ? 'en' : 'ja'
+    router.push(router.pathname, router.asPath, { locale: next })
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setSaveError('')
 
-    if (password.length < 8) { setSaveError('パスワードは8文字以上で入力してください'); return }
-    if (password !== passwordConfirm) { setSaveError('パスワードが一致しません'); return }
+    if (password.length < 8) { setSaveError(t('auth_confirm.err_too_short')); return }
+    if (password !== passwordConfirm) { setSaveError(t('auth_confirm.err_mismatch')); return }
 
     setSaving(true)
     try {
@@ -94,7 +96,10 @@ export default function AuthConfirm() {
       if (session) {
         await fetch('/api/auth/ensure-profile', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Accept-Language': i18n.language || 'ja',
+          },
         })
       }
 
@@ -109,16 +114,20 @@ export default function AuthConfirm() {
   return (
     <>
       <Head>
-        <title>パスワード設定 — 名刺メーラー</title>
+        <title>{t('auth_confirm.page_title')}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
       <div className="shell">
+        <div className="top-lang">
+          <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
+        </div>
+
         {stage === 'loading' && (
           <div className="center">
             <div className="spinner" />
-            <p className="hint">招待を確認しています…</p>
+            <p className="hint">{t('auth_confirm.loading_hint')}</p>
           </div>
         )}
 
@@ -126,22 +135,22 @@ export default function AuthConfirm() {
           <div className="center">
             <div className="error-icon">✕</div>
             <p className="error-text">{initError}</p>
-            <button className="ghost-btn" onClick={() => router.push('/login')}>ログインへ</button>
+            <button className="ghost-btn" onClick={() => router.push('/login')}>{t('auth_confirm.to_login')}</button>
           </div>
         )}
 
         {stage === 'form' && (
           <div className="card">
-            <div className="logo">名刺メーラー</div>
-            <h1 className="title">パスワードを設定</h1>
-            <p className="desc">チームへの参加を完了するため、パスワードを設定してください。</p>
+            <div className="logo">{t('auth_confirm.logo')}</div>
+            <h1 className="title">{t('auth_confirm.title')}</h1>
+            <p className="desc">{t('auth_confirm.desc')}</p>
 
             <form onSubmit={handleSubmit} className="form">
-              <label className="label">パスワード</label>
+              <label className="label">{t('auth_confirm.password_label')}</label>
               <input
                 type="password"
                 className="input"
-                placeholder="8文字以上"
+                placeholder={t('auth_confirm.password_placeholder')}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
@@ -149,11 +158,11 @@ export default function AuthConfirm() {
                 autoComplete="new-password"
               />
 
-              <label className="label" style={{ marginTop: 14 }}>パスワード（確認）</label>
+              <label className="label" style={{ marginTop: 14 }}>{t('auth_confirm.password_confirm_label')}</label>
               <input
                 type="password"
                 className="input"
-                placeholder="もう一度入力"
+                placeholder={t('auth_confirm.password_confirm_placeholder')}
                 value={passwordConfirm}
                 onChange={e => setPasswordConfirm(e.target.value)}
                 required
@@ -164,7 +173,7 @@ export default function AuthConfirm() {
               {saveError && <div className="error-box">{saveError}</div>}
 
               <button type="submit" className="submit-btn" disabled={saving}>
-                {saving ? '設定中...' : 'パスワードを設定してチームに参加'}
+                {saving ? t('auth_confirm.submitting') : t('auth_confirm.submit')}
               </button>
             </form>
           </div>
@@ -181,10 +190,29 @@ export default function AuthConfirm() {
         .shell {
           min-height: 100svh;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
           padding: 1.5rem;
+          position: relative;
         }
+        .top-lang {
+          position: absolute;
+          top: 1.25rem;
+          right: 1.5rem;
+        }
+        .lang-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 4px;
+          color: #5a5650;
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          padding: 2px 6px;
+          letter-spacing: .06em;
+        }
+        .lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
         .center {
           display: flex;
           flex-direction: column;
@@ -292,3 +320,9 @@ export default function AuthConfirm() {
     </>
   )
 }
+
+export const getStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale, ['common'])),
+  },
+})

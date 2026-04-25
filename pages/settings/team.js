@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 
 export default function TeamSettings() {
+  const { t, i18n } = useTranslation('common')
   const { user, loading: authLoading } = useRequireAuth()
   const [ownTeam, setOwnTeam] = useState(null)
   const [memberTeams, setMemberTeams] = useState([])
@@ -42,7 +45,12 @@ export default function TeamSettings() {
     })
   }, [authLoading])
 
-  const orgName = ownTeam?.organization?.name || 'マイチーム'
+  function switchLocale() {
+    const next = i18n.language === 'ja' ? 'en' : 'ja'
+    router.push(router.pathname, router.asPath, { locale: next })
+  }
+
+  const orgName = ownTeam?.organization?.name || t('team.my_team_default')
 
   function startEditName() {
     setNameInput(orgName)
@@ -69,7 +77,7 @@ export default function TeamSettings() {
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
       setOwnTeam(prev => ({ ...prev, organization: { ...prev.organization, name: trimmed } }))
-      setNameMsg({ ok: true, text: 'チーム名を更新しました' })
+      setNameMsg({ ok: true, text: t('team.name_updated') })
       setEditingName(false)
     } catch (err) {
       setNameMsg({ ok: false, text: err.message })
@@ -107,7 +115,7 @@ export default function TeamSettings() {
           m.profiles?.id === user.id ? { ...m, profiles: { ...m.profiles, name: trimmed } } : m
         ),
       }))
-      setMyNameMsg({ ok: true, text: '表示名を更新しました' })
+      setMyNameMsg({ ok: true, text: t('team.display_name_updated') })
       setEditingMyName(false)
     } catch (err) {
       setMyNameMsg({ ok: false, text: err.message })
@@ -132,7 +140,7 @@ export default function TeamSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      setInviteMsg({ ok: true, text: `${inviteEmail} に招待メールを送りました` })
+      setInviteMsg({ ok: true, text: t('team.invite_sent', { email: inviteEmail }) })
       setInviteEmail('')
     } catch (err) {
       setInviteMsg({ ok: false, text: err.message })
@@ -158,25 +166,24 @@ export default function TeamSettings() {
   return (
     <>
       <Head>
-        <title>チーム管理 — 名刺メーラー</title>
+        <title>{t('team.page_title')}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
       <div className="shell">
         <div className="header">
-          <button className="back-btn" onClick={() => router.push('/')}>← 戻る</button>
-          <div className="header-title">チーム管理</div>
+          <button className="back-btn" onClick={() => router.push('/')}>{t('nav.back')}</button>
+          <div className="header-title">{t('team.header')}</div>
+          <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
         </div>
 
         <div className="page">
 
-          {/* ========== 自分のチーム ========== */}
           <div className="section-header-row">
-            <div className="section-group-label">自分のチーム</div>
+            <div className="section-group-label">{t('team.own_team')}</div>
           </div>
 
-          {/* チーム名 */}
           <div className="section">
             <div className="section-label">TEAM</div>
             {editingName ? (
@@ -192,10 +199,10 @@ export default function TeamSettings() {
                 />
                 <div className="name-edit-actions">
                   <button type="submit" className="name-save-btn" disabled={nameSaving || !nameInput.trim()}>
-                    {nameSaving ? '保存中...' : '保存'}
+                    {nameSaving ? t('team.saving') : t('team.save')}
                   </button>
                   <button type="button" className="name-cancel-btn" onClick={() => { setEditingName(false); setNameMsg(null) }} disabled={nameSaving}>
-                    キャンセル
+                    {t('team.cancel')}
                   </button>
                 </div>
                 {nameMsg && (
@@ -205,27 +212,26 @@ export default function TeamSettings() {
             ) : (
               <div className="org-name-row">
                 <div className="org-name">{orgName}</div>
-                <button className="edit-name-btn" onClick={startEditName} title="チーム名を編集">
-                  編集
+                <button className="edit-name-btn" onClick={startEditName}>
+                  {t('team.edit')}
                 </button>
               </div>
             )}
-            <div className="org-role-badge" style={{ marginTop: editingName ? 10 : 8 }}>オーナー</div>
+            <div className="org-role-badge" style={{ marginTop: editingName ? 10 : 8 }}>{t('team.owner_badge')}</div>
           </div>
 
           <div className="divider" />
 
-          {/* メンバー一覧 */}
           <div className="section">
             <div className="section-label">
               MEMBERS
-              {!membersLoading && <span className="section-count"> · {members.length}人</span>}
+              {!membersLoading && <span className="section-count">{t('team.people_count', { count: members.length })}</span>}
             </div>
 
             {membersLoading ? (
               <div className="spinner-wrap"><div className="spinner" /></div>
             ) : members.length === 0 ? (
-              <p className="empty-members">メンバーがいません</p>
+              <p className="empty-members">{t('team.no_members')}</p>
             ) : (
               <div className="member-list">
                 {members.map(m => {
@@ -246,15 +252,15 @@ export default function TeamSettings() {
                               value={myNameInput}
                               onChange={e => setMyNameInput(e.target.value)}
                               maxLength={50}
-                              placeholder="表示名"
+                              placeholder={t('team.display_name_placeholder')}
                               className="myname-input"
                             />
                             <div className="myname-actions">
                               <button type="submit" className="myname-save-btn" disabled={myNameSaving}>
-                                {myNameSaving ? '...' : '保存'}
+                                {myNameSaving ? '...' : t('team.save')}
                               </button>
                               <button type="button" className="myname-cancel-btn" onClick={() => { setEditingMyName(false); setMyNameMsg(null) }} disabled={myNameSaving}>
-                                キャンセル
+                                {t('team.cancel')}
                               </button>
                             </div>
                             {myNameMsg && (
@@ -267,7 +273,7 @@ export default function TeamSettings() {
                               {mp.name || mp.email?.split('@')[0] || '—'}
                               {isMe && <span className="you-badge"> (you)</span>}
                               {isMe && (
-                                <button className="myname-edit-btn" onClick={() => startEditMyName(mp.name)}>編集</button>
+                                <button className="myname-edit-btn" onClick={() => startEditMyName(mp.name)}>{t('team.edit')}</button>
                               )}
                             </div>
                             <div className="member-email">{mp.email || '—'}</div>
@@ -276,7 +282,7 @@ export default function TeamSettings() {
                       </div>
                       {!isEditingThisRow && (
                         <div className={`role-badge ${m.role}`}>
-                          {m.role === 'owner' ? 'オーナー' : 'メンバー'}
+                          {m.role === 'owner' ? t('team.role_owner') : t('team.role_member')}
                         </div>
                       )}
                     </div>
@@ -286,14 +292,10 @@ export default function TeamSettings() {
             )}
           </div>
 
-          {/* 招待フォーム */}
           <div className="divider" />
           <div className="section">
-            <div className="section-label">招待</div>
-            <p className="invite-desc">
-              メールアドレスを入力してチームメンバーを招待します。
-              招待されたメンバーには参加用のリンクが届きます。
-            </p>
+            <div className="section-label">{t('team.invite_section')}</div>
+            <p className="invite-desc">{t('team.invite_desc')}</p>
             <form onSubmit={handleInvite} className="invite-form">
               <input
                 type="email"
@@ -304,7 +306,7 @@ export default function TeamSettings() {
                 className="text-input"
               />
               <button type="submit" className="invite-btn" disabled={inviting}>
-                {inviting ? '送信中...' : '招待メールを送る'}
+                {inviting ? t('team.inviting') : t('team.invite_btn')}
               </button>
             </form>
             {inviteMsg && (
@@ -314,19 +316,18 @@ export default function TeamSettings() {
             )}
           </div>
 
-          {/* ========== 参加中のチーム ========== */}
           {!membersLoading && memberTeams.length > 0 && (
             <>
               <div className="divider thick" />
               <div className="section-header-row">
-                <div className="section-group-label">参加中のチーム</div>
+                <div className="section-group-label">{t('team.member_teams')}</div>
               </div>
               <div className="section">
                 <div className="member-teams-list">
-                  {memberTeams.map(t => (
-                    <div key={t.organization?.id} className="member-team-row">
-                      <div className="member-team-name">{t.organization?.name || '—'}</div>
-                      <div className="role-badge member">メンバー</div>
+                  {memberTeams.map(t_ => (
+                    <div key={t_.organization?.id} className="member-team-row">
+                      <div className="member-team-name">{t_.organization?.name || '—'}</div>
+                      <div className="role-badge member">{t('team.role_member')}</div>
                     </div>
                   ))}
                 </div>
@@ -370,7 +371,21 @@ export default function TeamSettings() {
           font-size: 16px;
           font-weight: 700;
           color: #f0ede8;
+          flex: 1;
         }
+        .lang-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 4px;
+          color: #5a5650;
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          padding: 2px 6px;
+          letter-spacing: .06em;
+          flex-shrink: 0;
+        }
+        .lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
 
         .page {
           flex: 1;
@@ -415,7 +430,6 @@ export default function TeamSettings() {
           border-bottom: 1px solid #1e1e2a;
         }
 
-        /* 組織 */
         .org-name-row {
           display: flex;
           align-items: center;
@@ -492,7 +506,6 @@ export default function TeamSettings() {
           border: 1px solid #1a3525;
         }
 
-        /* メンバー */
         .spinner-wrap {
           display: flex;
           justify-content: center;
@@ -571,7 +584,6 @@ export default function TeamSettings() {
           border: 1px solid #1e1e2a;
         }
 
-        /* 参加中チーム一覧 */
         .member-teams-list {
           display: flex;
           flex-direction: column;
@@ -592,7 +604,6 @@ export default function TeamSettings() {
           color: #f0ede8;
         }
 
-        /* 招待フォーム */
         .invite-desc {
           font-size: 13px;
           color: #5a5650;
@@ -655,7 +666,6 @@ export default function TeamSettings() {
           padding: 8px 0;
         }
 
-        /* 自分の表示名編集 */
         .member-row.editing {
           align-items: flex-start;
         }
@@ -736,3 +746,9 @@ export default function TeamSettings() {
     </>
   )
 }
+
+export const getStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale, ['common'])),
+  },
+})

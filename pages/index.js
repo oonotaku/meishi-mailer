@@ -1,16 +1,12 @@
 import { useState, useRef } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
 const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6 }
-
-const TEMP_OPTIONS = [
-  { value: 'hot',    label: '熱い',    emoji: '🔥' },
-  { value: 'normal', label: '普通',    emoji: '🤝' },
-  { value: 'watch',  label: '様子見',  emoji: '👀' },
-]
 
 async function compressImage(file) {
   return new Promise((resolve) => {
@@ -32,6 +28,7 @@ async function compressImage(file) {
 }
 
 export default function Home() {
+  const { t, i18n } = useTranslation('common')
   const { user, profile, loading: authLoading } = useRequireAuth()
   const [step, setStep] = useState(STEPS.UPLOAD)
   const [images, setImages] = useState([])
@@ -42,7 +39,6 @@ export default function Home() {
   const [statusMsg, setStatusMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [saveOnly, setSaveOnly] = useState(false)
-  // 文脈情報
   const [location, setLocation] = useState('')
   const [eventName, setEventName] = useState('')
   const [temperature, setTemperature] = useState('normal')
@@ -50,11 +46,22 @@ export default function Home() {
   const fileRef = useRef()
   const router = useRouter()
 
+  const TEMP_OPTIONS = [
+    { value: 'hot',    label: t('temp.hot'),    emoji: '🔥' },
+    { value: 'normal', label: t('temp.normal'), emoji: '🤝' },
+    { value: 'watch',  label: t('temp.watch'),  emoji: '👀' },
+  ]
+
   const email = contact?.email || manualEmail
 
   const initials = (name) => {
     if (!name) return '?'
     return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
+  }
+
+  function switchLocale() {
+    const next = i18n.language === 'ja' ? 'en' : 'ja'
+    router.push(router.pathname, router.asPath, { locale: next })
   }
 
   async function handleLogout() {
@@ -76,15 +83,20 @@ export default function Home() {
 
   async function onAnalyze() {
     setStep(STEPS.ANALYZING)
-    setStatusMsg('名刺を解析中...')
+    setStatusMsg(t('home.analyzing_status'))
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           image: images[0].base64,
           mediaType: 'image/jpeg',
           capturedAt: new Date().toISOString(),
+          locale: i18n.language,
         })
       })
       const data = await r.json()
@@ -152,7 +164,7 @@ export default function Home() {
   }
 
   async function onSendNow() {
-    if (!email) { alert('メールアドレスを入力してください'); return }
+    if (!email) { alert(t('contact.no_email_alert')); return }
     setSaveOnly(false)
     setStep(STEPS.SENDING)
     try {
@@ -215,7 +227,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>名刺メーラー</title>
+        <title>{t('app.name')}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
@@ -235,25 +247,26 @@ export default function Home() {
             />
 
             <div className="top-bar">
-              <div className="eyebrow">AI名刺スキャナー</div>
+              <div className="eyebrow">{t('app.tagline')}</div>
               <div className="top-right">
+                <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
                 {user?.email && <span className="user-email">{user.email}</span>}
-                <button className="logout-btn" onClick={handleLogout}>ログアウト</button>
+                <button className="logout-btn" onClick={handleLogout}>{t('nav.logout')}</button>
               </div>
             </div>
 
             {images.length === 0 ? (
               <>
-                <h1 className="title">名刺を<br/>撮るだけ。</h1>
-                <p className="sub">AIが名前・会社・メールを読み取り<br/>お礼メールを自動で送ります</p>
+                <h1 className="title">{t('home.title_line1')}<br/>{t('home.title_line2')}</h1>
+                <p className="sub">{t('home.sub_line1')}<br/>{t('home.sub_line2')}</p>
                 <button className="upload-btn" onClick={() => fileRef.current.click()}>
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                     <circle cx="12" cy="13" r="4"/>
                   </svg>
-                  名刺を撮影する
+                  {t('home.capture')}
                 </button>
-                <p className="hint">またはギャラリーから選択</p>
+                <p className="hint">{t('home.gallery_hint')}</p>
               </>
             ) : (
               <>
@@ -267,26 +280,26 @@ export default function Home() {
                   {images.length < 3 && (
                     <button className="thumb-add" onClick={() => fileRef.current.click()}>
                       <span>+</span>
-                      <span className="thumb-add-label">追加</span>
+                      <span className="thumb-add-label">{t('home.add')}</span>
                     </button>
                   )}
                 </div>
                 <p className="hint" style={{ textAlign: 'left', marginBottom: 20 }}>
-                  {images.length}/3枚 撮影済み
+                  {t('home.photo_count', { count: images.length })}
                 </p>
-                <button className="upload-btn" onClick={onAnalyze}>解析する →</button>
-                <button className="ghost-btn" onClick={reset}>やり直す</button>
+                <button className="upload-btn" onClick={onAnalyze}>{t('home.analyze')}</button>
+                <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
               </>
             )}
 
             <button className="list-btn" onClick={() => router.push('/contacts')}>
-              保存済み名刺一覧 →
+              {t('nav.contacts')} →
             </button>
             <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/team')}>
-              チーム設定 →
+              {t('nav.team')} →
             </button>
             <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/profile')}>
-              プロフィール設定 →
+              {t('nav.profile')} →
             </button>
           </div>
         )}
@@ -300,15 +313,15 @@ export default function Home() {
               <span className="status-text">{statusMsg}</span>
             </div>
             {images[0] && <img src={images[0].preview} className="preview-img" alt="" />}
-            <p className="hint" style={{ marginTop: 16 }}>AIが名刺を読み取っています...</p>
+            <p className="hint" style={{ marginTop: 16 }}>{t('home.analyzing_hint')}</p>
           </div>
         )}
 
-        {/* ── CONFIRM（OCR確認・メール編集）── */}
+        {/* ── CONFIRM ── */}
         {step === STEPS.CONFIRM && (
           <div className="page">
             <div className="prog-bar"><div className="prog-fill" style={{ width: '60%' }} /></div>
-            <div className="step-label">STEP 1 / 2 — 内容確認</div>
+            <div className="step-label">{t('step.confirm')}</div>
 
             <div className="contact-card">
               <div className="avatar">{initials(contact?.name)}</div>
@@ -330,10 +343,10 @@ export default function Home() {
               <div className="email-pill">{contact.email}</div>
             ) : (
               <div className="email-missing">
-                <p>メールアドレスが見つかりませんでした</p>
+                <p>{t('confirm.no_email')}</p>
                 <input
                   type="email"
-                  placeholder="手動でメールアドレスを入力"
+                  placeholder={t('confirm.manual_email_placeholder')}
                   value={manualEmail}
                   onChange={e => setManualEmail(e.target.value)}
                   className="text-input"
@@ -342,42 +355,40 @@ export default function Home() {
             )}
 
             <div className="mail-section">
-              <label className="field-label">件名</label>
+              <label className="field-label">{t('confirm.subject')}</label>
               <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="text-input" />
-              <label className="field-label" style={{ marginTop: 12 }}>本文</label>
+              <label className="field-label" style={{ marginTop: 12 }}>{t('confirm.body')}</label>
               <textarea value={body} onChange={e => setBody(e.target.value)} className="textarea" rows={7} />
             </div>
 
             <button className="send-btn" onClick={() => setStep(STEPS.CONTEXT)}>
-              次へ: 文脈を入力 →
+              {t('confirm.next')}
             </button>
-            <button className="ghost-btn" onClick={reset}>やり直す</button>
+            <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
           </div>
         )}
 
-        {/* ── CONTEXT（文脈情報）── */}
+        {/* ── CONTEXT ── */}
         {step === STEPS.CONTEXT && (
           <div className="page">
             <div className="prog-bar"><div className="prog-fill" style={{ width: '80%' }} /></div>
-            <div className="step-label">STEP 2 / 2 — 出会いの文脈（任意）</div>
+            <div className="step-label">{t('step.context')}</div>
 
             <div className="ctx-name">
               {contact?.name || '—'}
               <span className="ctx-company">{contact?.company ? `（${contact.company}）` : ''}</span>
             </div>
 
-            {/* 場所 */}
-            <label className="field-label" style={{ marginTop: 4 }}>場所・イベント名</label>
+            <label className="field-label" style={{ marginTop: 4 }}>{t('context.event_label')}</label>
             <input
               type="text"
-              placeholder="例：〇〇交流会、渋谷オフィス"
+              placeholder={t('context.event_placeholder')}
               value={eventName}
               onChange={e => setEventName(e.target.value)}
               className="text-input"
             />
 
-            {/* 出会った日 */}
-            <label className="field-label" style={{ marginTop: 14 }}>出会った日</label>
+            <label className="field-label" style={{ marginTop: 14 }}>{t('context.met_label')}</label>
             <input
               type="date"
               value={location || new Date().toISOString().slice(0, 10)}
@@ -385,8 +396,7 @@ export default function Home() {
               className="text-input date-input"
             />
 
-            {/* 温度感 */}
-            <label className="field-label" style={{ marginTop: 14 }}>温度感</label>
+            <label className="field-label" style={{ marginTop: 14 }}>{t('context.temp_label')}</label>
             <div className="temp-row">
               {TEMP_OPTIONS.map(opt => (
                 <button
@@ -401,10 +411,9 @@ export default function Home() {
               ))}
             </div>
 
-            {/* メモ */}
-            <label className="field-label" style={{ marginTop: 14 }}>一言メモ</label>
+            <label className="field-label" style={{ marginTop: 14 }}>{t('context.memo_label')}</label>
             <textarea
-              placeholder="話した内容、印象、次のアクションなど"
+              placeholder={t('context.memo_placeholder')}
               value={memo}
               onChange={e => setMemo(e.target.value)}
               className="textarea"
@@ -413,10 +422,10 @@ export default function Home() {
 
             <button className="send-btn" style={{ marginTop: 20 }} onClick={onSendNow}
               disabled={!email && !manualEmail}>
-              今すぐ送信 →
+              {t('context.send_now')}
             </button>
-            <button className="save-btn" onClick={onSaveOnly}>保存して後で送る</button>
-            <button className="ghost-btn" onClick={() => setStep(STEPS.CONFIRM)}>← 戻る</button>
+            <button className="save-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
+            <button className="ghost-btn" onClick={() => setStep(STEPS.CONFIRM)}>{t('context.back')}</button>
           </div>
         )}
 
@@ -425,8 +434,12 @@ export default function Home() {
           <div className="page center">
             <div className="prog-bar"><div className="prog-fill" style={{ width: '95%' }} /></div>
             <div className="big-spinner" />
-            <p className="status-text" style={{ marginTop: 20 }}>{saveOnly ? '保存中...' : '送信中...'}</p>
-            <p className="hint">{saveOnly ? 'Supabaseに保存しています' : 'Gmail経由でメールを送っています'}</p>
+            <p className="status-text" style={{ marginTop: 20 }}>
+              {saveOnly ? t('sending.saving') : t('sending.sending')}
+            </p>
+            <p className="hint">
+              {saveOnly ? t('sending.saving_hint') : t('sending.sending_hint')}
+            </p>
           </div>
         )}
 
@@ -440,26 +453,36 @@ export default function Home() {
             </div>
             {saveOnly ? (
               <>
-                <h2 className="done-title">保存しました！</h2>
-                <p className="done-name">{contact?.name ? `${contact.name}様の名刺` : '名刺'} を保存しました</p>
+                <h2 className="done-title">{t('done.saved_title')}</h2>
+                <p className="done-name">
+                  {contact?.name
+                    ? t('done.saved_message', { name: contact.name })
+                    : t('done.saved_message_generic')}
+                </p>
                 {temperature && (
                   <div className="done-temp">
                     {TEMP_OPTIONS.find(o => o.value === temperature)?.emoji}{' '}
                     {TEMP_OPTIONS.find(o => o.value === temperature)?.label}
                   </div>
                 )}
-                <div className="done-note">後で一覧から送信できます</div>
-                <button className="send-btn" style={{ marginTop: 32 }} onClick={() => router.push('/contacts')}>一覧を見る</button>
-                <button className="ghost-btn" style={{ marginTop: 8 }} onClick={reset}>次の名刺を読み取る</button>
+                <div className="done-note">{t('done.later_note')}</div>
+                <button className="send-btn" style={{ marginTop: 32 }} onClick={() => router.push('/contacts')}>
+                  {t('done.view_list')}
+                </button>
+                <button className="ghost-btn" style={{ marginTop: 8 }} onClick={reset}>{t('done.next_card')}</button>
               </>
             ) : (
               <>
-                <h2 className="done-title">送信完了！</h2>
-                <p className="done-name">{contact?.name ? `${contact.name}様` : '相手'} にメールを送りました</p>
+                <h2 className="done-title">{t('done.sent_title')}</h2>
+                <p className="done-name">
+                  {contact?.name
+                    ? t('done.sent_message', { name: contact.name })
+                    : t('done.sent_message_generic')}
+                </p>
                 <p className="done-addr">{email}</p>
-                <div className="done-note">受信トレイをご確認ください</div>
-                <button className="send-btn" style={{ marginTop: 32 }} onClick={reset}>次の名刺を読み取る</button>
-                <button className="ghost-btn" onClick={reset}>トップに戻る</button>
+                <div className="done-note">{t('done.inbox_note')}</div>
+                <button className="send-btn" style={{ marginTop: 32 }} onClick={reset}>{t('done.next_card')}</button>
+                <button className="ghost-btn" onClick={reset}>{t('done.top_back')}</button>
               </>
             )}
           </div>
@@ -469,10 +492,10 @@ export default function Home() {
         {step === STEPS.ERROR && (
           <div className="page">
             <div className="error-box">
-              <div className="error-label">エラー</div>
+              <div className="error-label">{t('error.label')}</div>
               <p className="error-msg">{errorMsg}</p>
             </div>
-            <button className="ghost-btn" onClick={reset}>最初からやり直す</button>
+            <button className="ghost-btn" onClick={reset}>{t('error.retry')}</button>
           </div>
         )}
       </div>
@@ -498,7 +521,6 @@ export default function Home() {
         }
         .page.center { align-items: center; justify-content: center; text-align: center; }
 
-        /* ヘッダー */
         .top-bar {
           display: flex;
           align-items: center;
@@ -517,11 +539,24 @@ export default function Home() {
           align-items: center;
           gap: 10px;
         }
+        .lang-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 4px;
+          color: #5a5650;
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          padding: 2px 6px;
+          letter-spacing: .06em;
+          flex-shrink: 0;
+        }
+        .lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
         .user-email {
           font-size: 11px;
           color: #3a3a4a;
           font-family: 'DM Mono', monospace;
-          max-width: 160px;
+          max-width: 140px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -538,7 +573,6 @@ export default function Home() {
         }
         .logout-btn:active { color: #7b9e87; }
 
-        /* ステップラベル */
         .step-label {
           font-family: 'DM Mono', monospace;
           font-size: 10px;
@@ -568,7 +602,6 @@ export default function Home() {
           margin-top: 8px;
         }
 
-        /* サムネイル */
         .thumb-row {
           display: flex;
           gap: 10px;
@@ -627,7 +660,6 @@ export default function Home() {
         }
         .thumb-add:active { border-color: #7b9e87; color: #7b9e87; }
 
-        /* CONFIRMのサムネイル */
         .confirm-thumbs {
           display: flex;
           gap: 8px;
@@ -642,7 +674,6 @@ export default function Home() {
           border: 1px solid #1e1e2a;
         }
 
-        /* CONTEXTの人物ヘッダー */
         .ctx-name {
           font-size: 18px;
           font-weight: 700;
@@ -656,7 +687,6 @@ export default function Home() {
           color: #5a5650;
         }
 
-        /* 温度感セレクター */
         .temp-row {
           display: flex;
           gap: 8px;
@@ -687,7 +717,6 @@ export default function Home() {
         }
         .temp-btn.active .temp-label { color: #7b9e87; }
 
-        /* 日付インプット */
         .date-input {
           color-scheme: dark;
         }
@@ -938,3 +967,9 @@ export default function Home() {
     </>
   )
 }
+
+export const getStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale, ['common'])),
+  },
+})

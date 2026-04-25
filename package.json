@@ -11,9 +11,13 @@
     "@anthropic-ai/sdk": "^0.24.0",
     "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.104.0",
+    "i18next": "^26.0.8",
     "next": "14.2.3",
+    "next-i18next": "^16.0.5",
     "nodemailer": "^8.0.5",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "react-i18next": "^17.0.4",
+    "stripe": "^22.1.0"
   }
 }

@@ -1,14 +1,13 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
+import { appWithTranslation } from 'next-i18next/pages'
 
-export default function App({ Component, pageProps }) {
+function App({ Component, pageProps }) {
   const router = useRouter()
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    // Supabase の招待リンクが redirectTo を無視して Site URL へ飛ばした場合に
-    // #access_token=...&type=invite を検知して /auth/confirm へ転送する
     const hash = window.location.hash.slice(1)
     if (!hash) return
 
@@ -23,3 +22,5 @@ export default function App({ Component, pageProps }) {
 
   return <Component {...pageProps} />
 }
+
+export default appWithTranslation(App)
