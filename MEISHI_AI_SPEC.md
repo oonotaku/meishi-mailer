@@ -68,13 +68,21 @@
 
 ---
 
-### 3. プロフィール・送信設定 ✅ 完了
+### 3. プロフィール・送信設定・課金 ✅ 完了
 
 **`/settings/profile`**
-- ログイン中のメールアドレス・表示名を表示
+- ログイン中のメールアドレス・表示名を表示（インライン編集可）
 - SendGrid APIキーと送信元メールアドレスを設定
 - 設定済み/未設定バッジ表示
 - 未設定の場合、メール送信時に設定を促すエラーを返す
+- プランバッジ（Free / Pro）と今月のスキャン使用数バーを表示
+- Stripe Checkout（アップグレード）・Stripe Customer Portal（管理）へのボタン
+
+**Stripe課金（本番稼働中）**
+- Free: 10スキャン/月、Pro: 100スキャン/月（¥980/月）
+- 本番APIキー（`sk_live_`, `pk_live_`）をVercelに設定済み
+- webhookでDB（`profiles.plan`）を自動更新
+- ベータユーザーへのPro付与: Supabase SQL Editor で `UPDATE profiles SET plan = 'pro' WHERE email = 'xxx';`
 
 ---
 
@@ -145,8 +153,10 @@ Contact詳細（/contacts/[id]）
   - 参加中のチーム: チーム名一覧（読み取り専用）
   ↓
 プロフィール設定（/settings/profile）
-  - ログイン中のメールアドレス・表示名
+  - ログイン中のメールアドレス・表示名（インライン編集）
   - SendGrid APIキー・送信元メールアドレス設定
+  - プランバッジ・スキャン使用数バー
+  - アップグレード（Stripe Checkout）・管理（Stripe Portal）
   ↓
 パスワード設定（/auth/confirm）
   - 招待メール経由のユーザー向け
@@ -165,6 +175,7 @@ Contact詳細（/contacts/[id]）
 | ストレージ | Supabase Storage (`cards` bucket) |
 | AI | Anthropic Claude API (claude-opus-4-5, Vision + Text) |
 | メール送信 | SendGrid (`@sendgrid/mail`、APIキーはDBにユーザーごとに保存） |
+| 課金 | Stripe（本番 sk_live_ / pk_live_、Checkout + Customer Portal + Webhook）|
 | 通知 | 未実装（将来: Vercel Cron + メール/Push）|
 
 ---
@@ -181,8 +192,13 @@ profiles (
   email,
   name,
   current_organization_id → organizations,  -- 常に自分がownerのorg
-  sender_email,        -- SendGrid送信元アドレス
-  sendgrid_api_key     -- SendGrid APIキー（クライアントには返さない）
+  sender_email,              -- SendGrid送信元アドレス
+  sendgrid_api_key,          -- SendGrid APIキー（クライアントには返さない）
+  plan text,                 -- 'free' | 'pro'  default: 'free'
+  scan_count_month int,      -- 今月のスキャン数（月初リセット）
+  scan_count_reset_at timestamptz,
+  stripe_customer_id text,
+  stripe_subscription_id text
 )
 
 -- ユーザー×組織 中間テーブル（多対多）
@@ -240,7 +256,11 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] 他チームのContactに組織名バッジを表示
 - [x] 送信権限制御（owner_idのユーザーのみ送信・再送ボタンを表示）
 - [x] メール送信をGmail SMTPからSendGridに切り替え
-- [x] プロフィール設定画面（`/settings/profile`）— SendGrid APIキー・送信元アドレス設定
+- [x] プロフィール設定画面（`/settings/profile`）— SendGrid APIキー・送信元アドレス設定、表示名インライン編集
+- [x] Stripe課金実装・本番稼働（Free/Pro、¥980/月、Checkout + Portal + Webhook）
+- [x] スキャン上限チェック（Free: 10/月、Pro: 100/月）+ 月次リセット
+- [x] UIロケールとメール生成言語の連動（EN UI → 英語メール、JA UI → 日本語メール）
+- [x] `useRequireAuth` 認証レースコンディション修正（`onAuthStateChange` 優先 + `resolved` フラグ）
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）

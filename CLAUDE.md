@@ -32,7 +32,7 @@ No test framework is configured.
 | `login.js` | Email/password login |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows) |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
-| `settings/profile.js` | Profile settings — display name, SendGrid API key + sender email configuration |
+| `settings/profile.js` | Profile settings — display name, SendGrid API key + sender email configuration, billing plan display + Stripe Checkout/Portal |
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -46,8 +46,13 @@ No test framework is configured.
 - `POST /api/contacts/update-visibility` — toggles `private`/`team` on a contact (owner only)
 
 **Core**
-- `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls)
+- `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success.
 - `POST /api/send` — requires Bearer token. Fetches `sender_email` + `sendgrid_api_key` from sender's profile and sends via SendGrid. Returns 400 with setup instructions if not configured.
+
+**Billing**
+- `POST /api/billing/create-checkout-session` — creates Stripe Checkout session for Pro plan. Reuses existing `stripe_customer_id` if present. `success_url`/`cancel_url` built from request headers.
+- `POST /api/billing/portal` — creates Stripe Customer Portal session for subscription management.
+- `POST /api/billing/webhook` — Stripe webhook handler (bodyParser: false, raw body). Handles: `checkout.session.completed` (sets customer_id, subscription_id, plan=pro), `customer.subscription.updated`, `customer.subscription.deleted` (plan=free).
 
 **Team**
 - `POST /api/team/invite` — sends Supabase invite email with `organization_id` in user metadata
@@ -62,15 +67,20 @@ No test framework is configured.
 
 Both API calls in `/api/analyze` use `claude-opus-4-5`. OCR prompt forces JSON-only output. Email template: 100–150 chars, ends with `。`, hardcoded signature `大野 拓（node-bee合同会社）`.
 
+Email generation language follows the UI locale (`Accept-Language` header from client): EN UI → English email, JA UI → Japanese email.
+
 ### Database (Supabase)
 
 #### Tables
 
 **`organizations`** — `id, name, created_at`
 
-**`profiles`** — `id, email, name, current_organization_id (FK → organizations), sender_email, sendgrid_api_key`
+**`profiles`** — `id, email, name, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
 - `current_organization_id` always points to the org where the user is `owner`
 - `sender_email` + `sendgrid_api_key` are set by the user via `/settings/profile`; `sendgrid_api_key` is never returned to the client
+- `plan`: `'free'` (default) or `'pro'`; updated by Stripe webhook
+- `scan_count_month`: resets when `scan_count_reset_at < startOfMonth`; Free limit=10, Pro limit=100
+- `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
 
 **`user_organizations`** — `user_id, organization_id, role (owner|member), created_at`
 - Junction table for many-to-many users ↔ orgs
@@ -93,11 +103,15 @@ Supabase Storage bucket `cards` holds public card images.
 
 ### Auth (`lib/useRequireAuth.js`)
 
-Calls `/api/auth/ensure-profile` on session init and auth state changes. Returns `{ user, profile, loading }` where `profile` includes:
+`onAuthStateChange` is registered before `getSession()` to avoid Vercel production race condition. A `resolved` flag ensures `init()` is called exactly once. `getSession()` acts as fallback only when a session exists (never redirects on null).
+
+Calls `/api/auth/ensure-profile` on session init. Returns `{ user, profile, loading }` where `profile` includes:
 - `organization_id` — alias for `current_organization_id` (user's own owner org)
 - `role` — always `'owner'` (reflects ownership of `current_organization_id`)
 - `organizations` — array of all memberships: `[{ organization_id, name, role }, ...]`
 - `sender_email` — configured sender address (or null if not set)
+- `plan` — `'free'` or `'pro'`
+- `scan_count_month` — scans used this month
 
 ## Environment Variables
 
@@ -109,10 +123,22 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=https://meishi-mailer-mu.vercel.app
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_PRO_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Note: SendGrid API keys and sender emails are stored per-user in `profiles.sendgrid_api_key` / `profiles.sender_email` — no server-level email env vars needed.
 
+### Stripe (billing)
+- Live keys (`sk_live_`, `pk_live_`) are active in Vercel production as of 2026-04-25
+- `STRIPE_PRO_PRICE_ID` must be a Price ID (`price_...`), NOT a Product ID (`prod_...`)
+- Webhook endpoint: `https://meishi-mailer-mu.vercel.app/api/billing/webhook`
+- Registered events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+- Customer Portal business name: "node-bee"
+- To manually grant Pro to a beta user: `UPDATE profiles SET plan = 'pro' WHERE email = 'xxx';` in Supabase SQL Editor
+
 ## Current status
 
-Phase 1, 2, and Phase 3 (partial) are complete. See `MEISHI_AI_SPEC.md` for roadmap.
+Phase 1, 2, and Phase 3 (partial) are complete. Stripe billing is live in production (¥980/mo Pro plan). See `MEISHI_AI_SPEC.md` for roadmap.
