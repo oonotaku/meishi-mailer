@@ -86,7 +86,20 @@ export default function Home() {
     setStep(STEPS.ANALYZING)
     setStatusMsg(t('home.analyzing_status'))
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      // refreshSession() で必ず最新トークンを取得（getSession はキャッシュを返すだけ）
+      let session
+      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession()
+      if (!refreshErr && refreshed?.session?.access_token) {
+        session = refreshed.session
+      } else {
+        // リフレッシュ失敗時は getSession にフォールバック
+        const { data: fallback } = await supabase.auth.getSession()
+        session = fallback?.session
+      }
+      if (!session?.access_token) {
+        router.replace('/login')
+        return
+      }
       const r = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
