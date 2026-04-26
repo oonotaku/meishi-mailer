@@ -44,6 +44,7 @@ export default function Home() {
   const [temperature, setTemperature] = useState('normal')
   const [memo, setMemo] = useState('')
   const [duplicates, setDuplicates] = useState([])
+  const [duplicateContactId, setDuplicateContactId] = useState(null)
   const fileRef = useRef()
   const router = useRouter()
 
@@ -187,6 +188,39 @@ export default function Home() {
     if (!email) { alert(t('contact.no_email_alert')); return }
     setSaveOnly(false)
     setStep(STEPS.SENDING)
+
+    // 重複コンタクトへの出会い追記モード
+    if (duplicateContactId) {
+      try {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        const session = refreshed?.session || (await supabase.auth.getSession()).data.session
+        const r = await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ to: email, subject, body }),
+        })
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error)
+        await fetch('/api/encounters/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            contact_id: duplicateContactId,
+            met_at: new Date().toISOString().slice(0, 10),
+            event_name: eventName || null,
+            location: location || null,
+            memo: memo || null,
+            temperature,
+          }),
+        })
+        setStep(STEPS.DONE)
+      } catch (err) {
+        setErrorMsg(err.message)
+        setStep(STEPS.ERROR)
+      }
+      return
+    }
+
     try {
       const card_image_urls = await uploadAllImages()
       const { data: { session } } = await supabase.auth.getSession()
@@ -211,6 +245,32 @@ export default function Home() {
   async function onSaveOnly() {
     setSaveOnly(true)
     setStep(STEPS.SENDING)
+
+    // 重複コンタクトへの出会い追記モード
+    if (duplicateContactId) {
+      try {
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        const session = refreshed?.session || (await supabase.auth.getSession()).data.session
+        await fetch('/api/encounters/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            contact_id: duplicateContactId,
+            met_at: new Date().toISOString().slice(0, 10),
+            event_name: eventName || null,
+            location: location || null,
+            memo: memo || null,
+            temperature,
+          }),
+        })
+        setStep(STEPS.DONE)
+      } catch (err) {
+        setErrorMsg(err.message)
+        setStep(STEPS.ERROR)
+      }
+      return
+    }
+
     try {
       const card_image_urls = await uploadAllImages()
       await saveContact(card_image_urls, null)
@@ -235,6 +295,7 @@ export default function Home() {
     setTemperature('normal')
     setMemo('')
     setDuplicates([])
+    setDuplicateContactId(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -369,7 +430,17 @@ export default function Home() {
 
             <p className="dup-note">{t('duplicate.note')}</p>
 
-            <button className="send-btn" style={{ marginTop: 24 }} onClick={() => router.push('/contacts')}>
+            <button
+              className="send-btn"
+              style={{ marginTop: 20 }}
+              onClick={() => {
+                setDuplicateContactId(duplicates[0].id)
+                setStep(STEPS.CONTEXT)
+              }}
+            >
+              {t('duplicate.add_encounter')}
+            </button>
+            <button className="save-btn" onClick={() => router.push('/contacts')}>
               {t('duplicate.view_contacts')}
             </button>
             <button className="ghost-btn" onClick={reset}>{t('duplicate.scan_another')}</button>

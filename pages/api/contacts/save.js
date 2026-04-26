@@ -49,5 +49,18 @@ export default async function handler(req, res) {
     .single()
 
   if (error) return res.status(500).json({ error: error.message })
+
+  // 初回出会いをencountersにも記録
+  if (data?.id) {
+    await supabaseAdmin.from('encounters').insert({
+      contact_id: data.id,
+      met_at: met_at || null,
+      event_name: event_name || null,
+      location: location || null,
+      memo: memo || null,
+      temperature: temperature || 'normal',
+    })
+  }
+
   res.json({ data })
 }

@@ -28,6 +28,8 @@ export default function ContactDetail() {
   const [visibility, setVisibility] = useState('private')
   const [visSaving, setVisSaving] = useState(false)
   const [visError, setVisError] = useState('')
+  const [encounters, setEncounters] = useState([])
+  const [encLoading, setEncLoading] = useState(true)
 
   const TEMP_OPTIONS = [
     { value: 'hot',    label: t('temp.hot'),    emoji: '🔥' },
@@ -54,6 +56,20 @@ export default function ContactDetail() {
         setVisibility(data.visibility || 'private')
       }
       setLoading(false)
+    })
+
+    // encounters取得
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { setEncLoading(false); return }
+      fetch(`/api/encounters/list?contact_id=${id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+        .then(r => r.json())
+        .then(({ data }) => {
+          setEncounters(data || [])
+          setEncLoading(false)
+        })
+        .catch(() => setEncLoading(false))
     })
   }, [id])
 
@@ -328,6 +344,43 @@ export default function ContactDetail() {
                 ) : (!contact.event_name && !contact.location && !contact.met_at && !contact.temperature) ? (
                   <div className="ctx-empty">{t('contact.ctx_empty')}</div>
                 ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="divider" />
+
+          <div className="ctx-section">
+            <div className="ctx-header">
+              <div className="section-label">{t('encounter.section_label')}</div>
+            </div>
+            {encLoading ? (
+              <div style={{ color: '#5a5650', fontSize: 13 }}>...</div>
+            ) : encounters.length === 0 ? (
+              <div className="ctx-empty">{t('encounter.empty')}</div>
+            ) : (
+              <div className="enc-list">
+                {encounters.map((enc, i) => (
+                  <div key={enc.id} className="enc-item">
+                    <div className="enc-date">
+                      {enc.met_at
+                        ? new Date(enc.met_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                        : new Date(enc.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                      }
+                      {i === 0 && <span className="enc-latest">{t('encounter.latest')}</span>}
+                    </div>
+                    {(enc.event_name || enc.location) && (
+                      <div className="enc-meta">{[enc.event_name, enc.location].filter(Boolean).join(' · ')}</div>
+                    )}
+                    {enc.memo && <div className="enc-memo">{enc.memo}</div>}
+                    {enc.temperature && (
+                      <div className="enc-temp">
+                        {['🔥', '🤝', '👀'][['hot', 'normal', 'watch'].indexOf(enc.temperature)] || '🤝'}
+                        {' '}{t(`temp.${enc.temperature}`)}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -864,6 +917,53 @@ export default function ContactDetail() {
           font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
           margin-top: 8px;
+        }
+
+        .enc-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 8px;
+        }
+        .enc-item {
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          padding: 12px 14px;
+        }
+        .enc-date {
+          font-size: 13px;
+          font-weight: 700;
+          color: #f0ede8;
+          margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .enc-latest {
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          color: #7b9e87;
+          background: #0d1f15;
+          border: 1px solid #1a3525;
+          border-radius: 999px;
+          padding: 1px 8px;
+        }
+        .enc-meta {
+          font-size: 12px;
+          color: #5a5650;
+          margin-bottom: 4px;
+        }
+        .enc-memo {
+          font-size: 13px;
+          color: #c0bdb8;
+          line-height: 1.5;
+          margin-top: 4px;
+        }
+        .enc-temp {
+          font-size: 12px;
+          color: #7b9e87;
+          margin-top: 6px;
         }
       `}</style>
     </>

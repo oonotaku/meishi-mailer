@@ -85,8 +85,14 @@
     "location_label": "Location",
     "note": "This email address is already registered.\nDuplicate contacts cannot be imported.",
     "history_label": "Scan History",
+    "add_encounter": "Record this encounter",
     "view_contacts": "View Contacts",
     "scan_another": "Scan Another Card"
+  },
+  "encounter": {
+    "section_label": "Encounter History",
+    "empty": "No encounter history",
+    "latest": "Latest"
   },
   "login": {
     "page_title": "Login — Card Mailer",
