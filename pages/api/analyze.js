@@ -71,6 +71,21 @@ export default async function handler(req, res) {
     const raw = ocrRes.content[0].text.replace(/```json|```/g, '').trim()
     const contact = JSON.parse(raw)
 
+    // 重複チェック
+    let duplicate = null
+    if (contact.email) {
+      const { data: existing } = await supabaseAdmin
+        .from('contacts')
+        .select('id, name, company, met_at, event_name, location, created_at')
+        .eq('owner_id', user.id)
+        .ilike('email', contact.email)
+        .limit(1)
+        .single()
+      if (existing) {
+        duplicate = existing
+      }
+    }
+
     // Step 2: メール生成（ロケール別プロンプト）
     let mailPrompt
     if (locale === 'en') {
@@ -120,7 +135,7 @@ Rules:
       .update({ scan_count_month: currentCount + 1 })
       .eq('id', user.id)
 
-    res.json({ contact, subject, body })
+    res.json({ contact, subject, body, duplicate })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: e.message })

@@ -77,6 +77,16 @@
     "label": "エラー",
     "retry": "最初からやり直す"
   },
+  "duplicate": {
+    "title": "登録済みの名刺です",
+    "unknown_name": "（名前なし）",
+    "date_label": "撮影日",
+    "event_label": "イベント",
+    "location_label": "場所",
+    "note": "同じメールアドレスの名刺は\n取り込めません。",
+    "view_contacts": "コンタクト一覧を見る",
+    "scan_another": "別の名刺を撮影する"
+  },
   "login": {
     "page_title": "ログイン — 名刺メーラー",
     "sub_line1": "出会いを記録し、",

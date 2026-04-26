@@ -6,7 +6,7 @@ import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslation
 import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
-const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6 }
+const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6, DUPLICATE: 7 }
 
 async function compressImage(file) {
   return new Promise((resolve) => {
@@ -43,6 +43,7 @@ export default function Home() {
   const [eventName, setEventName] = useState('')
   const [temperature, setTemperature] = useState('normal')
   const [memo, setMemo] = useState('')
+  const [duplicate, setDuplicate] = useState(null)
   const fileRef = useRef()
   const router = useRouter()
 
@@ -101,6 +102,12 @@ export default function Home() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
+      if (data.duplicate) {
+        setContact(data.contact)
+        setDuplicate(data.duplicate)
+        setStep(STEPS.DUPLICATE)
+        return
+      }
       setContact(data.contact)
       setSubject(data.subject)
       setBody(data.body)
@@ -214,6 +221,7 @@ export default function Home() {
     setEventName('')
     setTemperature('normal')
     setMemo('')
+    setDuplicate(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -314,6 +322,51 @@ export default function Home() {
             </div>
             {images[0] && <img src={images[0].preview} className="preview-img" alt="" />}
             <p className="hint" style={{ marginTop: 16 }}>{t('home.analyzing_hint')}</p>
+          </div>
+        )}
+
+        {/* ── DUPLICATE ── */}
+        {step === STEPS.DUPLICATE && (
+          <div className="page">
+            <div className="prog-bar"><div className="prog-fill" style={{ width: '50%' }} /></div>
+
+            <div className="dup-icon">⚠️</div>
+            <h2 className="dup-title">{t('duplicate.title')}</h2>
+            <p className="dup-email">{contact?.email}</p>
+
+            <div className="dup-card">
+              <div className="dup-name">{duplicate?.name || t('duplicate.unknown_name')}</div>
+              {duplicate?.company && <div className="dup-company">{duplicate.company}</div>}
+              <div className="dup-divider" />
+              <div className="dup-row">
+                <span className="dup-label">{t('duplicate.date_label')}</span>
+                <span className="dup-value">
+                  {duplicate?.met_at
+                    ? new Date(duplicate.met_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                    : new Date(duplicate?.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                  }
+                </span>
+              </div>
+              {duplicate?.event_name && (
+                <div className="dup-row">
+                  <span className="dup-label">{t('duplicate.event_label')}</span>
+                  <span className="dup-value">{duplicate.event_name}</span>
+                </div>
+              )}
+              {duplicate?.location && (
+                <div className="dup-row">
+                  <span className="dup-label">{t('duplicate.location_label')}</span>
+                  <span className="dup-value">{duplicate.location}</span>
+                </div>
+              )}
+            </div>
+
+            <p className="dup-note">{t('duplicate.note')}</p>
+
+            <button className="send-btn" style={{ marginTop: 24 }} onClick={() => router.push('/contacts')}>
+              {t('duplicate.view_contacts')}
+            </button>
+            <button className="ghost-btn" onClick={reset}>{t('duplicate.scan_another')}</button>
           </div>
         )}
 
@@ -963,6 +1016,76 @@ export default function Home() {
           margin-bottom: 8px;
         }
         .error-msg { font-size: 14px; color: #c08080; line-height: 1.6; }
+
+        .dup-icon {
+          font-size: 48px;
+          text-align: center;
+          margin-bottom: 12px;
+        }
+        .dup-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #f0ede8;
+          text-align: center;
+          margin-bottom: 6px;
+        }
+        .dup-email {
+          font-size: 12px;
+          color: #7b9e87;
+          font-family: 'DM Mono', monospace;
+          text-align: center;
+          margin-bottom: 20px;
+          word-break: break-all;
+        }
+        .dup-card {
+          background: #12121a;
+          border: 1px solid #2a2a3a;
+          border-radius: 14px;
+          padding: 16px;
+          margin-bottom: 16px;
+        }
+        .dup-name {
+          font-size: 16px;
+          font-weight: 700;
+          color: #f0ede8;
+          margin-bottom: 2px;
+        }
+        .dup-company {
+          font-size: 12px;
+          color: #5a5650;
+          margin-bottom: 12px;
+        }
+        .dup-divider {
+          height: 1px;
+          background: #1e1e2a;
+          margin-bottom: 12px;
+        }
+        .dup-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .dup-label {
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          color: #5a5650;
+          text-transform: uppercase;
+          letter-spacing: .06em;
+          flex-shrink: 0;
+        }
+        .dup-value {
+          font-size: 13px;
+          color: #c0bdb8;
+          text-align: right;
+        }
+        .dup-note {
+          font-size: 12px;
+          color: #5a5650;
+          text-align: center;
+          line-height: 1.6;
+        }
       `}</style>
     </>
   )
