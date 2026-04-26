@@ -84,6 +84,7 @@
     "event_label": "Event",
     "location_label": "Location",
     "note": "This email address is already registered.\nDuplicate contacts cannot be imported.",
+    "history_label": "Scan History",
     "view_contacts": "View Contacts",
     "scan_another": "Scan Another Card"
   },

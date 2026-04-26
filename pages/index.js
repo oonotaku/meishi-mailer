@@ -43,7 +43,7 @@ export default function Home() {
   const [eventName, setEventName] = useState('')
   const [temperature, setTemperature] = useState('normal')
   const [memo, setMemo] = useState('')
-  const [duplicate, setDuplicate] = useState(null)
+  const [duplicates, setDuplicates] = useState([])
   const fileRef = useRef()
   const router = useRouter()
 
@@ -115,9 +115,9 @@ export default function Home() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      if (data.duplicate) {
+      if (data.duplicates && data.duplicates.length > 0) {
         setContact(data.contact)
-        setDuplicate(data.duplicate)
+        setDuplicates(data.duplicates)
         setStep(STEPS.DUPLICATE)
         return
       }
@@ -234,7 +234,7 @@ export default function Home() {
     setEventName('')
     setTemperature('normal')
     setMemo('')
-    setDuplicate(null)
+    setDuplicates([])
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -347,31 +347,24 @@ export default function Home() {
             <h2 className="dup-title">{t('duplicate.title')}</h2>
             <p className="dup-email">{contact?.email}</p>
 
-            <div className="dup-card">
-              <div className="dup-name">{duplicate?.name || t('duplicate.unknown_name')}</div>
-              {duplicate?.company && <div className="dup-company">{duplicate.company}</div>}
-              <div className="dup-divider" />
-              <div className="dup-row">
-                <span className="dup-label">{t('duplicate.date_label')}</span>
-                <span className="dup-value">
-                  {duplicate?.met_at
-                    ? new Date(duplicate.met_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                    : new Date(duplicate?.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                  }
-                </span>
-              </div>
-              {duplicate?.event_name && (
-                <div className="dup-row">
-                  <span className="dup-label">{t('duplicate.event_label')}</span>
-                  <span className="dup-value">{duplicate.event_name}</span>
+            <div className="dup-name">{duplicates[0]?.name || t('duplicate.unknown_name')}</div>
+            {duplicates[0]?.company && <div className="dup-company">{duplicates[0].company}</div>}
+
+            <div className="dup-history-label">{t('duplicate.history_label')}</div>
+            <div className="dup-history">
+              {duplicates.map((d) => (
+                <div key={d.id} className="dup-history-item">
+                  <div className="dup-history-date">
+                    {d.met_at
+                      ? new Date(d.met_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                      : new Date(d.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                    }
+                  </div>
+                  <div className="dup-history-meta">
+                    {[d.event_name, d.location].filter(Boolean).join(' · ') || '—'}
+                  </div>
                 </div>
-              )}
-              {duplicate?.location && (
-                <div className="dup-row">
-                  <span className="dup-label">{t('duplicate.location_label')}</span>
-                  <span className="dup-value">{duplicate.location}</span>
-                </div>
-              )}
+              ))}
             </div>
 
             <p className="dup-note">{t('duplicate.note')}</p>
@@ -1098,6 +1091,41 @@ export default function Home() {
           color: #5a5650;
           text-align: center;
           line-height: 1.6;
+        }
+        .dup-history-label {
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          color: #5a5650;
+          text-transform: uppercase;
+          letter-spacing: .06em;
+          margin: 16px 0 8px;
+        }
+        .dup-history {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .dup-history-item {
+          background: #12121a;
+          border: 1px solid #2a2a3a;
+          border-radius: 10px;
+          padding: 10px 14px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+        .dup-history-date {
+          font-size: 13px;
+          font-weight: 700;
+          color: #f0ede8;
+          flex-shrink: 0;
+        }
+        .dup-history-meta {
+          font-size: 12px;
+          color: #5a5650;
+          text-align: right;
         }
       `}</style>
     </>

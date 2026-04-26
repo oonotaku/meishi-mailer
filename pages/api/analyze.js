@@ -72,17 +72,16 @@ export default async function handler(req, res) {
     const contact = JSON.parse(raw)
 
     // 重複チェック
-    let duplicate = null
+    let duplicates = []
     if (contact.email) {
       const { data: existing } = await supabaseAdmin
         .from('contacts')
         .select('id, name, company, met_at, event_name, location, created_at')
         .eq('owner_id', user.id)
         .ilike('email', contact.email)
-        .limit(1)
-        .single()
-      if (existing) {
-        duplicate = existing
+        .order('met_at', { ascending: false, nullsFirst: false })
+      if (existing && existing.length > 0) {
+        duplicates = existing
       }
     }
 
@@ -135,7 +134,7 @@ Rules:
       .update({ scan_count_month: currentCount + 1 })
       .eq('id', user.id)
 
-    res.json({ contact, subject, body, duplicate })
+    res.json({ contact, subject, body, duplicates })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: e.message })
