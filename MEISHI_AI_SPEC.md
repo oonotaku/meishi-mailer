@@ -66,6 +66,17 @@
 - デフォルトは `private`
 - 一覧画面で他チームのContactにはチーム名バッジを表示
 
+**重複検出（2026-04-26 実装）**
+- スキャン時に同じメールアドレスのContactが既存の場合、DUPLICATE画面を表示
+- 重複Contactは新規保存しない（上書き・重複防止）
+- DUPLICATE画面で過去の全撮影履歴（日付・イベント・場所）を一覧表示
+- 「この出会いを記録する」から文脈情報（日付・場所・メモ）を追記可能
+
+**出会い履歴（encounters）**
+- 同一人物と複数回会うたびに出会いを追記できる
+- Contact詳細ページに出会い履歴セクションを追加（新しい順で表示）
+- 初回スキャン時にも encounters テーブルに自動記録される
+
 ---
 
 ### 3. プロフィール・送信設定・課金 ✅ 完了
@@ -145,6 +156,7 @@ Contact詳細（/contacts/[id]）
   - 名刺写真
   - 基本情報
   - 文脈情報・メモ（後から編集可）
+  - 出会い履歴（encounters）— 新しい順で全件表示
   - お礼メール送信状況・再送（owner_idのユーザーのみ表示）
   - 共有範囲トグル（owner_idのユーザーのみ表示）
   ↓
@@ -221,6 +233,17 @@ contacts (
   visibility text,       -- 'private' | 'team'  default: 'private'
   created_at
 )
+
+-- 出会い履歴（1 Contact に複数紐付け可）
+encounters (
+  id,
+  contact_id → contacts,  -- ON DELETE CASCADE
+  met_at date,
+  event_name, location, memo,
+  temperature text,        -- 'hot' | 'normal' | 'watch'
+  created_at
+)
+-- RLS無効。supabaseAdmin経由のAPI routeのみアクセス
 ```
 
 **将来追加予定テーブル：**
@@ -261,6 +284,9 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] スキャン上限チェック（Free: 10/月、Pro: 100/月）+ 月次リセット
 - [x] UIロケールとメール生成言語の連動（EN UI → 英語メール、JA UI → 日本語メール）
 - [x] `useRequireAuth` 認証レースコンディション修正（`onAuthStateChange` 優先 + `resolved` フラグ）
+- [x] メアド重複検出・DUPLICATE画面表示・保存ブロック
+- [x] encounters テーブルで複数出会い履歴を管理
+- [x] Contact詳細に出会い履歴セクション追加
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）

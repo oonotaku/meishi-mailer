@@ -16,7 +16,9 @@ No test framework is configured.
 
 **meishi-mailer** is a mobile-first business card scanner that OCRs card photos, auto-generates/sends Japanese thank-you emails, and supports team sharing of contacts.
 
-**Core flow:** Photo capture → `/api/analyze` (Claude Vision OCR + email generation) → `/api/contacts/save` (Supabase Storage + `contacts` table) → `/api/send` (SendGrid) → mark `mail_sent_at`
+**Core flow (通常):** Photo capture → `/api/analyze` (Claude Vision OCR + email generation) → `/api/contacts/save` (Supabase Storage + `contacts` table + `encounters` テーブルに初回出会いを自動挿入) → `/api/send` (SendGrid) → mark `mail_sent_at`
+
+**Core flow (重複時):** Photo capture → `/api/analyze` (重複検出: `duplicates` 配列返却) → DUPLICATE画面表示 → 「この出会いを記録する」 → CONTEXT入力 → `/api/encounters/save` (encountersテーブルに追記、必要に応じてメール送信)
 
 ### Data access pattern
 
@@ -26,9 +28,9 @@ No test framework is configured.
 
 | File | Purpose |
 |------|---------|
-| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR |
+| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。DUPLICATE画面から「この出会いを記録する」でCONTEXTへ進み `encounters/save` を呼ぶ。 |
 | `contacts.js` | Saved contacts list (own + team-shared). Shows team name badge for contacts from other orgs. |
-| `contacts/[id].js` | Contact detail — view, resend email, edit context, toggle visibility. Send/resend buttons shown only to `owner_id === user.id`. |
+| `contacts/[id].js` | Contact detail — view, resend email, edit context, toggle visibility. Send/resend buttons shown only to `owner_id === user.id`. 出会い履歴セクション（encounters）を表示。`/api/encounters/list` から取得し新しい順で一覧表示。 |
 | `login.js` | Email/password login |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows) |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
@@ -41,12 +43,16 @@ No test framework is configured.
 - `POST /api/auth/ensure-profile` — idempotent profile + org setup. Gets all user memberships; if no `role='owner'` exists, creates a new org and registers as owner (invited members also get their own owner org). `current_organization_id` always points to the user's own (owner) org. Returns `organizations` array `[{ organization_id, name, role }, ...]`.
 
 **Contacts**
-- `POST /api/contacts/save` — saves contact; looks up `profiles.current_organization_id` server-side to set `organization_id`
+- `POST /api/contacts/save` — saves contact; looks up `profiles.current_organization_id` server-side to set `organization_id`. insert成功後、`encounters` テーブルに初回出会いを自動挿入。
 - `GET /api/contacts/list` — returns own contacts (all visibility) + team-shared contacts from all orgs the user belongs to. Includes `organization_name` field on each contact.
 - `POST /api/contacts/update-visibility` — toggles `private`/`team` on a contact (owner only)
 
+**Encounters**
+- `POST /api/encounters/save` — encounter 1件保存。`contact_id` の `owner_id === user.id` を確認してからinsert。
+- `GET /api/encounters/list` — `contact_id` で encounter一覧取得（`met_at` 降順）。owner または チームメンバー（`visibility='team'`）のみアクセス可。
+
 **Core**
-- `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success.
+- `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。
 - `POST /api/send` — requires Bearer token. Fetches `sender_email` + `sendgrid_api_key` from sender's profile and sends via SendGrid. Returns 400 with setup instructions if not configured.
 
 **Billing**
@@ -91,6 +97,12 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - `owner_id` = auth user UUID (not `user_id`)
 - `organization_id` = copied from owner's `profiles.current_organization_id` at save time
 - `visibility` defaults to `'private'`
+
+**`encounters`** — `id, contact_id (FK → contacts.id, CASCADE DELETE), met_at, event_name, location, memo, temperature (hot|normal|watch), created_at`
+- RLS無効（supabaseAdmin経由のみアクセス）
+- `contacts/save` 実行時に初回出会いとして自動挿入される
+- 重複名刺撮影時にDUPLICATE画面から「この出会いを記録する」で追記可能
+- `contacts/[id].js` の出会い履歴セクションで `met_at` 降順表示
 
 Supabase Storage bucket `cards` holds public card images.
 

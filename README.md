@@ -1,13 +1,16 @@
 # 名刺メーラー
 
-名刺を撮影するだけでお礼メールを自動送信し、チームで共有できるWebアプリ。
+名刺を撮影するだけでお礼メールを自動送信し、出会いの履歴をチームで管理できるWebアプリ。
 
 ## 機能
 
 - 名刺撮影（最大3枚）→ Claude Vision OCR → お礼メール自動生成・送信
-- 文脈情報（場所・温度感・メモ）の記録
+- 文脈情報（場所・イベント名・温度感・メモ）の記録
+- **重複検出**: 同じメールアドレスの名刺は自動検出し、新たな出会いを追記
+- **出会い履歴**: 同一人物と複数回会うたびに履歴として蓄積
 - チーム管理・メンバー招待
 - 名刺の共有範囲設定（自分だけ / チーム全体）
+- Free / Pro プラン（Stripe課金）
 
 ## セットアップ
 
@@ -24,14 +27,14 @@ ANTHROPIC_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-GMAIL_USER=
-GMAIL_APP_PASSWORD=
 NEXT_PUBLIC_SITE_URL=https://meishi-mailer-mu.vercel.app
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_PRO_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase Dashboard → Settings → API → service_role key
-- `GMAIL_APP_PASSWORD` — Googleアカウント → セキュリティ → アプリパスワード で発行
-- `NEXT_PUBLIC_SITE_URL` — Vercelデプロイ後の本番URL（招待メールのリンクに使用）
+SendGrid APIキーと送信元メールアドレスはユーザーごとに `/settings/profile` から設定します（環境変数不要）。
 
 ## Supabase セットアップ
 
@@ -53,6 +56,13 @@ create table profiles (
   email text,
   name text,
   current_organization_id uuid references organizations(id),
+  sender_email text,
+  sendgrid_api_key text,
+  plan text default 'free',
+  scan_count_month int default 0,
+  scan_count_reset_at timestamptz,
+  stripe_customer_id text,
+  stripe_subscription_id text,
   created_at timestamptz default now()
 );
 
@@ -88,42 +98,37 @@ create table contacts (
   visibility text not null default 'private' check (visibility in ('private', 'team')),
   created_at timestamptz default now()
 );
+
+-- 出会い履歴（1 Contact に複数紐付け可）
+create table encounters (
+  id uuid default gen_random_uuid() primary key,
+  contact_id uuid references contacts(id) on delete cascade not null,
+  met_at date,
+  event_name text,
+  location text,
+  memo text,
+  temperature text default 'normal',
+  created_at timestamptz default now()
+);
+-- ※ encounters は RLS 無効で OK（supabaseAdmin経由のAPI routeのみアクセス）
 ```
 
 ### RLSポリシー
 
 ```sql
--- RLS有効化
 alter table profiles enable row level security;
 alter table contacts enable row level security;
 alter table organizations enable row level security;
 alter table user_organizations enable row level security;
 
--- profiles: 自分のプロフィールのみ読み書き可
-create policy "select own profile"
-  on profiles for select using (auth.uid() = id);
+create policy "select own profile" on profiles for select using (auth.uid() = id);
+create policy "insert own profile" on profiles for insert with check (auth.uid() = id);
+create policy "update own profile" on profiles for update using (auth.uid() = id);
 
-create policy "insert own profile"
-  on profiles for insert with check (auth.uid() = id);
-
-create policy "update own profile"
-  on profiles for update using (auth.uid() = id);
-
--- contacts: 自分のContactのみ読み書き可（チーム共有はAPI route経由）
-create policy "select own contacts"
-  on contacts for select using (auth.uid() = owner_id);
-
-create policy "insert own contacts"
-  on contacts for insert with check (auth.uid() = owner_id);
-
-create policy "update own contacts"
-  on contacts for update using (auth.uid() = owner_id);
-
-create policy "delete own contacts"
-  on contacts for delete using (auth.uid() = owner_id);
-
--- organizations / user_organizations はsupabaseAdmin（API route）経由のみ操作
--- クライアントからのアクセスは不要なのでポリシー不要（またはdenyのまま）
+create policy "select own contacts" on contacts for select using (auth.uid() = owner_id);
+create policy "insert own contacts" on contacts for insert with check (auth.uid() = owner_id);
+create policy "update own contacts" on contacts for update using (auth.uid() = owner_id);
+create policy "delete own contacts" on contacts for delete using (auth.uid() = owner_id);
 ```
 
 > **注意**: `user_organizations` のRLSにrecursiveなポリシーを設定すると400エラーが発生します。
@@ -149,24 +154,13 @@ npm run dev
 
 http://localhost:3000 にアクセス。
 
-スマホ（同じWi-Fi）からアクセスする場合：
-```
-http://<PCのIPアドレス>:3000
-```
-
-## Vercelデプロイ
-
-```bash
-npm i -g vercel
-vercel --prod
-```
-
-Vercel環境変数に上記の環境変数をすべて設定する（`vercel env add` または Dashboard）。
-
 ## 技術スタック
 
-- **フロントエンド**: Next.js 14 (Pages Router)
-- **デプロイ**: Vercel
-- **DB / Auth / Storage**: Supabase
-- **AI**: Anthropic Claude API (claude-opus-4-5)
-- **メール送信**: Nodemailer + Gmail SMTP
+| 項目 | 技術 |
+|---|---|
+| フロントエンド | Next.js 14 (Pages Router) |
+| デプロイ | Vercel |
+| DB / Auth / Storage | Supabase |
+| AI | Anthropic Claude API (claude-opus-4-5) |
+| メール送信 | SendGrid（ユーザーごとにAPIキー設定） |
+| 課金 | Stripe（Free/Pro、¥980/月） |
