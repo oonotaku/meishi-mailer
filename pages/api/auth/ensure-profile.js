@@ -75,10 +75,10 @@ export default async function handler(req, res) {
 
   if (profileErr) return res.status(500).json({ error: profileErr.message })
 
-  // plan / scan_count_month を別 SELECT で取得（カラム追加前の環境でも upsert が壊れないよう分離）
+  // plan / scan_count_month / smtp 設定を別 SELECT で取得（カラム追加前の環境でも upsert が壊れないよう分離）
   const { data: billingData } = await supabaseAdmin
     .from('profiles')
-    .select('plan, scan_count_month')
+    .select('plan, scan_count_month, smtp_provider, smtp_host, smtp_port, smtp_user')
     .eq('id', user.id)
     .single()
 
@@ -93,6 +93,10 @@ export default async function handler(req, res) {
       ...profile,
       plan: billingData?.plan ?? 'free',
       scan_count_month: billingData?.scan_count_month ?? 0,
+      smtp_provider: billingData?.smtp_provider ?? null,
+      smtp_host: billingData?.smtp_host ?? null,
+      smtp_port: billingData?.smtp_port ?? null,
+      smtp_user: billingData?.smtp_user ?? null,
       organization_id: ownerOrgId,
       role: 'owner',
       organizations,

@@ -9,8 +9,14 @@ import { useRequireAuth } from '../../lib/useRequireAuth'
 export default function ProfileSettings() {
   const { t, i18n } = useTranslation('common')
   const { user, profile, loading: authLoading } = useRequireAuth()
+  const [provider, setProvider] = useState(null)
   const [senderEmail, setSenderEmail] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [gmailUser, setGmailUser] = useState('')
+  const [smtpHost, setSmtpHost] = useState('')
+  const [smtpPort, setSmtpPort] = useState('587')
+  const [smtpUser, setSmtpUser] = useState('')
+  const [smtpPassword, setSmtpPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
   const [localName, setLocalName] = useState(null)
@@ -25,6 +31,24 @@ export default function ProfileSettings() {
   useEffect(() => {
     if (profile !== null && localName === null) {
       setLocalName(profile?.name || '')
+    }
+    if (profile !== null && provider === null) {
+      setProvider(profile?.smtp_provider || 'sendgrid')
+      setSenderEmail(profile?.sender_email || '')
+
+      const isCustom = profile?.smtp_provider === 'custom' || profile?.smtp_provider === 'other'
+      const isGmail = profile?.smtp_provider === 'gmail'
+
+      setGmailUser(isGmail ? (profile?.smtp_user || '') : '')
+      setSmtpHost(isCustom ? (profile?.smtp_host || '') : '')
+      setSmtpPort(isCustom && profile?.smtp_port ? String(profile.smtp_port) : '587')
+      setSmtpUser(isCustom ? (profile?.smtp_user || '') : '')
+    }
+  }, [profile])
+
+  useEffect(() => {
+    if (profile && profile.smtp_provider) {
+      setProvider(profile.smtp_provider)
     }
   }, [profile])
 
@@ -120,7 +144,13 @@ export default function ProfileSettings() {
     return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
   }
 
-  const isConfigured = !!profile?.sender_email
+  const activeProvider = provider ?? profile?.smtp_provider ?? 'sendgrid'
+  const normalizedProvider = activeProvider === 'other' ? 'custom' : activeProvider
+
+  const currentProvider = profile?.smtp_provider || 'sendgrid'
+  const isConfigured = currentProvider === 'sendgrid'
+    ? !!profile?.sender_email
+    : !!profile?.sender_email && !!profile?.smtp_host
 
   async function handleSave(e) {
     e.preventDefault()
@@ -128,21 +158,34 @@ export default function ProfileSettings() {
     setMsg(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
+
+      const payload = { smtp_provider: normalizedProvider, sender_email: senderEmail }
+
+      if (normalizedProvider === 'sendgrid') {
+        payload.sendgrid_api_key = apiKey
+      } else if (normalizedProvider === 'gmail') {
+        payload.smtp_user = gmailUser
+        payload.smtp_password = smtpPassword
+      } else {
+        payload.smtp_host = smtpHost
+        payload.smtp_port = smtpPort
+        payload.smtp_user = smtpUser
+        payload.smtp_password = smtpPassword
+      }
+
       const r = await fetch('/api/profile/update-email-settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          sender_email: senderEmail,
-          sendgrid_api_key: apiKey,
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
       setMsg({ ok: true, text: t('profile.saved') })
       setApiKey('')
+      setSmtpPassword('')
     } catch (err) {
       setMsg({ ok: false, text: err.message })
     } finally {
@@ -278,50 +321,149 @@ export default function ProfileSettings() {
               </div>
             )}
 
-            <p className="desc">{t('profile.desc')}</p>
-
-            <div className="link-row">
-              <a
-                href="https://sendgrid.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ext-link"
-              >
-                {t('profile.create_account')}
-              </a>
-              <a
-                href="https://app.sendgrid.com/settings/api_keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ext-link"
-              >
-                {t('profile.create_api_key')}
-              </a>
+            {/* プロバイダー選択タブ */}
+            <div className="provider-tabs">
+              {['sendgrid', 'gmail', 'custom'].map(p => {
+                const isCurrentProvider =
+                  profile?.smtp_provider === p ||
+                  (profile?.smtp_provider === 'other' && p === 'custom') ||
+                  (!profile?.smtp_provider && p === 'sendgrid')
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`provider-tab ${normalizedProvider === p ? 'active' : ''}`}
+                    onClick={() => { setProvider(p); setMsg(null) }}
+                  >
+                    {t(`profile.provider_${p}`)}
+                    {isCurrentProvider && (
+                      <span className="in-use-badge">使用中</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
 
             <form onSubmit={handleSave} className="email-form">
+              {/* 全プロバイダー共通: 送信元メール */}
               <label className="field-label">{t('profile.sender_email_label')}</label>
               <input
                 type="email"
                 value={senderEmail}
                 onChange={e => setSenderEmail(e.target.value)}
-                placeholder={profile?.sender_email || 'you@example.com'}
+                placeholder="you@example.com"
                 required
                 className="text-input"
               />
 
-              <label className="field-label" style={{ marginTop: 12 }}>{t('profile.api_key_label')}</label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder={t('profile.api_key_placeholder')}
-                required
-                className="text-input"
-                autoComplete="new-password"
-              />
+              {/* SendGrid */}
+              {normalizedProvider === 'sendgrid' && (
+                <>
+                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.api_key_label')}</label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={e => setApiKey(e.target.value)}
+                    placeholder={t('profile.api_key_placeholder')}
+                    required
+                    className="text-input"
+                    autoComplete="new-password"
+                  />
+                  <p className="caution">{t('profile.caution')}</p>
+                  <div className="link-row" style={{ marginTop: 10 }}>
+                    <a href="https://sendgrid.com" target="_blank" rel="noopener noreferrer" className="ext-link">
+                      {t('profile.create_account')}
+                    </a>
+                    <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="ext-link">
+                      {t('profile.create_api_key')}
+                    </a>
+                  </div>
+                </>
+              )}
 
-              <p className="caution">{t('profile.caution')}</p>
+              {/* Gmail */}
+              {normalizedProvider === 'gmail' && (
+                <>
+                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.gmail_user_label')}</label>
+                  <input
+                    type="email"
+                    value={gmailUser}
+                    onChange={e => setGmailUser(e.target.value)}
+                    placeholder="yourname@gmail.com"
+                    required
+                    className="text-input"
+                  />
+                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.gmail_password_label')}</label>
+                  <input
+                    type="password"
+                    value={smtpPassword}
+                    onChange={e => setSmtpPassword(e.target.value)}
+                    placeholder={t('profile.gmail_password_placeholder')}
+                    required
+                    className="text-input"
+                    autoComplete="new-password"
+                  />
+                  <div className="gmail-guide">
+                    <div className="gmail-step">
+                      <span className="gmail-step-num">①</span>
+                      <span>まず2段階認証を有効にする（未設定の場合）</span>
+                    </div>
+                    <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener noreferrer" className="ext-link">
+                      ↗ 2段階認証を設定する
+                    </a>
+                    <div className="gmail-step" style={{ marginTop: 12 }}>
+                      <span className="gmail-step-num">②</span>
+                      <span>アプリパスワードを発行する（16桁の英字）</span>
+                    </div>
+                    <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="ext-link">
+                      ↗ アプリパスワードを発行する
+                    </a>
+                  </div>
+                </>
+              )}
+
+              {/* カスタムSMTP */}
+              {normalizedProvider === 'custom' && (
+                <>
+                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_host_label')}</label>
+                  <input
+                    type="text"
+                    value={smtpHost}
+                    onChange={e => setSmtpHost(e.target.value)}
+                    placeholder={t('profile.smtp_host_placeholder')}
+                    required
+                    className="text-input"
+                  />
+                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_port_label')}</label>
+                  <input
+                    type="number"
+                    value={smtpPort}
+                    onChange={e => setSmtpPort(e.target.value)}
+                    placeholder="587"
+                    required
+                    className="text-input"
+                  />
+                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_user_label')}</label>
+                  <input
+                    type="text"
+                    value={smtpUser}
+                    onChange={e => setSmtpUser(e.target.value)}
+                    placeholder="user@example.com"
+                    required
+                    className="text-input"
+                  />
+                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_password_label')}</label>
+                  <input
+                    type="password"
+                    value={smtpPassword}
+                    onChange={e => setSmtpPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="text-input"
+                    autoComplete="new-password"
+                  />
+                </>
+              )}
 
               {msg && (
                 <div className={`msg ${msg.ok ? 'success' : 'error'}`}>{msg.text}</div>
@@ -645,6 +787,62 @@ export default function ProfileSettings() {
           transition: opacity .15s;
         }
         .ext-link:active { opacity: .7; }
+
+        .provider-tabs {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 1.25rem;
+        }
+        .provider-tab {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 6px 12px;
+          background: none;
+          border: 1px solid #1e1e2a;
+          border-radius: 8px;
+          color: #5a5650;
+          font-size: 12px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          transition: color .15s, border-color .15s;
+        }
+        .provider-tab.active {
+          border-color: #7b9e87;
+          color: #f0ede8;
+        }
+        .provider-tab:hover:not(.active) { color: #f0ede8; }
+        .in-use-badge {
+          font-size: 9px;
+          padding: 1px 5px;
+          border-radius: 999px;
+          background: #0d1f15;
+          color: #7b9e87;
+          border: 1px solid #1a3525;
+          font-family: 'DM Mono', monospace;
+        }
+
+        .gmail-guide {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 1.25rem;
+        }
+        .gmail-step {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          font-size: 12px;
+          color: #5a5650;
+          line-height: 1.6;
+        }
+        .gmail-step-num {
+          color: #7b9e87;
+          font-family: 'DM Mono', monospace;
+          font-size: 11px;
+          flex-shrink: 0;
+          margin-top: 1px;
+        }
 
         .email-form {
           display: flex;
