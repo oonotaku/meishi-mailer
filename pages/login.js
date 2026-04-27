@@ -130,12 +130,22 @@ export default function Login() {
             {mode === 'register' && (
               <p className="privacy-notice">
                 {i18n.language === 'en'
-                  ? <>By signing up, you agree to our <a href="/privacy" className="privacy-link">Privacy Policy</a>.</>
-                  : <>登録することで<a href="/privacy" className="privacy-link">プライバシーポリシー</a>に同意したことになります。</>
+                  ? <>By signing up, you agree to our <a href="/privacy" className="privacy-link">Privacy Policy</a> and <a href="/terms" className="privacy-link">Terms of Service</a>.</>
+                  : <>登録することで<a href="/privacy" className="privacy-link">プライバシーポリシー</a>と<a href="/terms" className="privacy-link">利用規約</a>に同意したことになります。</>
                 }
               </p>
             )}
           </form>
+        </div>
+
+        <div className="page-footer">
+          <a href="/privacy" className="footer-link">
+            {i18n.language === 'en' ? 'Privacy Policy' : 'プライバシーポリシー'}
+          </a>
+          <span className="footer-sep">·</span>
+          <a href="/terms" className="footer-link">
+            {i18n.language === 'en' ? 'Terms of Service' : '利用規約'}
+          </a>
         </div>
       </div>
 
@@ -300,6 +310,26 @@ export default function Login() {
           text-decoration: underline;
         }
         .privacy-link:hover { color: #7b9e87; }
+        .page-footer {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;
+          padding: 0 1.5rem 2rem;
+        }
+        .footer-link {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          text-decoration: none;
+          letter-spacing: .04em;
+        }
+        .footer-link:hover { color: #5a5650; }
+        .footer-sep {
+          font-size: 11px;
+          color: #2a2a3a;
+          font-family: 'DM Mono', monospace;
+        }
       `}</style>
     </>
   )
