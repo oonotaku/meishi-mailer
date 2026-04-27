@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('name, sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password')
+    .select('name, sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email')
     .eq('id', user.id)
     .single()
 
@@ -43,6 +43,35 @@ export default async function handler(req, res) {
       console.error(e)
       const msg = e.response?.body?.errors?.[0]?.message || e.message
       return res.status(500).json({ error: msg })
+    }
+  } else if (provider === 'gmail') {
+    if (!profile?.gmail_refresh_token || !profile?.gmail_email) {
+      return res.status(400).json({
+        error: 'Gmailの連携が未設定です。プロフィール設定からGoogleアカウントを連携してください。',
+      })
+    }
+
+    try {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          type: 'OAuth2',
+          user: profile.gmail_email,
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          refreshToken: profile.gmail_refresh_token,
+        },
+      })
+      await transporter.sendMail({
+        from: profile.gmail_email,
+        to,
+        subject,
+        text: body,
+      })
+      return res.json({ ok: true })
+    } catch (e) {
+      console.error(e)
+      return res.status(500).json({ error: e.message })
     }
   } else {
     if (!profile?.sender_email || !profile?.smtp_host) {

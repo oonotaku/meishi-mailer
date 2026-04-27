@@ -126,6 +126,15 @@ export default function Login() {
                 ? t('login.loading')
                 : mode === 'login' ? t('login.submit_login') : t('login.submit_register')}
             </button>
+
+            {mode === 'register' && (
+              <p className="privacy-notice">
+                {i18n.language === 'en'
+                  ? <>By signing up, you agree to our <a href="/privacy" className="privacy-link">Privacy Policy</a>.</>
+                  : <>登録することで<a href="/privacy" className="privacy-link">プライバシーポリシー</a>に同意したことになります。</>
+                }
+              </p>
+            )}
           </form>
         </div>
       </div>
@@ -279,6 +288,18 @@ export default function Login() {
         }
         .submit-btn:disabled { opacity: .6; cursor: not-allowed; }
         .submit-btn:not(:disabled):active { opacity: .8; }
+        .privacy-notice {
+          margin-top: 12px;
+          font-size: 11px;
+          color: #4a4a5a;
+          text-align: center;
+          line-height: 1.6;
+        }
+        .privacy-link {
+          color: #5a6a7a;
+          text-decoration: underline;
+        }
+        .privacy-link:hover { color: #7b9e87; }
       `}</style>
     </>
   )

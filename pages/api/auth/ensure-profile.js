@@ -78,7 +78,7 @@ export default async function handler(req, res) {
   // plan / scan_count_month / smtp 設定を別 SELECT で取得（カラム追加前の環境でも upsert が壊れないよう分離）
   const { data: billingData } = await supabaseAdmin
     .from('profiles')
-    .select('plan, scan_count_month, smtp_provider, smtp_host, smtp_port, smtp_user')
+    .select('plan, scan_count_month, smtp_provider, smtp_host, smtp_port, smtp_user, gmail_email')
     .eq('id', user.id)
     .single()
 
@@ -97,6 +97,7 @@ export default async function handler(req, res) {
       smtp_host: billingData?.smtp_host ?? null,
       smtp_port: billingData?.smtp_port ?? null,
       smtp_user: billingData?.smtp_user ?? null,
+      gmail_email: billingData?.gmail_email ?? null,
       organization_id: ownerOrgId,
       role: 'owner',
       organizations,

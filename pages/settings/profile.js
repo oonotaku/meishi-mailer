@@ -24,6 +24,8 @@ export default function ProfileSettings() {
   const [nameValue, setNameValue] = useState('')
   const [nameSaving, setNameSaving] = useState(false)
   const [nameMsg, setNameMsg] = useState(null)
+  const [gmailEmail, setGmailEmail] = useState(null)
+  const [gmailDisconnecting, setGmailDisconnecting] = useState(false)
   const [billingLoading, setBillingLoading] = useState(false)
   const [upgradeMsg, setUpgradeMsg] = useState(null)
   const router = useRouter()
@@ -35,6 +37,7 @@ export default function ProfileSettings() {
     if (profile !== null && provider === null) {
       setProvider(profile?.smtp_provider || 'sendgrid')
       setSenderEmail(profile?.sender_email || '')
+      setGmailEmail(profile?.gmail_email || null)
 
       const isCustom = profile?.smtp_provider === 'custom' || profile?.smtp_provider === 'other'
       const isGmail = profile?.smtp_provider === 'gmail'
@@ -55,6 +58,14 @@ export default function ProfileSettings() {
   useEffect(() => {
     if (router.query.upgrade === 'success') {
       setUpgradeMsg(t('billing.upgrade_success'))
+      router.replace('/settings/profile', undefined, { shallow: true })
+    }
+    if (router.query.gmail === 'connected') {
+      setMsg({ ok: true, text: t('profile.gmail_connect_success') })
+      router.replace('/settings/profile', undefined, { shallow: true })
+    }
+    if (router.query.gmail === 'error') {
+      setMsg({ ok: false, text: t('profile.gmail_connect_error') })
       router.replace('/settings/profile', undefined, { shallow: true })
     }
   }, [router.query])
@@ -148,12 +159,42 @@ export default function ProfileSettings() {
   const normalizedProvider = activeProvider === 'other' ? 'custom' : activeProvider
 
   const currentProvider = profile?.smtp_provider || 'sendgrid'
-  const isConfigured = currentProvider === 'sendgrid'
-    ? !!profile?.sender_email
-    : !!profile?.sender_email && !!profile?.smtp_host
+  const isConfigured = currentProvider === 'gmail'
+    ? !!profile?.gmail_email
+    : (currentProvider === 'sendgrid'
+      ? !!profile?.sender_email
+      : !!profile?.sender_email && !!profile?.smtp_host)
+
+  async function handleGmailConnect() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    window.location.href = `/api/auth/gmail/connect?token=${encodeURIComponent(session.access_token)}`
+  }
+
+  async function handleGmailDisconnect() {
+    setGmailDisconnecting(true)
+    setMsg(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/auth/gmail/disconnect', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setGmailEmail(null)
+      setProvider('sendgrid')
+      setMsg({ ok: true, text: t('profile.gmail_disconnect_done') })
+    } catch (err) {
+      setMsg({ ok: false, text: err.message })
+    } finally {
+      setGmailDisconnecting(false)
+    }
+  }
 
   async function handleSave(e) {
     e.preventDefault()
+    if (normalizedProvider === 'gmail') return
     setSaving(true)
     setMsg(null)
     try {
@@ -317,7 +358,10 @@ export default function ProfileSettings() {
 
             {isConfigured && (
               <div className="current-email">
-                {t('profile.current')}<span className="mono">{profile.sender_email}</span>
+                {t('profile.current')}
+                <span className="mono">
+                  {currentProvider === 'gmail' ? profile?.gmail_email : profile?.sender_email}
+                </span>
               </div>
             )}
 
@@ -345,16 +389,20 @@ export default function ProfileSettings() {
             </div>
 
             <form onSubmit={handleSave} className="email-form">
-              {/* 全プロバイダー共通: 送信元メール */}
-              <label className="field-label">{t('profile.sender_email_label')}</label>
-              <input
-                type="email"
-                value={senderEmail}
-                onChange={e => setSenderEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                className="text-input"
-              />
+              {/* Gmail以外: 送信元メール共通入力 */}
+              {normalizedProvider !== 'gmail' && (
+                <>
+                  <label className="field-label">{t('profile.sender_email_label')}</label>
+                  <input
+                    type="email"
+                    value={senderEmail}
+                    onChange={e => setSenderEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    className="text-input"
+                  />
+                </>
+              )}
 
               {/* SendGrid */}
               {normalizedProvider === 'sendgrid' && (
@@ -381,45 +429,36 @@ export default function ProfileSettings() {
                 </>
               )}
 
-              {/* Gmail */}
+              {/* Gmail — OAuth 2.0 */}
               {normalizedProvider === 'gmail' && (
-                <>
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.gmail_user_label')}</label>
-                  <input
-                    type="email"
-                    value={gmailUser}
-                    onChange={e => setGmailUser(e.target.value)}
-                    placeholder="yourname@gmail.com"
-                    required
-                    className="text-input"
-                  />
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.gmail_password_label')}</label>
-                  <input
-                    type="password"
-                    value={smtpPassword}
-                    onChange={e => setSmtpPassword(e.target.value)}
-                    placeholder={t('profile.gmail_password_placeholder')}
-                    required
-                    className="text-input"
-                    autoComplete="new-password"
-                  />
-                  <div className="gmail-guide">
-                    <div className="gmail-step">
-                      <span className="gmail-step-num">①</span>
-                      <span>まず2段階認証を有効にする（未設定の場合）</span>
-                    </div>
-                    <a href="https://myaccount.google.com/signinoptions/two-step-verification" target="_blank" rel="noopener noreferrer" className="ext-link">
-                      ↗ 2段階認証を設定する
-                    </a>
-                    <div className="gmail-step" style={{ marginTop: 12 }}>
-                      <span className="gmail-step-num">②</span>
-                      <span>アプリパスワードを発行する（16桁の英字）</span>
-                    </div>
-                    <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="ext-link">
-                      ↗ アプリパスワードを発行する
-                    </a>
-                  </div>
-                </>
+                <div className="gmail-oauth-box">
+                  <p className="desc">{t('profile.gmail_connect_desc')}</p>
+                  {gmailEmail ? (
+                    <>
+                      <div className="gmail-oauth-connected">
+                        <span className="gmail-oauth-check">✓</span>
+                        <span className="mono">{gmailEmail}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="gmail-disconnect-btn"
+                        onClick={handleGmailDisconnect}
+                        disabled={gmailDisconnecting}
+                      >
+                        {gmailDisconnecting ? '解除中...' : t('profile.gmail_disconnect_btn')}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="gmail-connect-btn"
+                      onClick={handleGmailConnect}
+                    >
+                      <span className="google-g">G</span>
+                      {t('profile.gmail_connect_btn')}
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* カスタムSMTP */}
@@ -469,11 +508,19 @@ export default function ProfileSettings() {
                 <div className={`msg ${msg.ok ? 'success' : 'error'}`}>{msg.text}</div>
               )}
 
-              <button type="submit" className="save-btn" disabled={saving}>
-                {saving ? t('profile.saving') : t('profile.save')}
-              </button>
+              {normalizedProvider !== 'gmail' && (
+                <button type="submit" className="save-btn" disabled={saving}>
+                  {saving ? t('profile.saving') : t('profile.save')}
+                </button>
+              )}
             </form>
           </div>
+        </div>
+
+        <div className="page-footer">
+          <a href="/privacy" className="privacy-link">
+            {i18n.language === 'en' ? 'Privacy Policy' : 'プライバシーポリシー'}
+          </a>
         </div>
       </div>
 
@@ -822,27 +869,66 @@ export default function ProfileSettings() {
           font-family: 'DM Mono', monospace;
         }
 
-        .gmail-guide {
+        .gmail-oauth-box {
           display: flex;
           flex-direction: column;
-          gap: 6px;
-          margin-bottom: 1.25rem;
+          gap: 12px;
+          margin-top: 4px;
         }
-        .gmail-step {
+        .gmail-oauth-connected {
           display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          font-size: 12px;
-          color: #5a5650;
-          line-height: 1.6;
+          align-items: center;
+          gap: 10px;
+          background: #0d1f15;
+          border: 1px solid #1a3525;
+          border-radius: 10px;
+          padding: 12px 14px;
         }
-        .gmail-step-num {
+        .gmail-oauth-check {
           color: #7b9e87;
-          font-family: 'DM Mono', monospace;
-          font-size: 11px;
+          font-size: 15px;
           flex-shrink: 0;
-          margin-top: 1px;
         }
+        .gmail-connect-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          width: 100%;
+          padding: 14px;
+          background: #12121a;
+          border: 1px solid #2a2a3a;
+          color: #f0ede8;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: border-color .15s;
+        }
+        .gmail-connect-btn:hover { border-color: #4285F4; }
+        .gmail-connect-btn:active { opacity: .8; }
+        .google-g {
+          font-family: 'DM Mono', monospace;
+          font-weight: 700;
+          font-size: 17px;
+          color: #4285F4;
+          line-height: 1;
+        }
+        .gmail-disconnect-btn {
+          width: 100%;
+          padding: 13px;
+          background: transparent;
+          color: #8a4040;
+          border: 1px solid #3a1010;
+          border-radius: 12px;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: background .15s;
+        }
+        .gmail-disconnect-btn:hover:not(:disabled) { background: #1a0808; }
+        .gmail-disconnect-btn:disabled { opacity: .5; cursor: not-allowed; }
 
         .email-form {
           display: flex;
@@ -908,6 +994,18 @@ export default function ProfileSettings() {
         }
         .save-btn:disabled { opacity: .6; cursor: not-allowed; }
         .save-btn:not(:disabled):active { opacity: .8; }
+        .page-footer {
+          padding: 1rem 1.5rem 2rem;
+          text-align: center;
+        }
+        .privacy-link {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          text-decoration: none;
+          letter-spacing: .04em;
+        }
+        .privacy-link:hover { color: #5a5650; }
       `}</style>
     </>
   )
