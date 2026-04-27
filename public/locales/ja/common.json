@@ -235,6 +235,26 @@
     "upgrade_success": "Proプランへのアップグレードが完了しました！",
     "redirecting": "Stripeへ移動中..."
   },
+  "landing": {
+    "login": "ログイン",
+    "cta": "無料で始める",
+    "hero_sub": "AIが名刺を読み取り、会話の内容を覚えて、あなたらしいメールを自動生成します。",
+    "feat1_title": "撮影するだけ",
+    "feat1_body": "名刺を撮影してAIが自動でテキスト抽出",
+    "feat2_title": "メモを添えて",
+    "feat2_body": "会った時の会話や印象をメモ",
+    "feat3_title": "メールが届く",
+    "feat3_body": "AIがパーソナライズされたお礼メールを生成",
+    "pricing_title": "シンプルな料金体系",
+    "free_plan": "Free",
+    "free_scans": "月10回まで",
+    "free_features": "基本機能",
+    "pro_plan": "Pro",
+    "pro_scans": "月100回まで",
+    "pro_price": "¥980 / 月",
+    "pro_features": "全機能",
+    "footer_copy": "© 2026 MeishiMailer"
+  },
   "auth_confirm": {
     "page_title": "パスワード設定 — 名刺メーラー",
     "loading_hint": "招待を確認しています…",

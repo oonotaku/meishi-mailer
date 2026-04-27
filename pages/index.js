@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../lib/supabase'
-import { useRequireAuth } from '../lib/useRequireAuth'
+import { useAuth } from '../lib/useAuth'
 
 const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6, DUPLICATE: 7 }
 
@@ -29,7 +29,7 @@ async function compressImage(file) {
 
 export default function Home() {
   const { t, i18n } = useTranslation('common')
-  const { user, profile, loading: authLoading } = useRequireAuth()
+  const { user, profile, loading: authLoading } = useAuth()
   const [step, setStep] = useState(STEPS.UPLOAD)
   const [images, setImages] = useState([])
   const [contact, setContact] = useState(null)
@@ -365,6 +365,375 @@ export default function Home() {
       <div style={{ width: 32, height: 32, border: '2px solid #1e1e2a', borderTopColor: '#7b9e87', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+  )
+
+  if (!user) return (
+    <>
+      <Head>
+        <title>{i18n.language === 'en' ? 'Card Mailer — AI Business Card Scanner' : '名刺メーラー — AI名刺スキャナー'}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+      </Head>
+
+      <div className="lp-shell">
+        {/* Header */}
+        <header className="lp-header">
+          <span className="lp-logo">MeishiMailer</span>
+          <div className="lp-header-actions">
+            <button className="lp-lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
+            <a href="/login" className="lp-login-btn">{t('landing.login')}</a>
+            <a href="/login" className="lp-cta-btn-sm">{t('landing.cta')}</a>
+          </div>
+        </header>
+
+        {/* Hero */}
+        <section className="lp-hero">
+          <div className="lp-eyebrow">AI BUSINESS CARD SCANNER</div>
+          <h1 className="lp-hero-title">
+            {i18n.language === 'en'
+              ? <>Snap a business card.<br />Send a thank-you. Done.</>
+              : <>名刺を撮るだけで、<br />お礼メールが届く。</>
+            }
+          </h1>
+          <p className="lp-hero-sub">{t('landing.hero_sub')}</p>
+          <a href="/login" className="lp-cta-btn">{t('landing.cta')} →</a>
+        </section>
+
+        {/* Features */}
+        <section className="lp-features">
+          <div className="lp-feat-grid">
+            <div className="lp-feat-card">
+              <div className="lp-feat-icon">📸</div>
+              <h3 className="lp-feat-title">{t('landing.feat1_title')}</h3>
+              <p className="lp-feat-body">{t('landing.feat1_body')}</p>
+            </div>
+            <div className="lp-feat-card">
+              <div className="lp-feat-icon">✍️</div>
+              <h3 className="lp-feat-title">{t('landing.feat2_title')}</h3>
+              <p className="lp-feat-body">{t('landing.feat2_body')}</p>
+            </div>
+            <div className="lp-feat-card">
+              <div className="lp-feat-icon">📧</div>
+              <h3 className="lp-feat-title">{t('landing.feat3_title')}</h3>
+              <p className="lp-feat-body">{t('landing.feat3_body')}</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section className="lp-pricing">
+          <h2 className="lp-section-title">{t('landing.pricing_title')}</h2>
+          <div className="lp-pricing-grid">
+            <div className="lp-plan-card">
+              <div className="lp-plan-name">{t('landing.free_plan')}</div>
+              <div className="lp-plan-price">¥0</div>
+              <ul className="lp-plan-features">
+                <li>{t('landing.free_scans')}</li>
+                <li>{t('landing.free_features')}</li>
+              </ul>
+              <a href="/login" className="lp-plan-btn lp-plan-btn-ghost">{t('landing.cta')}</a>
+            </div>
+            <div className="lp-plan-card lp-plan-card-pro">
+              <div className="lp-plan-badge">Pro</div>
+              <div className="lp-plan-name">{t('landing.pro_plan')}</div>
+              <div className="lp-plan-price">{t('landing.pro_price')}</div>
+              <ul className="lp-plan-features">
+                <li>{t('landing.pro_scans')}</li>
+                <li>{t('landing.pro_features')}</li>
+              </ul>
+              <a href="/login" className="lp-plan-btn lp-plan-btn-primary">{t('landing.cta')}</a>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="lp-footer">
+          <p className="lp-footer-copy">{t('landing.footer_copy')}</p>
+          <div className="lp-footer-links">
+            <a href="/privacy" className="lp-footer-link">
+              {i18n.language === 'en' ? 'Privacy Policy' : 'プライバシーポリシー'}
+            </a>
+            <span className="lp-footer-sep">·</span>
+            <a href="/terms" className="lp-footer-link">
+              {i18n.language === 'en' ? 'Terms of Service' : '利用規約'}
+            </a>
+          </div>
+        </footer>
+      </div>
+
+      <style jsx global>{`
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { background: #0a0a0f; color: #f0ede8; font-family: 'Noto Sans JP', sans-serif; }
+      `}</style>
+      <style jsx>{`
+        .lp-shell {
+          min-height: 100svh;
+          display: flex;
+          flex-direction: column;
+        }
+        /* Header */
+        .lp-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid #1e1e2a;
+          position: sticky;
+          top: 0;
+          background: #0a0a0f;
+          z-index: 10;
+        }
+        .lp-logo {
+          font-family: 'DM Mono', monospace;
+          font-size: 15px;
+          font-weight: 500;
+          color: #7b9e87;
+          letter-spacing: .04em;
+        }
+        .lp-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .lp-lang-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 4px;
+          color: #5a5650;
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          padding: 2px 6px;
+          letter-spacing: .06em;
+        }
+        .lp-lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
+        .lp-login-btn {
+          font-size: 13px;
+          color: #8a8680;
+          text-decoration: none;
+          padding: 6px 12px;
+        }
+        .lp-login-btn:hover { color: #f0ede8; }
+        .lp-cta-btn-sm {
+          font-size: 12px;
+          font-weight: 700;
+          color: #0a0a0f;
+          background: #7b9e87;
+          text-decoration: none;
+          padding: 7px 14px;
+          border-radius: 8px;
+          font-family: 'Noto Sans JP', sans-serif;
+        }
+        .lp-cta-btn-sm:hover { opacity: .9; }
+        /* Hero */
+        .lp-hero {
+          flex: 0 0 auto;
+          padding: 5rem 1.5rem 4rem;
+          max-width: 680px;
+          margin: 0 auto;
+          width: 100%;
+          text-align: center;
+        }
+        .lp-eyebrow {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          letter-spacing: .18em;
+          color: #7b9e87;
+          text-transform: uppercase;
+          margin-bottom: 1.5rem;
+        }
+        .lp-hero-title {
+          font-size: clamp(28px, 7vw, 48px);
+          font-weight: 700;
+          line-height: 1.3;
+          color: #f0ede8;
+          margin-bottom: 1.25rem;
+        }
+        .lp-hero-sub {
+          font-size: 15px;
+          color: #8a8680;
+          line-height: 1.8;
+          margin-bottom: 2.5rem;
+          max-width: 480px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        .lp-cta-btn {
+          display: inline-block;
+          background: #7b9e87;
+          color: #0a0a0f;
+          font-size: 16px;
+          font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          text-decoration: none;
+          padding: 16px 36px;
+          border-radius: 14px;
+          transition: opacity .15s;
+        }
+        .lp-cta-btn:hover { opacity: .9; }
+        /* Features */
+        .lp-features {
+          padding: 3rem 1.5rem;
+          max-width: 720px;
+          margin: 0 auto;
+          width: 100%;
+        }
+        .lp-feat-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 1rem;
+        }
+        .lp-feat-card {
+          background: #0e0e16;
+          border: 1px solid #1e1e2a;
+          border-radius: 14px;
+          padding: 1.75rem 1.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .lp-feat-icon { font-size: 28px; }
+        .lp-feat-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #f0ede8;
+        }
+        .lp-feat-body {
+          font-size: 13px;
+          color: #7a7470;
+          line-height: 1.7;
+        }
+        /* Pricing */
+        .lp-pricing {
+          padding: 3rem 1.5rem 4rem;
+          max-width: 560px;
+          margin: 0 auto;
+          width: 100%;
+          text-align: center;
+        }
+        .lp-section-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: #f0ede8;
+          margin-bottom: 2rem;
+        }
+        .lp-pricing-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+        }
+        .lp-plan-card {
+          background: #0e0e16;
+          border: 1px solid #1e1e2a;
+          border-radius: 14px;
+          padding: 1.75rem 1.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          position: relative;
+          text-align: left;
+        }
+        .lp-plan-card-pro {
+          border-color: #2a3e30;
+          background: #0d1610;
+        }
+        .lp-plan-badge {
+          position: absolute;
+          top: -10px;
+          right: 14px;
+          background: #7b9e87;
+          color: #0a0a0f;
+          font-size: 10px;
+          font-weight: 700;
+          font-family: 'DM Mono', monospace;
+          padding: 2px 8px;
+          border-radius: 4px;
+          letter-spacing: .06em;
+        }
+        .lp-plan-name {
+          font-family: 'DM Mono', monospace;
+          font-size: 12px;
+          letter-spacing: .08em;
+          color: #5a5650;
+          text-transform: uppercase;
+        }
+        .lp-plan-price {
+          font-size: 24px;
+          font-weight: 700;
+          color: #f0ede8;
+        }
+        .lp-plan-features {
+          list-style: none;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          flex: 1;
+        }
+        .lp-plan-features li {
+          font-size: 12px;
+          color: #7a7470;
+        }
+        .lp-plan-features li::before {
+          content: '✓ ';
+          color: #7b9e87;
+        }
+        .lp-plan-btn {
+          display: block;
+          text-align: center;
+          text-decoration: none;
+          padding: 11px;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          margin-top: 6px;
+          transition: opacity .15s;
+        }
+        .lp-plan-btn-ghost {
+          border: 1px solid #2a2a3a;
+          color: #7a7470;
+        }
+        .lp-plan-btn-ghost:hover { border-color: #7b9e87; color: #7b9e87; }
+        .lp-plan-btn-primary {
+          background: #7b9e87;
+          color: #0a0a0f;
+        }
+        .lp-plan-btn-primary:hover { opacity: .9; }
+        /* Footer */
+        .lp-footer {
+          margin-top: auto;
+          padding: 2rem 1.5rem;
+          border-top: 1px solid #1e1e2a;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+        }
+        .lp-footer-copy {
+          font-family: 'DM Mono', monospace;
+          font-size: 11px;
+          color: #3a3a4a;
+        }
+        .lp-footer-links {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .lp-footer-link {
+          font-family: 'DM Mono', monospace;
+          font-size: 11px;
+          color: #3a3a4a;
+          text-decoration: none;
+          letter-spacing: .04em;
+        }
+        .lp-footer-link:hover { color: #5a5650; }
+        .lp-footer-sep {
+          font-size: 11px;
+          color: #2a2a3a;
+          font-family: 'DM Mono', monospace;
+        }
+      `}</style>
+    </>
   )
 
   return (
