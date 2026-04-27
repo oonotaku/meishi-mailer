@@ -521,6 +521,10 @@ export default function ProfileSettings() {
           <a href="/privacy" className="privacy-link">
             {i18n.language === 'en' ? 'Privacy Policy' : 'プライバシーポリシー'}
           </a>
+          <span className="footer-sep">·</span>
+          <a href="/terms" className="privacy-link">
+            {i18n.language === 'en' ? 'Terms of Service' : '利用規約'}
+          </a>
         </div>
       </div>
 
@@ -1006,6 +1010,11 @@ export default function ProfileSettings() {
           letter-spacing: .04em;
         }
         .privacy-link:hover { color: #5a5650; }
+        .footer-sep {
+          font-size: 11px;
+          color: #2a2a3a;
+          font-family: 'DM Mono', monospace;
+        }
       `}</style>
     </>
   )

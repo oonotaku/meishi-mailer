@@ -207,6 +207,11 @@ export default function Privacy() {
             </div>
           ))}
 
+          <div className="footer-links">
+            <Link href="/terms" className="footer-link">
+              {lang === 'ja' ? '利用規約' : 'Terms of Service'}
+            </Link>
+          </div>
           <p className="footer-note">© 2026 node-bee LLC</p>
         </div>
       </div>
@@ -305,12 +310,25 @@ export default function Privacy() {
           font-size: 12px;
           font-family: 'DM Mono', monospace;
         }
+        .footer-links {
+          display: flex;
+          justify-content: center;
+          gap: 16px;
+          margin-top: .5rem;
+        }
+        .footer-link {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          text-decoration: none;
+          letter-spacing: .04em;
+        }
+        .footer-link:hover { color: #5a5650; }
         .footer-note {
           font-size: 11px;
           color: #3a3a4a;
           font-family: 'DM Mono', monospace;
           text-align: center;
-          margin-top: .5rem;
         }
       `}</style>
     </>
