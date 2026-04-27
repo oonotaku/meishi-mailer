@@ -728,6 +728,16 @@ export default function Home() {
             <button className="ghost-btn" onClick={reset}>{t('error.retry')}</button>
           </div>
         )}
+
+        <div className="page-footer">
+          <a href="/privacy" className="footer-link">
+            {i18n.language === 'en' ? 'Privacy Policy' : 'プライバシーポリシー'}
+          </a>
+          <span className="footer-sep">·</span>
+          <a href="/terms" className="footer-link">
+            {i18n.language === 'en' ? 'Terms of Service' : '利用規約'}
+          </a>
+        </div>
       </div>
 
       <style jsx global>{`
@@ -1338,6 +1348,26 @@ export default function Home() {
         .textarea-listening {
           border-color: #e24b4a;
           color: #a08080;
+        }
+        .page-footer {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;
+          padding: 1.5rem 1.5rem 2rem;
+        }
+        .footer-link {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          text-decoration: none;
+          letter-spacing: .04em;
+        }
+        .footer-link:hover { color: #5a5650; }
+        .footer-sep {
+          font-size: 11px;
+          color: #2a2a3a;
+          font-family: 'DM Mono', monospace;
         }
       `}</style>
     </>

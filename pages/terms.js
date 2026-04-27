@@ -192,7 +192,7 @@ export default function Terms() {
 
       <div className="shell">
         <div className="header">
-          <Link href="/" className="back-btn">←</Link>
+          <button className="back-btn" onClick={() => router.back()}>←</button>
           <span className="header-title">{c.title}</span>
           <button className="lang-btn" onClick={switchLocale}>{lang === 'ja' ? 'EN' : 'JA'}</button>
         </div>
