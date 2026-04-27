@@ -33,8 +33,8 @@
     "analyzing_hint": "AI is reading the card..."
   },
   "step": {
-    "confirm": "STEP 1 / 2 — REVIEW",
-    "context": "STEP 2 / 2 — CONTEXT (optional)"
+    "confirm": "STEP 2 / 2 — REVIEW & SEND",
+    "context": "STEP 1 / 2 — CONTEXT (optional)"
   },
   "confirm": {
     "no_email": "No email address found",
@@ -50,6 +50,9 @@
     "temp_label": "Interest level",
     "memo_label": "Quick note",
     "memo_placeholder": "Topics discussed, impressions, next steps...",
+    "analyze_generate": "Analyze & Generate Email →",
+    "mic_start": "Start voice input",
+    "mic_stop": "Stop voice input",
     "send_now": "Send now →",
     "save_later": "Save and send later",
     "back": "← Back"
@@ -113,6 +116,8 @@
     "header": "Saved Contacts",
     "empty": "No saved contacts",
     "capture": "Capture a card",
+    "search_placeholder": "Search by name, company, email or event",
+    "no_results": "No results found",
     "sent": "Sent",
     "unsent": "Unsent",
     "no_name": "(No name)"

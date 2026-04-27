@@ -8,7 +8,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { image, mediaType = 'image/jpeg', capturedAt, locale = 'ja' } = req.body
+  const { image, mediaType = 'image/jpeg', capturedAt, locale = 'ja', memo } = req.body
   if (!image) return res.status(400).json({ error: 'image required' })
 
   // Auth
@@ -102,6 +102,7 @@ Rules:
 - 80–120 words
 - Include anticipation of future connection
 - Signature: Taku Ono (node-bee LLC)`
+      if (memo) mailPrompt += `\n- Conversation notes: "${memo}"\n- Naturally weave these notes into the email body without being pushy`
     } else {
       const greetingStart = sameDay ? '先ほどは' : '先日は'
       mailPrompt = `以下の方への名刺交換お礼メールを作成してください。
@@ -116,6 +117,7 @@ Rules:
 - 本文100〜150字
 - 今後のお付き合いへの期待を含める
 - 署名: 大野 拓（node-bee合同会社）`
+      if (memo) mailPrompt += `\n- 会話メモ：「${memo}」\n- このメモの内容を自然な形でメール本文に盛り込んでください。ただし押しつけがましくならないよう注意してください。`
     }
 
     const mailRes = await client.messages.create({

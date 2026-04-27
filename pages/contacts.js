@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
@@ -11,6 +11,10 @@ export default function Contacts() {
   const { user, profile, loading: authLoading } = useRequireAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [searchResults, setSearchResults] = useState(null) // null = 検索未実行
+  const [searching, setSearching] = useState(false)
+  const debounceRef = useRef(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -27,6 +31,33 @@ export default function Contacts() {
         })
     })
   }, [user])
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    const q = query.trim()
+    if (!q) {
+      setSearchResults(null)
+      setSearching(false)
+      return
+    }
+    setSearching(true)
+    debounceRef.current = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      try {
+        const r = await fetch(`/api/contacts/search?q=${encodeURIComponent(q)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        })
+        const json = await r.json()
+        setSearchResults(json.data || [])
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+    return () => clearTimeout(debounceRef.current)
+  }, [query])
 
   function switchLocale() {
     const next = i18n.language === 'ja' ? 'en' : 'ja'
@@ -63,46 +94,68 @@ export default function Contacts() {
           </div>
         </div>
 
-        {loading && (
+        <div className="search-wrap">
+          <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="search"
+            placeholder={t('contacts.search_placeholder')}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="search-input"
+          />
+          {searching && <div className="search-spinner" />}
+        </div>
+
+        {(loading || (query.trim() && searching)) && (
           <div className="center">
             <div className="spinner" />
           </div>
         )}
 
-        {!loading && contacts.length === 0 && (
-          <div className="empty">
-            <p>{t('contacts.empty')}</p>
-            <button className="upload-btn" onClick={() => router.push('/')}>{t('contacts.capture')}</button>
-          </div>
-        )}
-
-        {!loading && contacts.length > 0 && (
-          <div className="list">
-            {contacts.map(c => {
-              const isOtherTeam = c.organization_id && profile?.organization_id && c.organization_id !== profile.organization_id
-              return (
-                <button key={c.id} className="card" onClick={() => router.push(`/contacts/${c.id}`)}>
-                  <div className="avatar">{initials(c.name)}</div>
-                  <div className="info">
-                    <div className="name">{c.name || t('contacts.no_name')}</div>
-                    <div className="meta">{c.company || '—'}</div>
-                    {isOtherTeam && c.organization_name && (
-                      <div className="team-label">{c.organization_name}</div>
-                    )}
-                  </div>
-                  <div className="badges">
-                    <div className={`vis-badge ${c.visibility === 'team' ? 'team' : 'private'}`}>
-                      {c.visibility === 'team' ? '👥' : '🔒'}
+        {!loading && !searching && (() => {
+          const isSearchActive = query.trim() !== ''
+          const displayContacts = searchResults !== null ? searchResults : contacts
+          if (displayContacts.length === 0 && !isSearchActive) return (
+            <div className="empty">
+              <p>{t('contacts.empty')}</p>
+              <button className="upload-btn" onClick={() => router.push('/')}>{t('contacts.capture')}</button>
+            </div>
+          )
+          if (displayContacts.length === 0 && isSearchActive) return (
+            <div className="empty">
+              <p>{t('contacts.no_results')}</p>
+            </div>
+          )
+          return (
+            <div className="list">
+              {displayContacts.map(c => {
+                const isOtherTeam = c.organization_id && profile?.organization_id && c.organization_id !== profile.organization_id
+                return (
+                  <button key={c.id} className="card" onClick={() => router.push(`/contacts/${c.id}`)}>
+                    <div className="avatar">{initials(c.name)}</div>
+                    <div className="info">
+                      <div className="name">{c.name || t('contacts.no_name')}</div>
+                      <div className="meta">{c.company || '—'}</div>
+                      {isOtherTeam && c.organization_name && (
+                        <div className="team-label">{c.organization_name}</div>
+                      )}
                     </div>
-                    <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
-                      {c.mail_sent_at ? t('contacts.sent') : t('contacts.unsent')}
+                    <div className="badges">
+                      <div className={`vis-badge ${c.visibility === 'team' ? 'team' : 'private'}`}>
+                        {c.visibility === 'team' ? '👥' : '🔒'}
+                      </div>
+                      <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
+                        {c.mail_sent_at ? t('contacts.sent') : t('contacts.unsent')}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })()}
       </div>
 
       <style jsx global>{`
@@ -266,6 +319,42 @@ export default function Contacts() {
         .vis-badge {
           font-size: 12px;
           line-height: 1;
+        }
+
+        .search-wrap {
+          position: relative;
+          display: flex;
+          align-items: center;
+          padding: 0.75rem 1.5rem;
+          border-bottom: 1px solid #1e1e2a;
+          gap: 10px;
+        }
+        .search-icon {
+          color: #3a3a4a;
+          flex-shrink: 0;
+        }
+        .search-input {
+          flex: 1;
+          padding: 8px 10px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 8px;
+          color: #f0ede8;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          outline: none;
+          -webkit-appearance: none;
+        }
+        .search-input:focus { border-color: #7b9e87; }
+        .search-input::placeholder { color: #3a3a4a; }
+        .search-spinner {
+          width: 16px;
+          height: 16px;
+          border: 2px solid #1e1e2a;
+          border-top-color: #7b9e87;
+          border-radius: 50%;
+          animation: spin .7s linear infinite;
+          flex-shrink: 0;
         }
       `}</style>
     </>

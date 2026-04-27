@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
@@ -45,8 +45,17 @@ export default function Home() {
   const [memo, setMemo] = useState('')
   const [duplicates, setDuplicates] = useState([])
   const [duplicateContactId, setDuplicateContactId] = useState(null)
+  const [speechSupported, setSpeechSupported] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [interimText, setInterimText] = useState('')
   const fileRef = useRef()
+  const recognitionRef = useRef(null)
+  const memoBaseRef = useRef('')
   const router = useRouter()
+
+  useEffect(() => {
+    setSpeechSupported(!!(window.SpeechRecognition || window.webkitSpeechRecognition))
+  }, [])
 
   const TEMP_OPTIONS = [
     { value: 'hot',    label: t('temp.hot'),    emoji: '🔥' },
@@ -112,6 +121,7 @@ export default function Home() {
           mediaType: 'image/jpeg',
           capturedAt: new Date().toISOString(),
           locale: i18n.language,
+          ...(memo && { memo }),
         })
       })
       const data = await r.json()
@@ -281,7 +291,58 @@ export default function Home() {
     }
   }
 
+  function toggleVoice() {
+    if (isListening) {
+      recognitionRef.current?.abort()
+      recognitionRef.current = null
+      setIsListening(false)
+      setInterimText('')
+      return
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    const recognition = new SR()
+    recognition.lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US'
+    recognition.continuous = true
+    recognition.interimResults = true
+    memoBaseRef.current = memo
+    recognition.onresult = (e) => {
+      let interim = ''
+      let final = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          final += e.results[i][0].transcript
+        } else {
+          interim += e.results[i][0].transcript
+        }
+      }
+      if (final) {
+        const newBase = memoBaseRef.current
+          ? memoBaseRef.current + ' ' + final
+          : final
+        memoBaseRef.current = newBase
+        setMemo(newBase)
+        setInterimText('')
+      } else {
+        setInterimText(interim)
+      }
+    }
+    recognition.onend = () => { setIsListening(false); setInterimText('') }
+    recognition.onerror = () => { setIsListening(false); setInterimText('') }
+    recognitionRef.current = recognition
+    recognition.start()
+    setIsListening(true)
+  }
+
   function reset() {
+    if (recognitionRef.current) {
+      recognitionRef.current.onresult = null
+      recognitionRef.current.onend = null
+      recognitionRef.current.onerror = null
+      try { recognitionRef.current.abort() } catch {}
+      recognitionRef.current = null
+    }
+    setIsListening(false)
+    setInterimText('')
     setStep(STEPS.UPLOAD)
     setImages([])
     setContact(null)
@@ -369,7 +430,7 @@ export default function Home() {
                 <p className="hint" style={{ textAlign: 'left', marginBottom: 20 }}>
                   {t('home.photo_count', { count: images.length })}
                 </p>
-                <button className="upload-btn" onClick={onAnalyze}>{t('home.analyze')}</button>
+                <button className="upload-btn" onClick={() => setStep(STEPS.CONTEXT)}>{t('home.analyze')}</button>
                 <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
               </>
             )}
@@ -389,7 +450,7 @@ export default function Home() {
         {/* ── ANALYZING ── */}
         {step === STEPS.ANALYZING && (
           <div className="page">
-            <div className="prog-bar"><div className="prog-fill" style={{ width: '40%' }} /></div>
+            <div className="prog-bar"><div className="prog-fill" style={{ width: '60%' }} /></div>
             <div className="status-row">
               <div className="spinner" />
               <span className="status-text">{statusMsg}</span>
@@ -450,7 +511,7 @@ export default function Home() {
         {/* ── CONFIRM ── */}
         {step === STEPS.CONFIRM && (
           <div className="page">
-            <div className="prog-bar"><div className="prog-fill" style={{ width: '60%' }} /></div>
+            <div className="prog-bar"><div className="prog-fill" style={{ width: '80%' }} /></div>
             <div className="step-label">{t('step.confirm')}</div>
 
             <div className="contact-card">
@@ -491,9 +552,10 @@ export default function Home() {
               <textarea value={body} onChange={e => setBody(e.target.value)} className="textarea" rows={7} />
             </div>
 
-            <button className="send-btn" onClick={() => setStep(STEPS.CONTEXT)}>
-              {t('confirm.next')}
+            <button className="send-btn" onClick={onSendNow} disabled={!email && !manualEmail}>
+              {t('context.send_now')}
             </button>
+            <button className="save-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
             <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
           </div>
         )}
@@ -501,15 +563,17 @@ export default function Home() {
         {/* ── CONTEXT ── */}
         {step === STEPS.CONTEXT && (
           <div className="page">
-            <div className="prog-bar"><div className="prog-fill" style={{ width: '80%' }} /></div>
+            <div className="prog-bar"><div className="prog-fill" style={{ width: duplicateContactId ? '80%' : '40%' }} /></div>
             <div className="step-label">{t('step.context')}</div>
 
-            <div className="ctx-name">
-              {contact?.name || '—'}
-              <span className="ctx-company">{contact?.company ? `（${contact.company}）` : ''}</span>
-            </div>
+            {duplicateContactId && (
+              <div className="ctx-name">
+                {contact?.name || '—'}
+                <span className="ctx-company">{contact?.company ? `（${contact.company}）` : ''}</span>
+              </div>
+            )}
 
-            <label className="field-label" style={{ marginTop: 4 }}>{t('context.event_label')}</label>
+            <label className="field-label" style={{ marginTop: duplicateContactId ? 4 : 0 }}>{t('context.event_label')}</label>
             <input
               type="text"
               placeholder={t('context.event_placeholder')}
@@ -541,21 +605,57 @@ export default function Home() {
               ))}
             </div>
 
-            <label className="field-label" style={{ marginTop: 14 }}>{t('context.memo_label')}</label>
+            <div className="memo-label-row">
+              <label className="field-label">{t('context.memo_label')}</label>
+              {speechSupported && (
+                <button
+                  type="button"
+                  className={`mic-btn${isListening ? ' mic-active' : ''}`}
+                  onClick={toggleVoice}
+                  aria-label={t(isListening ? 'context.mic_stop' : 'context.mic_start')}
+                >
+                  {isListening ? (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    </svg>
+                  ) : (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      <line x1="12" y1="19" x2="12" y2="22"/>
+                    </svg>
+                  )}
+                </button>
+              )}
+            </div>
             <textarea
               placeholder={t('context.memo_placeholder')}
-              value={memo}
-              onChange={e => setMemo(e.target.value)}
-              className="textarea"
+              value={isListening && interimText
+                ? (memo ? memo + ' ' + interimText : interimText)
+                : memo}
+              onChange={e => { if (!isListening) setMemo(e.target.value) }}
+              readOnly={isListening}
+              className={`textarea${isListening ? ' textarea-listening' : ''}`}
               rows={3}
             />
 
-            <button className="send-btn" style={{ marginTop: 20 }} onClick={onSendNow}
-              disabled={!email && !manualEmail}>
-              {t('context.send_now')}
-            </button>
-            <button className="save-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
-            <button className="ghost-btn" onClick={() => setStep(STEPS.CONFIRM)}>{t('context.back')}</button>
+            {duplicateContactId ? (
+              <>
+                <button className="send-btn" style={{ marginTop: 20 }} onClick={onSendNow}
+                  disabled={!email && !manualEmail}>
+                  {t('context.send_now')}
+                </button>
+                <button className="save-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
+                <button className="ghost-btn" onClick={() => setStep(STEPS.DUPLICATE)}>{t('context.back')}</button>
+              </>
+            ) : (
+              <>
+                <button className="send-btn" style={{ marginTop: 20 }} onClick={onAnalyze}>
+                  {t('context.analyze_generate')}
+                </button>
+                <button className="ghost-btn" onClick={() => setStep(STEPS.UPLOAD)}>{t('context.back')}</button>
+              </>
+            )}
           </div>
         )}
 
@@ -1197,6 +1297,47 @@ export default function Home() {
           font-size: 12px;
           color: #5a5650;
           text-align: right;
+        }
+
+        .memo-label-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 14px;
+          margin-bottom: 5px;
+        }
+        .memo-label-row .field-label {
+          margin-bottom: 0;
+          margin-top: 0;
+        }
+        .mic-btn {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          background: #12121a;
+          border: 1px solid #2a2a3a;
+          color: #5a5650;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all .15s;
+          flex-shrink: 0;
+        }
+        .mic-btn:hover { border-color: #7b9e87; color: #7b9e87; }
+        .mic-btn.mic-active {
+          background: #2a0808;
+          border-color: #e24b4a;
+          color: #e24b4a;
+          animation: mic-pulse .9s ease-in-out infinite;
+        }
+        @keyframes mic-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(226,75,74,.5); }
+          50% { box-shadow: 0 0 0 6px rgba(226,75,74,0); }
+        }
+        .textarea-listening {
+          border-color: #e24b4a;
+          color: #a08080;
         }
       `}</style>
     </>
