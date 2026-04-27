@@ -39,7 +39,14 @@ export default function ContactDetail() {
 
   useEffect(() => {
     if (!id) return
-    supabase.from('contacts').select('*').eq('id', id).single().then(({ data }) => {
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { setLoading(false); return }
+      const r = await fetch(`/api/contacts/${id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const json = await r.json()
+      const data = json.data
       if (data) {
         setContact(data)
         setSubject(data.subject || '')
@@ -125,6 +132,7 @@ export default function ContactDetail() {
   }
 
   const cardImages = (contact) => {
+    if (contact?.card_signed_urls?.length) return contact.card_signed_urls
     if (contact?.card_image_urls?.length) return contact.card_image_urls
     if (contact?.card_image_url) return [contact.card_image_url]
     return []
