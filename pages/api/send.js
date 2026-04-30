@@ -13,6 +13,51 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;')
 }
 
+async function sendWithGmail(gmailRefreshToken, gmailEmail, { to, subject, text, html }) {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/gmail-callback`
+  )
+  oauth2Client.setCredentials({ refresh_token: gmailRefreshToken })
+
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
+
+  const boundary = 'boundary_' + Date.now()
+  const mimeMessage = [
+    `To: ${to}`,
+    `From: ${gmailEmail}`,
+    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(text || '').toString('base64'),
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(html || text || '').toString('base64'),
+    '',
+    `--${boundary}--`,
+  ].join('\r\n')
+
+  const encodedMessage = Buffer.from(mimeMessage)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+
+  await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw: encodedMessage },
+  })
+}
+
 function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
   const htmlBody = body
     .split('\n')
@@ -110,40 +155,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      console.log('[Gmail] refreshToken exists:', !!profile.gmail_refresh_token)
-      console.log('[Gmail] clientId exists:', !!process.env.GOOGLE_CLIENT_ID)
-      console.log('[Gmail] clientSecret exists:', !!process.env.GOOGLE_CLIENT_SECRET)
-
-      const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/gmail-callback`
-      )
-      oauth2Client.setCredentials({ refresh_token: profile.gmail_refresh_token })
-
-      let accessToken
-      try {
-        const { token } = await oauth2Client.getAccessToken()
-        accessToken = token
-        console.log('[Gmail] accessToken obtained:', !!accessToken, accessToken?.substring(0, 10))
-      } catch (tokenErr) {
-        console.error('[Gmail] getAccessToken failed:', tokenErr.message)
-        throw tokenErr
-      }
-
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          type: 'OAuth2',
-          user: profile.gmail_email,
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          refreshToken: profile.gmail_refresh_token,
-          accessToken,
-        },
-      })
-      await transporter.sendMail({
-        from: profile.gmail_email,
+      await sendWithGmail(profile.gmail_refresh_token, profile.gmail_email, {
         to,
         subject,
         text: body,
