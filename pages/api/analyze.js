@@ -57,16 +57,6 @@ export default async function handler(req, res) {
   const captured = capturedAt ? new Date(capturedAt) : now
   const sameDay = now.toDateString() === captured.toDateString()
 
-  const { data: affiliationRows } = await supabaseAdmin
-    .from('profile_affiliations')
-    .select('company_name, title')
-    .eq('user_id', user.id)
-    .order('order_index', { ascending: true })
-    .limit(1)
-  const primaryAffil = affiliationRows?.[0]
-  const displayName = profile?.name || ''
-  const displayCompany = primaryAffil?.company_name || ''
-
   try {
     // Step 1: OCR
     const ocrRes = await client.messages.create({
@@ -98,10 +88,6 @@ export default async function handler(req, res) {
       }
     }
 
-    const profileUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/p/${user.id}`
-    const signatureJa = `${displayName}${displayCompany ? `（${displayCompany}）` : ''}\n🔗 プロフィール: ${profileUrl}`
-    const signatureEn = `${displayName}${displayCompany ? ` (${displayCompany})` : ''}\n🔗 Profile: ${profileUrl}`
-
     // Step 2: メール生成（ロケール別プロンプト）
     let mailPrompt
     if (locale === 'en') {
@@ -117,8 +103,7 @@ Rules:
 - Start the body with "${greeting}"
 - Professional, warm business English
 - 80–120 words
-- Include anticipation of future connection
-- Signature: ${signatureEn}`
+- Include anticipation of future connection`
       if (memo) mailPrompt += `\n- Conversation notes: "${memo}"\n- Naturally weave these notes into the email body without being pushy`
     } else {
       const greetingStart = sameDay ? '先ほどは' : '先日は'
@@ -132,8 +117,7 @@ Rules:
 - 「。」の後は必ず改行する
 - 丁寧でビジネス的、温かみのある日本語
 - 本文100〜150字
-- 今後のお付き合いへの期待を含める
-- 署名: ${signatureJa}`
+- 今後のお付き合いへの期待を含める`
       if (memo) mailPrompt += `\n- 会話メモ：「${memo}」\n- このメモの内容を自然な形でメール本文に盛り込んでください。ただし押しつけがましくならないよう注意してください。`
     }
 
