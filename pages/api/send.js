@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
 import sgMail from '@sendgrid/mail'
 import nodemailer from 'nodemailer'
+import { google } from 'googleapis'
 
 function escapeHtml(str) {
   if (!str) return ''
@@ -109,6 +110,14 @@ export default async function handler(req, res) {
     }
 
     try {
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/gmail-callback`
+      )
+      oauth2Client.setCredentials({ refresh_token: profile.gmail_refresh_token })
+      const { token: accessToken } = await oauth2Client.getAccessToken()
+
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -117,6 +126,7 @@ export default async function handler(req, res) {
           clientId: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           refreshToken: profile.gmail_refresh_token,
+          accessToken,
         },
       })
       await transporter.sendMail({
