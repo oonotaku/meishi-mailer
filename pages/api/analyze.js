@@ -21,7 +21,10 @@ export default async function handler(req, res) {
   // プランチェック＋スキャン数管理
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('plan, scan_count_month, scan_count_reset_at')
+    .select(`plan, scan_count_month, scan_count_reset_at, name,
+      sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
+      sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
+      sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest`)
     .eq('id', user.id)
     .single()
 
@@ -54,6 +57,16 @@ export default async function handler(req, res) {
   const captured = capturedAt ? new Date(capturedAt) : now
   const sameDay = now.toDateString() === captured.toDateString()
 
+  const { data: affiliationRows } = await supabaseAdmin
+    .from('profile_affiliations')
+    .select('company_name, title')
+    .eq('user_id', user.id)
+    .order('order_index', { ascending: true })
+    .limit(1)
+  const primaryAffil = affiliationRows?.[0]
+  const displayName = profile?.name || ''
+  const displayCompany = primaryAffil?.company_name || ''
+
   try {
     // Step 1: OCR
     const ocrRes = await client.messages.create({
@@ -85,6 +98,10 @@ export default async function handler(req, res) {
       }
     }
 
+    const profileUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/p/${user.id}`
+    const signatureJa = `${displayName}${displayCompany ? `（${displayCompany}）` : ''}\n🔗 プロフィール: ${profileUrl}`
+    const signatureEn = `${displayName}${displayCompany ? ` (${displayCompany})` : ''}\n🔗 Profile: ${profileUrl}`
+
     // Step 2: メール生成（ロケール別プロンプト）
     let mailPrompt
     if (locale === 'en') {
@@ -101,7 +118,7 @@ Rules:
 - Professional, warm business English
 - 80–120 words
 - Include anticipation of future connection
-- Signature: Taku Ono (node-bee LLC)`
+- Signature: ${signatureEn}`
       if (memo) mailPrompt += `\n- Conversation notes: "${memo}"\n- Naturally weave these notes into the email body without being pushy`
     } else {
       const greetingStart = sameDay ? '先ほどは' : '先日は'
@@ -116,7 +133,7 @@ Rules:
 - 丁寧でビジネス的、温かみのある日本語
 - 本文100〜150字
 - 今後のお付き合いへの期待を含める
-- 署名: 大野 拓（node-bee合同会社）`
+- 署名: ${signatureJa}`
       if (memo) mailPrompt += `\n- 会話メモ：「${memo}」\n- このメモの内容を自然な形でメール本文に盛り込んでください。ただし押しつけがましくならないよう注意してください。`
     }
 

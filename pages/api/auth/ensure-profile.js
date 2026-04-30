@@ -78,7 +78,10 @@ export default async function handler(req, res) {
   // plan / scan_count_month / smtp 設定を別 SELECT で取得（カラム追加前の環境でも upsert が壊れないよう分離）
   const { data: billingData } = await supabaseAdmin
     .from('profiles')
-    .select('plan, scan_count_month, smtp_provider, smtp_host, smtp_port, smtp_user, gmail_email')
+    .select(`plan, scan_count_month, smtp_provider, smtp_host, smtp_port, smtp_user, gmail_email,
+      sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
+      sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
+      sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest`)
     .eq('id', user.id)
     .single()
 
@@ -98,6 +101,21 @@ export default async function handler(req, res) {
       smtp_port: billingData?.smtp_port ?? null,
       smtp_user: billingData?.smtp_user ?? null,
       gmail_email: billingData?.gmail_email ?? null,
+      sns_line: billingData?.sns_line ?? null,
+      sns_whatsapp: billingData?.sns_whatsapp ?? null,
+      sns_x: billingData?.sns_x ?? null,
+      sns_instagram: billingData?.sns_instagram ?? null,
+      sns_facebook: billingData?.sns_facebook ?? null,
+      sns_linkedin: billingData?.sns_linkedin ?? null,
+      sns_tiktok: billingData?.sns_tiktok ?? null,
+      sns_youtube: billingData?.sns_youtube ?? null,
+      sns_threads: billingData?.sns_threads ?? null,
+      sns_telegram: billingData?.sns_telegram ?? null,
+      sns_wechat: billingData?.sns_wechat ?? null,
+      sns_discord: billingData?.sns_discord ?? null,
+      sns_github: billingData?.sns_github ?? null,
+      sns_bluesky: billingData?.sns_bluesky ?? null,
+      sns_pinterest: billingData?.sns_pinterest ?? null,
       organization_id: ownerOrgId,
       role: 'owner',
       organizations,

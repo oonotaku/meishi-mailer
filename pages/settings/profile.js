@@ -5,6 +5,52 @@ import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  useSortable, verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+function SortableAffiliationItem({ item, onDelete, onChange }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
+  const style = { transform: CSS.Transform.toString(transform), transition }
+  return (
+    <div ref={setNodeRef} style={style} className="affiliation-item">
+      <span className="drag-handle" {...attributes} {...listeners}>⠿</span>
+      <div className="affiliation-inputs">
+        <input type="text" value={item.company_name}
+          onChange={e => onChange(item.id, 'company_name', e.target.value)}
+          placeholder="会社名・団体名" className="text-input" maxLength={100} />
+        <input type="text" value={item.title || ''}
+          onChange={e => onChange(item.id, 'title', e.target.value)}
+          placeholder="肩書き・役職（任意）" className="text-input"
+          style={{ marginTop: 6 }} maxLength={100} />
+      </div>
+      <button type="button" className="affil-delete-btn" onClick={() => onDelete(item.id)}>✕</button>
+    </div>
+  )
+}
+
+const SNS_FIELDS = [
+  { key: 'sns_line',      label: 'LINE',      placeholder: 'https://line.me/ti/p/...' },
+  { key: 'sns_whatsapp',  label: 'WhatsApp',  placeholder: 'https://wa.me/819012345678' },
+  { key: 'sns_x',         label: 'X',         placeholder: 'https://x.com/username' },
+  { key: 'sns_instagram', label: 'Instagram', placeholder: 'https://instagram.com/username' },
+  { key: 'sns_facebook',  label: 'Facebook',  placeholder: 'https://facebook.com/username' },
+  { key: 'sns_linkedin',  label: 'LinkedIn',  placeholder: 'https://linkedin.com/in/username' },
+  { key: 'sns_tiktok',    label: 'TikTok',    placeholder: 'https://tiktok.com/@username' },
+  { key: 'sns_youtube',   label: 'YouTube',   placeholder: 'https://youtube.com/@channel' },
+  { key: 'sns_threads',   label: 'Threads',   placeholder: 'https://threads.net/@username' },
+  { key: 'sns_telegram',  label: 'Telegram',  placeholder: 'https://t.me/username' },
+  { key: 'sns_wechat',    label: 'WeChat',    placeholder: 'WeChat ID' },
+  { key: 'sns_discord',   label: 'Discord',   placeholder: 'username#0000 または サーバーURL' },
+  { key: 'sns_github',    label: 'GitHub',    placeholder: 'https://github.com/username' },
+  { key: 'sns_bluesky',   label: 'Bluesky',   placeholder: 'https://bsky.app/profile/...' },
+  { key: 'sns_pinterest', label: 'Pinterest', placeholder: 'https://pinterest.com/username' },
+]
 
 export default function ProfileSettings() {
   const { t, i18n } = useTranslation('common')
@@ -28,11 +74,27 @@ export default function ProfileSettings() {
   const [gmailDisconnecting, setGmailDisconnecting] = useState(false)
   const [billingLoading, setBillingLoading] = useState(false)
   const [upgradeMsg, setUpgradeMsg] = useState(null)
+  const [snsValues, setSnsValues] = useState({})
+  const [snsSaving, setSnsSaving] = useState(false)
+  const [snsMsg, setSnsMsg] = useState(null)
+  const [activeTab, setActiveTab] = useState('email')
+  const [affiliations, setAffiliations] = useState([])
+  const [affilSaving, setAffilSaving] = useState(false)
+  const [affilMsg, setAffilMsg] = useState(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
   const router = useRouter()
 
   useEffect(() => {
     if (profile !== null && localName === null) {
       setLocalName(profile?.name || '')
+    }
+    if (profile !== null && Object.keys(snsValues).length === 0) {
+      const initial = {}
+      SNS_FIELDS.forEach(f => { initial[f.key] = profile?.[f.key] || '' })
+      setSnsValues(initial)
     }
     if (profile !== null && provider === null) {
       setProvider(profile?.smtp_provider || 'sendgrid')
@@ -69,6 +131,18 @@ export default function ProfileSettings() {
       router.replace('/settings/profile', undefined, { shallow: true })
     }
   }, [router.query])
+
+  useEffect(() => {
+    if (!user) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      fetch('/api/profile/affiliations', {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      }).then(r => r.json()).then(data => {
+        if (data.affiliations) setAffiliations(data.affiliations)
+      })
+    })
+  }, [user])
 
   function startNameEdit() {
     setNameValue(localName ?? profile?.name ?? '')
@@ -234,6 +308,81 @@ export default function ProfileSettings() {
     }
   }
 
+  function handleDragEnd(event) {
+    const { active, over } = event
+    if (active.id !== over?.id) {
+      setAffiliations(items => {
+        const oldIndex = items.findIndex(i => i.id === active.id)
+        const newIndex = items.findIndex(i => i.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
+  }
+
+  function addAffiliation() {
+    if (affiliations.length >= 5) return
+    setAffiliations(prev => [...prev, { id: `new-${Date.now()}`, company_name: '', title: '' }])
+  }
+
+  function changeAffiliation(id, field, value) {
+    setAffiliations(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a))
+  }
+
+  function deleteAffiliation(id) {
+    setAffiliations(prev => prev.filter(a => a.id !== id))
+  }
+
+  async function handleAffilSave() {
+    const valid = affiliations.filter(a => a.company_name.trim())
+    setAffilSaving(true)
+    setAffilMsg(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/affiliations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ affiliations: valid.map((a, i) => ({
+          company_name: a.company_name.trim(),
+          title: a.title?.trim() || null,
+          order_index: i
+        })) })
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setAffilMsg({ ok: true, text: '保存しました' })
+      setTimeout(() => setAffilMsg(null), 2500)
+    } catch (err) {
+      setAffilMsg({ ok: false, text: err.message })
+    } finally {
+      setAffilSaving(false)
+    }
+  }
+
+  async function handleSnsSave(e) {
+    e.preventDefault()
+    setSnsSaving(true)
+    setSnsMsg(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/update-sns', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(snsValues),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setSnsMsg({ ok: true, text: '保存しました' })
+      setTimeout(() => setSnsMsg(null), 2500)
+    } catch (err) {
+      setSnsMsg({ ok: false, text: err.message })
+    } finally {
+      setSnsSaving(false)
+    }
+  }
+
   return (
     <>
       <Head>
@@ -346,175 +495,281 @@ export default function ProfileSettings() {
             )
           })()}
 
-          <div className="divider" />
+          <div className="tab-bar">
+            {[
+              { key: 'email',       label: 'メール設定' },
+              { key: 'sns',         label: 'SNS' },
+              { key: 'affiliation', label: '所属' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-          <div className="section">
-            <div className="section-header">
-              <div className="section-label">{t('profile.email_settings_label')}</div>
-              <span className={`config-badge ${isConfigured ? 'configured' : 'unconfigured'}`}>
-                {isConfigured ? t('profile.configured') : t('profile.unconfigured')}
-              </span>
-            </div>
-
-            {isConfigured && (
-              <div className="current-email">
-                {t('profile.current')}
-                <span className="mono">
-                  {currentProvider === 'gmail' ? profile?.gmail_email : profile?.sender_email}
+          {activeTab === 'email' && (
+            <div className="section">
+              <div className="section-header">
+                <div className="section-label">{t('profile.email_settings_label')}</div>
+                <span className={`config-badge ${isConfigured ? 'configured' : 'unconfigured'}`}>
+                  {isConfigured ? t('profile.configured') : t('profile.unconfigured')}
                 </span>
               </div>
-            )}
 
-            {/* プロバイダー選択タブ */}
-            <div className="provider-tabs">
-              {['sendgrid', 'gmail', 'custom'].map(p => {
-                const isCurrentProvider =
-                  profile?.smtp_provider === p ||
-                  (profile?.smtp_provider === 'other' && p === 'custom') ||
-                  (!profile?.smtp_provider && p === 'sendgrid')
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    className={`provider-tab ${normalizedProvider === p ? 'active' : ''}`}
-                    onClick={() => { setProvider(p); setMsg(null) }}
-                  >
-                    {t(`profile.provider_${p}`)}
-                    {isCurrentProvider && (
-                      <span className="in-use-badge">使用中</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-
-            <form onSubmit={handleSave} className="email-form">
-              {/* Gmail以外: 送信元メール共通入力 */}
-              {normalizedProvider !== 'gmail' && (
-                <>
-                  <label className="field-label">{t('profile.sender_email_label')}</label>
-                  <input
-                    type="email"
-                    value={senderEmail}
-                    onChange={e => setSenderEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    className="text-input"
-                  />
-                </>
-              )}
-
-              {/* SendGrid */}
-              {normalizedProvider === 'sendgrid' && (
-                <>
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.api_key_label')}</label>
-                  <input
-                    type="password"
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    placeholder={t('profile.api_key_placeholder')}
-                    required
-                    className="text-input"
-                    autoComplete="new-password"
-                  />
-                  <p className="caution">{t('profile.caution')}</p>
-                  <div className="link-row" style={{ marginTop: 10 }}>
-                    <a href="https://sendgrid.com" target="_blank" rel="noopener noreferrer" className="ext-link">
-                      {t('profile.create_account')}
-                    </a>
-                    <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="ext-link">
-                      {t('profile.create_api_key')}
-                    </a>
-                  </div>
-                </>
-              )}
-
-              {/* Gmail — OAuth 2.0 */}
-              {normalizedProvider === 'gmail' && (
-                <div className="gmail-oauth-box">
-                  <p className="desc">{t('profile.gmail_connect_desc')}</p>
-                  {gmailEmail ? (
-                    <>
-                      <div className="gmail-oauth-connected">
-                        <span className="gmail-oauth-check">✓</span>
-                        <span className="mono">{gmailEmail}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="gmail-disconnect-btn"
-                        onClick={handleGmailDisconnect}
-                        disabled={gmailDisconnecting}
-                      >
-                        {gmailDisconnecting ? '解除中...' : t('profile.gmail_disconnect_btn')}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="gmail-connect-btn"
-                      onClick={handleGmailConnect}
-                    >
-                      <span className="google-g">G</span>
-                      {t('profile.gmail_connect_btn')}
-                    </button>
-                  )}
+              {isConfigured && (
+                <div className="current-email">
+                  {t('profile.current')}
+                  <span className="mono">
+                    {currentProvider === 'gmail' ? profile?.gmail_email : profile?.sender_email}
+                  </span>
                 </div>
               )}
 
-              {/* カスタムSMTP */}
-              {normalizedProvider === 'custom' && (
-                <>
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_host_label')}</label>
-                  <input
-                    type="text"
-                    value={smtpHost}
-                    onChange={e => setSmtpHost(e.target.value)}
-                    placeholder={t('profile.smtp_host_placeholder')}
-                    required
-                    className="text-input"
-                  />
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_port_label')}</label>
-                  <input
-                    type="number"
-                    value={smtpPort}
-                    onChange={e => setSmtpPort(e.target.value)}
-                    placeholder="587"
-                    required
-                    className="text-input"
-                  />
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_user_label')}</label>
-                  <input
-                    type="text"
-                    value={smtpUser}
-                    onChange={e => setSmtpUser(e.target.value)}
-                    placeholder="user@example.com"
-                    required
-                    className="text-input"
-                  />
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_password_label')}</label>
-                  <input
-                    type="password"
-                    value={smtpPassword}
-                    onChange={e => setSmtpPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="text-input"
-                    autoComplete="new-password"
-                  />
-                </>
+              {/* プロバイダー選択タブ */}
+              <div className="provider-tabs">
+                {['sendgrid', 'gmail', 'custom'].map(p => {
+                  const isCurrentProvider =
+                    profile?.smtp_provider === p ||
+                    (profile?.smtp_provider === 'other' && p === 'custom') ||
+                    (!profile?.smtp_provider && p === 'sendgrid')
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`provider-tab ${normalizedProvider === p ? 'active' : ''}`}
+                      onClick={() => { setProvider(p); setMsg(null) }}
+                    >
+                      {t(`profile.provider_${p}`)}
+                      {isCurrentProvider && (
+                        <span className="in-use-badge">使用中</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <form onSubmit={handleSave} className="email-form">
+                {/* Gmail以外: 送信元メール共通入力 */}
+                {normalizedProvider !== 'gmail' && (
+                  <>
+                    <label className="field-label">{t('profile.sender_email_label')}</label>
+                    <input
+                      type="email"
+                      value={senderEmail}
+                      onChange={e => setSenderEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      className="text-input"
+                    />
+                  </>
+                )}
+
+                {/* SendGrid */}
+                {normalizedProvider === 'sendgrid' && (
+                  <>
+                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.api_key_label')}</label>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      placeholder={t('profile.api_key_placeholder')}
+                      required
+                      className="text-input"
+                      autoComplete="new-password"
+                    />
+                    <p className="caution">{t('profile.caution')}</p>
+                    <div className="link-row" style={{ marginTop: 10 }}>
+                      <a href="https://sendgrid.com" target="_blank" rel="noopener noreferrer" className="ext-link">
+                        {t('profile.create_account')}
+                      </a>
+                      <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="ext-link">
+                        {t('profile.create_api_key')}
+                      </a>
+                    </div>
+                  </>
+                )}
+
+                {/* Gmail — OAuth 2.0 */}
+                {normalizedProvider === 'gmail' && (
+                  <div className="gmail-oauth-box">
+                    <p className="desc">{t('profile.gmail_connect_desc')}</p>
+                    {gmailEmail ? (
+                      <>
+                        <div className="gmail-oauth-connected">
+                          <span className="gmail-oauth-check">✓</span>
+                          <span className="mono">{gmailEmail}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="gmail-disconnect-btn"
+                          onClick={handleGmailDisconnect}
+                          disabled={gmailDisconnecting}
+                        >
+                          {gmailDisconnecting ? '解除中...' : t('profile.gmail_disconnect_btn')}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="gmail-connect-btn"
+                        onClick={handleGmailConnect}
+                      >
+                        <span className="google-g">G</span>
+                        {t('profile.gmail_connect_btn')}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* カスタムSMTP */}
+                {normalizedProvider === 'custom' && (
+                  <>
+                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_host_label')}</label>
+                    <input
+                      type="text"
+                      value={smtpHost}
+                      onChange={e => setSmtpHost(e.target.value)}
+                      placeholder={t('profile.smtp_host_placeholder')}
+                      required
+                      className="text-input"
+                    />
+                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_port_label')}</label>
+                    <input
+                      type="number"
+                      value={smtpPort}
+                      onChange={e => setSmtpPort(e.target.value)}
+                      placeholder="587"
+                      required
+                      className="text-input"
+                    />
+                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_user_label')}</label>
+                    <input
+                      type="text"
+                      value={smtpUser}
+                      onChange={e => setSmtpUser(e.target.value)}
+                      placeholder="user@example.com"
+                      required
+                      className="text-input"
+                    />
+                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_password_label')}</label>
+                    <input
+                      type="password"
+                      value={smtpPassword}
+                      onChange={e => setSmtpPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="text-input"
+                      autoComplete="new-password"
+                    />
+                  </>
+                )}
+
+                {msg && (
+                  <div className={`msg ${msg.ok ? 'success' : 'error'}`}>{msg.text}</div>
+                )}
+
+                {normalizedProvider !== 'gmail' && (
+                  <button type="submit" className="save-btn" disabled={saving}>
+                    {saving ? t('profile.saving') : t('profile.save')}
+                  </button>
+                )}
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'sns' && (
+            <div className="section">
+              <div className="section-header">
+                <div className="section-label">SNS / 連絡先リンク</div>
+                <span className={`config-badge ${Object.values(snsValues).some(v => v) ? 'configured' : 'unconfigured'}`}>
+                  {Object.values(snsValues).some(v => v) ? '設定済み' : '未設定'}
+                </span>
+              </div>
+
+              {Object.values(snsValues).some(v => v) && (
+                <div className="sns-registered-summary">
+                  {SNS_FIELDS.filter(f => snsValues[f.key]).map(f => (
+                    <span key={f.key} className="sns-registered-pill">✓ {f.label}</span>
+                  ))}
+                </div>
+              )}
+              {!Object.values(snsValues).some(v => v) && (
+                <p className="sns-empty-hint">まだSNSが登録されていません</p>
               )}
 
-              {msg && (
-                <div className={`msg ${msg.ok ? 'success' : 'error'}`}>{msg.text}</div>
-              )}
+              <form onSubmit={handleSnsSave} className="email-form">
+                {SNS_FIELDS.map(f => (
+                  <div key={f.key} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                      <label className="field-label" style={{ margin: 0 }}>{f.label}</label>
+                      {snsValues[f.key] && (
+                        <span className="sns-set-badge">設定済み</span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={snsValues[f.key] || ''}
+                      onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      className={`text-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
+                    />
+                  </div>
+                ))}
 
-              {normalizedProvider !== 'gmail' && (
-                <button type="submit" className="save-btn" disabled={saving}>
-                  {saving ? t('profile.saving') : t('profile.save')}
+                {snsMsg && (
+                  <div className={`msg ${snsMsg.ok ? 'success' : 'error'}`}>{snsMsg.text}</div>
+                )}
+
+                <button type="submit" className="save-btn" disabled={snsSaving}>
+                  {snsSaving ? '保存中...' : '保存する'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'affiliation' && (
+            <div className="section">
+              <div className="section-header">
+                <div className="section-label">所属</div>
+                <span className={`config-badge ${affiliations.length > 0 ? 'configured' : 'unconfigured'}`}>
+                  {affiliations.length > 0 ? `${affiliations.length}件` : '未設定'}
+                </span>
+              </div>
+              <p className="desc" style={{ marginBottom: 14 }}>最大5件。⠿ ドラッグで並び替え可能。</p>
+
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={affiliations.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                  {affiliations.map(item => (
+                    <SortableAffiliationItem
+                      key={item.id}
+                      item={item}
+                      onDelete={deleteAffiliation}
+                      onChange={changeAffiliation}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+
+              {affiliations.length < 5 && (
+                <button type="button" className="add-affil-btn" onClick={addAffiliation}>
+                  + 所属を追加
                 </button>
               )}
-            </form>
-          </div>
+
+              {affilMsg && (
+                <div className={`msg ${affilMsg.ok ? 'success' : 'error'}`}>{affilMsg.text}</div>
+              )}
+
+              <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleAffilSave} disabled={affilSaving}>
+                {affilSaving ? '保存中...' : '保存する'}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="page-footer">
@@ -688,6 +943,52 @@ export default function ProfileSettings() {
         }
         .name-msg.success { background: #0d1f15; border: 1px solid #1a3525; color: #7b9e87; }
         .name-msg.error { background: #1a0a0a; border: 1px solid #2a1010; color: #c08080; }
+        .affiliation-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 12px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          padding: 10px 12px;
+        }
+        .drag-handle {
+          color: #3a3a4a;
+          cursor: grab;
+          font-size: 18px;
+          padding-top: 10px;
+          flex-shrink: 0;
+          user-select: none;
+          letter-spacing: -2px;
+        }
+        .drag-handle:active { cursor: grabbing; }
+        .affiliation-inputs { flex: 1; }
+        .affil-delete-btn {
+          background: none;
+          border: none;
+          color: #4a4a5a;
+          font-size: 14px;
+          cursor: pointer;
+          padding: 8px 4px;
+          flex-shrink: 0;
+          transition: color .15s;
+        }
+        .affil-delete-btn:hover { color: #c08080; }
+        .add-affil-btn {
+          width: 100%;
+          padding: 11px;
+          background: none;
+          border: 1px dashed #2a2a3a;
+          border-radius: 10px;
+          color: #5a5650;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: border-color .15s, color .15s;
+          margin-top: 4px;
+        }
+        .add-affil-btn:hover { border-color: #7b9e87; color: #7b9e87; }
         .hero-email {
           font-size: 12px;
           font-family: 'DM Mono', monospace;
@@ -1014,6 +1315,62 @@ export default function ProfileSettings() {
           font-size: 11px;
           color: #2a2a3a;
           font-family: 'DM Mono', monospace;
+        }
+        .tab-bar {
+          display: flex;
+          gap: 6px;
+          padding: 1rem 1.5rem 0;
+          border-bottom: 1px solid #1e1e2a;
+          margin-bottom: 0;
+        }
+        .tab-btn {
+          padding: 8px 16px;
+          background: none;
+          border: none;
+          border-bottom: 2px solid transparent;
+          color: #5a5650;
+          font-size: 13px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: color .15s, border-color .15s;
+          margin-bottom: -1px;
+        }
+        .tab-btn:hover { color: #f0ede8; }
+        .tab-btn.active {
+          color: #7b9e87;
+          border-bottom-color: #7b9e87;
+        }
+        .sns-registered-summary {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 1.25rem;
+          padding: 12px 14px;
+          background: #0d1f15;
+          border: 1px solid #1a3525;
+          border-radius: 10px;
+        }
+        .sns-registered-pill {
+          font-size: 12px;
+          font-family: 'DM Mono', monospace;
+          color: #7b9e87;
+        }
+        .sns-empty-hint {
+          font-size: 13px;
+          color: #3a3a4a;
+          margin-bottom: 1.25rem;
+        }
+        .sns-set-badge {
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: #0d1f15;
+          color: #7b9e87;
+          border: 1px solid #1a3525;
+        }
+        .sns-input-active {
+          border-color: #2a4a35 !important;
         }
       `}</style>
     </>
