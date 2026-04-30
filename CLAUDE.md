@@ -34,7 +34,8 @@ No test framework is configured.
 | `login.js` | Email/password login |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows) |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
-| `settings/profile.js` | Profile settings — display name, SendGrid API key + sender email configuration, billing plan display + Stripe Checkout/Portal |
+| `settings/profile.js` | Profile settings — tab UI (メール設定 / SNS / 所属). Display name, SendGrid/Gmail/SMTP config, SNS links (15 fields), affiliations (DnD sortable, max 5), billing plan + Stripe Checkout/Portal |
+| `p/[userId].js` | Public profile page — name, affiliations, SNS tap buttons. No auth. `getServerSideProps` + `supabaseAdmin`. |
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -53,7 +54,7 @@ No test framework is configured.
 
 **Core**
 - `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。
-- `POST /api/send` — requires Bearer token. Fetches `sender_email` + `sendgrid_api_key` from sender's profile and sends via SendGrid. Returns 400 with setup instructions if not configured.
+- `POST /api/send` — requires Bearer token. Fetches provider config from profile (`smtp_provider`: `sendgrid` | `gmail` | custom SMTP). Gmail uses `googleapis` `gmail.users.messages.send` REST API (not nodemailer SMTP) — reason: `gmail.send` scope only works with REST API, not SMTP OAuth2. All providers send `text` + `html` (QR-code signature built with `buildHtmlEmail`). Returns 400 with setup instructions if not configured.
 
 **Billing**
 - `POST /api/billing/create-checkout-session` — creates Stripe Checkout session for Pro plan. Reuses existing `stripe_customer_id` if present. `success_url`/`cancel_url` built from request headers.
@@ -68,10 +69,13 @@ No test framework is configured.
 **Profile**
 - `POST /api/profile/update-name` — updates `profiles.name` via supabaseAdmin
 - `POST /api/profile/update-email-settings` — updates `profiles.sender_email` and `profiles.sendgrid_api_key` via supabaseAdmin
+- `POST /api/profile/update-sns` — updates 15 SNS link fields on `profiles`; empty/whitespace strings saved as `null`
+- `GET /api/profile/affiliations` — returns `profile_affiliations` ordered by `order_index` ASC
+- `POST /api/profile/affiliations` — replaces all affiliations (delete-all + insert); max 5 rows, skips entries with empty `company_name`
 
 ### AI model usage
 
-Both API calls in `/api/analyze` use `claude-opus-4-5`. OCR prompt forces JSON-only output. Email template: 100–150 chars, ends with `。`, hardcoded signature `大野 拓（node-bee合同会社）`.
+Both API calls in `/api/analyze` use `claude-opus-4-5`. OCR prompt forces JSON-only output. Email template: 100–150 chars, ends with `。`. No signature in the prompt — signature (QR code + name + affiliation) is added by `send.js` as HTML.
 
 Email generation language follows the UI locale (`Accept-Language` header from client): EN UI → English email, JA UI → Japanese email.
 
@@ -81,9 +85,12 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 
 **`organizations`** — `id, name, created_at`
 
-**`profiles`** — `id, email, name, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
+**`profiles`** — `id, email, name, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
 - `current_organization_id` always points to the org where the user is `owner`
 - `sender_email` + `sendgrid_api_key` are set by the user via `/settings/profile`; `sendgrid_api_key` is never returned to the client
+- `smtp_provider`: `'sendgrid'` (default) | `'gmail'` | `'smtp'`
+- `gmail_refresh_token` / `gmail_email`: set via Gmail OAuth callback; used by `send.js` with googleapis REST API
+- `sns_*` (15 fields): SNS link URLs; `null` when not set
 - `plan`: `'free'` (default) or `'pro'`; updated by Stripe webhook
 - `scan_count_month`: resets when `scan_count_reset_at < startOfMonth`; Free limit=10, Pro limit=100
 - `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
@@ -103,6 +110,12 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - `contacts/save` 実行時に初回出会いとして自動挿入される
 - 重複名刺撮影時にDUPLICATE画面から「この出会いを記録する」で追記可能
 - `contacts/[id].js` の出会い履歴セクションで `met_at` 降順表示
+
+**`profile_affiliations`** — `id, user_id (FK → profiles.id), company_name, title, order_index, created_at`
+- RLS無効（supabaseAdmin経由のみアクセス）
+- `order_index` で表示順管理（最大5件）
+- `/api/profile/affiliations` POST は delete-all + insert のバッチ更新
+- `send.js` と `p/[userId].js` が `order_index ASC` の先頭1件または全件を参照
 
 Supabase Storage bucket `cards` holds public card images.
 
@@ -134,7 +147,7 @@ ANTHROPIC_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_SITE_URL=https://meishi-mailer-mu.vercel.app
+NEXT_PUBLIC_SITE_URL=https://www.meishi-mailer.com
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_PRO_PRICE_ID=price_...

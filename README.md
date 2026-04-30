@@ -8,6 +8,9 @@
 - 文脈情報（場所・イベント名・温度感・メモ）の記録
 - **重複検出**: 同じメールアドレスの名刺は自動検出し、新たな出会いを追記
 - **出会い履歴**: 同一人物と複数回会うたびに履歴として蓄積
+- **公開プロフィールページ** (`/p/[userId]`): SNSタップボタン・所属情報を表示、QRコードでアクセス可能
+- **QRコード付きHTML署名**: 送信メールに自動でQRコード＋プロフィールURLを挿入
+- **プロフィール設定**: SNSリンク15種・所属情報（ドラッグ&ドロップ並び替え、最大5件）
 - チーム管理・メンバー招待
 - 名刺の共有範囲設定（自分だけ / チーム全体）
 - Free / Pro プラン（Stripe課金）
@@ -27,7 +30,7 @@ ANTHROPIC_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_SITE_URL=https://meishi-mailer-mu.vercel.app
+NEXT_PUBLIC_SITE_URL=https://www.meishi-mailer.com
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_PRO_PRICE_ID=price_...
@@ -162,5 +165,5 @@ http://localhost:3000 にアクセス。
 | デプロイ | Vercel |
 | DB / Auth / Storage | Supabase |
 | AI | Anthropic Claude API (claude-opus-4-5) |
-| メール送信 | SendGrid（ユーザーごとにAPIキー設定） |
+| メール送信 | SendGrid / Gmail（OAuth2 REST API） / カスタムSMTP（ユーザーごとに選択・設定） |
 | 課金 | Stripe（Free/Pro、¥980/月） |

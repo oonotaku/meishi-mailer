@@ -81,13 +81,17 @@
 
 ### 3. プロフィール・送信設定・課金 ✅ 完了
 
-**`/settings/profile`**
+**`/settings/profile`**（タブUI: メール設定 / SNS / 所属）
 - ログイン中のメールアドレス・表示名を表示（インライン編集可）
-- SendGrid APIキーと送信元メールアドレスを設定
-- 設定済み/未設定バッジ表示
-- 未設定の場合、メール送信時に設定を促すエラーを返す
+- **メール設定タブ**: SendGrid / Gmail OAuth2 / カスタムSMTP を選択して設定。送信プロバイダーごとに設定フォームを切替表示。未設定の場合、メール送信時に設定を促すエラーを返す
+- **SNSタブ**: LINE / WhatsApp / X / Instagram / Facebook / LinkedIn / TikTok / YouTube / Threads / Telegram / WeChat / Discord / GitHub / Bluesky / Pinterest の15種のSNSリンクを登録。登録済みSNSはサマリーピルで一覧表示
+- **所属タブ**: 会社名・役職を最大5件登録（ドラッグ&ドロップ並び替え対応）。先頭1件がメール署名・プロフィールページの主所属として使われる
 - プランバッジ（Free / Pro）と今月のスキャン使用数バーを表示
 - Stripe Checkout（アップグレード）・Stripe Customer Portal（管理）へのボタン
+
+**公開プロフィールページ（`/p/[userId]`）**
+- 名前・所属（全件）・SNSタップボタンを表示（認証不要）
+- メール送信時にQRコードとしてHTMLメール署名に自動挿入
 
 **Stripe課金（本番稼働中）**
 - Free: 10スキャン/月、Pro: 100スキャン/月（¥980/月）
@@ -165,10 +169,17 @@ Contact詳細（/contacts/[id]）
   - 参加中のチーム: チーム名一覧（読み取り専用）
   ↓
 プロフィール設定（/settings/profile）
-  - ログイン中のメールアドレス・表示名（インライン編集）
-  - SendGrid APIキー・送信元メールアドレス設定
+  - タブUI: メール設定 / SNS / 所属
+  - メール設定: SendGrid / Gmail OAuth2 / カスタムSMTP 選択・設定
+  - SNS: 15種のSNSリンク登録
+  - 所属: 会社名・役職を最大5件（DnD並び替え）
   - プランバッジ・スキャン使用数バー
   - アップグレード（Stripe Checkout）・管理（Stripe Portal）
+  ↓
+公開プロフィール（/p/[userId]）
+  - 認証不要・外部公開
+  - 名前・所属・SNSタップボタン
+  - メール署名のQRコードからアクセス
   ↓
 パスワード設定（/auth/confirm）
   - 招待メール経由のユーザー向け
@@ -186,7 +197,7 @@ Contact詳細（/contacts/[id]）
 | 認証 | Supabase Auth |
 | ストレージ | Supabase Storage (`cards` bucket) |
 | AI | Anthropic Claude API (claude-opus-4-5, Vision + Text) |
-| メール送信 | SendGrid (`@sendgrid/mail`、APIキーはDBにユーザーごとに保存） |
+| メール送信 | SendGrid / Gmail（`googleapis` REST API）/ カスタムSMTP（ユーザーごとに選択・設定）|
 | 課金 | Stripe（本番 sk_live_ / pk_live_、Checkout + Customer Portal + Webhook）|
 | 通知 | 未実装（将来: Vercel Cron + メール/Push）|
 
@@ -204,14 +215,31 @@ profiles (
   email,
   name,
   current_organization_id → organizations,  -- 常に自分がownerのorg
-  sender_email,              -- SendGrid送信元アドレス
+  sender_email,              -- 送信元アドレス（SendGrid/SMTP用）
   sendgrid_api_key,          -- SendGrid APIキー（クライアントには返さない）
+  smtp_provider text,        -- 'sendgrid' | 'gmail' | 'smtp'
+  smtp_host, smtp_port, smtp_user, smtp_password,  -- カスタムSMTP用
+  gmail_refresh_token, gmail_email,                -- Gmail OAuth2用
+  sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
+  sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
+  sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
   plan text,                 -- 'free' | 'pro'  default: 'free'
   scan_count_month int,      -- 今月のスキャン数（月初リセット）
   scan_count_reset_at timestamptz,
   stripe_customer_id text,
   stripe_subscription_id text
 )
+
+-- 所属情報（1ユーザーに最大5件）
+profile_affiliations (
+  id,
+  user_id → profiles,
+  company_name text,
+  title text,
+  order_index int,           -- 表示順（0始まり）
+  created_at
+)
+-- RLS無効。supabaseAdmin経由のAPI routeのみアクセス
 
 -- ユーザー×組織 中間テーブル（多対多）
 user_organizations (user_id → profiles, organization_id → organizations, role text, created_at)
@@ -287,6 +315,11 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] メアド重複検出・DUPLICATE画面表示・保存ブロック
 - [x] encounters テーブルで複数出会い履歴を管理
 - [x] Contact詳細に出会い履歴セクション追加
+- [x] SNSリンク登録（15種）＋公開プロフィールページ（`/p/[userId]`）
+- [x] 所属管理（ドラッグ&ドロップ、最大5件）
+- [x] プロフィール設定タブUI（メール設定 / SNS / 所属）
+- [x] メール署名をQRコード付きHTMLに変更（`buildHtmlEmail` + `api.qrserver.com`）
+- [x] Gmail送信をSMTP → REST API（`googleapis` `gmail.users.messages.send`）に変更
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）
@@ -302,7 +335,7 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 https://github.com/oonotaku/meishi-mailer
 
 ## 本番URL
-https://meishi-mailer-mu.vercel.app
+https://www.meishi-mailer.com
 
 ## ローカル開発
 ```
