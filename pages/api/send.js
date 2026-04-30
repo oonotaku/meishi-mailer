@@ -110,13 +110,26 @@ export default async function handler(req, res) {
     }
 
     try {
+      console.log('[Gmail] refreshToken exists:', !!profile.gmail_refresh_token)
+      console.log('[Gmail] clientId exists:', !!process.env.GOOGLE_CLIENT_ID)
+      console.log('[Gmail] clientSecret exists:', !!process.env.GOOGLE_CLIENT_SECRET)
+
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
         `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/gmail-callback`
       )
       oauth2Client.setCredentials({ refresh_token: profile.gmail_refresh_token })
-      const { token: accessToken } = await oauth2Client.getAccessToken()
+
+      let accessToken
+      try {
+        const { token } = await oauth2Client.getAccessToken()
+        accessToken = token
+        console.log('[Gmail] accessToken obtained:', !!accessToken, accessToken?.substring(0, 10))
+      } catch (tokenErr) {
+        console.error('[Gmail] getAccessToken failed:', tokenErr.message)
+        throw tokenErr
+      }
 
       const transporter = nodemailer.createTransport({
         service: 'gmail',
