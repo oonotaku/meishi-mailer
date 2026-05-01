@@ -41,7 +41,8 @@ No test framework is configured.
 ### API Routes (`pages/api/`)
 
 **Auth**
-- `POST /api/auth/ensure-profile` — idempotent profile + org setup. Gets all user memberships; if no `role='owner'` exists, creates a new org and registers as owner (invited members also get their own owner org). `current_organization_id` always points to the user's own (owner) org. Returns `organizations` array `[{ organization_id, name, role }, ...]`.
+- `POST /api/auth/ensure-profile` — idempotent profile + org setup. Gets all user memberships; if no `role='owner'` exists: (1) upserts `profiles` first to satisfy FK constraint on `user_organizations.user_id → profiles.id`, (2) registers invited org membership from `user.user_metadata?.organization_id || user.app_metadata?.organization_id` (Supabase may store invite metadata in either field), (3) creates a new owner org. `current_organization_id` always points to the user's own (owner) org. Returns `organizations` array `[{ organization_id, name, role }, ...]`.
+- `GET /api/auth/gmail/callback` — Gmail OAuth2 callback. Exchanges authorization code for tokens, fetches Gmail address via userinfo, saves `gmail_refresh_token` + `gmail_email` + `smtp_provider='gmail'` to `profiles`. All `res.redirect()` calls use absolute URL (`NEXT_PUBLIC_SITE_URL || NEXT_PUBLIC_BASE_URL` with `.trim()`) to ensure the user lands on the custom domain even when the callback is processed on a Vercel preview URL.
 
 **Contacts**
 - `POST /api/contacts/save` — saves contact; looks up `profiles.current_organization_id` server-side to set `organization_id`. insert成功後、`encounters` テーブルに初回出会いを自動挿入。
@@ -155,6 +156,13 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Note: SendGrid API keys and sender emails are stored per-user in `profiles.sendgrid_api_key` / `profiles.sender_email` — no server-level email env vars needed.
+
+### Supabase Auth SMTP (インフラ設定)
+Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2026-05-01）。
+- Host: `smtp.gmail.com` / Port: `587`
+- Username: `taku_oono@node-bee.com`（Gmailアプリパスワード）
+- Sender: `info@node-bee.com`
+- 目的: Supabaseデフォルトのメール送信レート制限（招待メールなど）を回避するため。アプリのメール送信（SendGrid/Gmail/SMTP）とは別設定。
 
 ### Stripe (billing)
 - Live keys (`sk_live_`, `pk_live_`) are active in Vercel production as of 2026-04-25

@@ -320,6 +320,9 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] プロフィール設定タブUI（メール設定 / SNS / 所属）
 - [x] メール署名をQRコード付きHTMLに変更（`buildHtmlEmail` + `api.qrserver.com`）
 - [x] Gmail送信をSMTP → REST API（`googleapis` `gmail.users.messages.send`）に変更
+- [x] 招待ユーザーのチームメンバー登録漏れ修正（`app_metadata` フォールバック追加、`profiles` 先行upsertでFK制約23503を解消）
+- [x] Gmail OAuthコールバックのリダイレクトを絶対URLに変更（Vercelプレビュードメインからカスタムドメインのセッションを引き継げなかった問題を修正）
+- [x] Supabase Auth カスタムSMTP設定（smtp.gmail.com）でデフォルトレート制限を回避
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）
