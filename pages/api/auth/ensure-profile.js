@@ -20,6 +20,21 @@ export default async function handler(req, res) {
   let ownerMembership = memberships.find(m => m.role === 'owner')
 
   if (!ownerMembership) {
+    // profilesを先に作成してFK制約を満たす
+    const { data: existingProfileEarly } = await supabaseAdmin
+      .from('profiles')
+      .select('name')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    await supabaseAdmin
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        email: user.email,
+        name: existingProfileEarly?.name || user.email.split('@')[0],
+      }, { onConflict: 'id' })
+
     // 招待経由: metadata の organization_id を member として登録（未登録なら）
     const orgIdFromMeta = user.user_metadata?.organization_id
       || user.app_metadata?.organization_id
