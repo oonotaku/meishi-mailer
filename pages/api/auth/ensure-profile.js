@@ -22,10 +22,18 @@ export default async function handler(req, res) {
   if (!ownerMembership) {
     // 招待経由: metadata の organization_id を member として登録（未登録なら）
     const orgIdFromMeta = user.user_metadata?.organization_id
+      || user.app_metadata?.organization_id
+    console.error('ensure-profile invite debug:', {
+      user_id: user.id,
+      user_metadata: user.user_metadata,
+      app_metadata: user.app_metadata,
+      orgIdFromMeta,
+    })
     if (orgIdFromMeta && !memberships.some(m => m.organization_id === orgIdFromMeta)) {
-      await supabaseAdmin
+      const { error: insertErr } = await supabaseAdmin
         .from('user_organizations')
         .insert({ user_id: user.id, organization_id: orgIdFromMeta, role: 'member' })
+      if (insertErr) console.error('ensure-profile member insert error:', insertErr)
     }
 
     // 自分のチームを新規作成して owner になる
