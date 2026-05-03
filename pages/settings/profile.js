@@ -790,6 +790,49 @@ export default function ProfileSettings() {
               )}
 
               <form onSubmit={handleSnsSave} className="email-form">
+                {SNS_FIELDS.map(f => (
+                  <div key={f.key} className="sns-field">
+                    <div className="sns-field-label">
+                      <span>{f.label}</span>
+                      {snsValues[f.key] && (
+                        <span className="config-badge configured">{t('profile.configured')}</span>
+                      )}
+                    </div>
+
+                    {(f.key === 'sns_line' || f.key === 'sns_whatsapp') ? (
+                      <div>
+                        <button
+                          type="button"
+                          className="qr-scan-btn"
+                          onClick={() => {
+                            setQrTarget(f.key)
+                            setTimeout(() => qrFileRef.current?.click(), 50)
+                          }}
+                        >
+                          {snsValues[f.key] ? '📷 QRコードを更新する' : '📷 QRコードのスクショから読み取る'}
+                        </button>
+                        {snsValues[f.key] && (
+                          <button
+                            type="button"
+                            className="qr-clear-btn"
+                            onClick={() => setSnsValues(prev => ({ ...prev, [f.key]: '' }))}
+                          >
+                            削除
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <input
+                        type="url"
+                        value={snsValues[f.key] || ''}
+                        onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        placeholder={f.placeholder}
+                        className={`text-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
+                      />
+                    )}
+                  </div>
+                ))}
+
                 <input
                   ref={qrFileRef}
                   type="file"
@@ -797,35 +840,6 @@ export default function ProfileSettings() {
                   style={{ display: 'none' }}
                   onChange={handleQrScan}
                 />
-                {SNS_FIELDS.map(f => (
-                  <div key={f.key} style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                      <label className="field-label" style={{ margin: 0 }}>{f.label}</label>
-                      {snsValues[f.key] && (
-                        <span className="sns-set-badge">設定済み</span>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      value={snsValues[f.key] || ''}
-                      onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                      placeholder={f.placeholder}
-                      className={`text-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
-                    />
-                    {(f.key === 'sns_line' || f.key === 'sns_whatsapp') && (
-                      <button
-                        type="button"
-                        className="qr-scan-btn"
-                        onClick={() => {
-                          setQrTarget(f.key)
-                          setTimeout(() => qrFileRef.current?.click(), 50)
-                        }}
-                      >
-                        📷 QRコードのスクショから読み取る
-                      </button>
-                    )}
-                  </div>
-                ))}
 
                 {snsMsg && (
                   <div className={`msg ${snsMsg.ok ? 'success' : 'error'}`}>{snsMsg.text}</div>
@@ -1501,10 +1515,21 @@ export default function ProfileSettings() {
         .sns-input-active {
           border-color: #2a4a35 !important;
         }
+        .sns-field {
+          margin-bottom: 16px;
+        }
+        .sns-field-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 6px;
+          font-size: 13px;
+          color: #a0a0b0;
+          font-weight: 500;
+        }
         .qr-scan-btn {
-          margin-top: 6px;
           width: 100%;
-          padding: 10px;
+          padding: 14px;
           background: none;
           border: 1px dashed #2a2a3a;
           border-radius: 10px;
@@ -1513,11 +1538,24 @@ export default function ProfileSettings() {
           font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
           transition: border-color .15s, background .15s;
+          text-align: center;
         }
         .qr-scan-btn:hover {
           border-color: #7b9e87;
           background: #0d1f15;
         }
+        .qr-clear-btn {
+          margin-top: 6px;
+          background: none;
+          border: none;
+          color: #4a4a5a;
+          font-size: 12px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          padding: 4px 0;
+          transition: color .15s;
+        }
+        .qr-clear-btn:hover { color: #c08080; }
         .bio-textarea {
           resize: none;
           line-height: 1.6;
