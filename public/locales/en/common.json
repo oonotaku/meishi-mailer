@@ -224,7 +224,11 @@
     "name_placeholder": "Enter display name",
     "sig_preview_title": "Signature Preview",
     "sig_preview_desc": "This signature is automatically attached to your emails.",
-    "open_profile": "Open Profile"
+    "open_profile": "Open Profile",
+    "tab_email": "Email Settings",
+    "tab_affiliation": "Affiliations",
+    "sns_label": "SNS / Contact Links",
+    "affil_add": "+ Add Affiliation"
   },
   "sns": {
     "qr_scan": "📷 Scan from QR code screenshot",

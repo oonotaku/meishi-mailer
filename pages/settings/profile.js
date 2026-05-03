@@ -552,9 +552,9 @@ export default function ProfileSettings() {
 
           <div className="tab-bar">
             {[
-              { key: 'email',       label: 'メール設定' },
+              { key: 'email',       label: t('profile.tab_email') },
               { key: 'sns',         label: 'SNS' },
-              { key: 'affiliation', label: '所属' },
+              { key: 'affiliation', label: t('profile.tab_affiliation') },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -786,7 +786,7 @@ export default function ProfileSettings() {
           {activeTab === 'sns' && (
             <div className="section">
               <div className="section-header">
-                <div className="section-label">SNS / 連絡先リンク</div>
+                <div className="section-label">{t('profile.sns_label')}</div>
                 <span className={`config-badge ${Object.values(snsValues).some(v => v) ? 'configured' : 'unconfigured'}`}>
                   {Object.values(snsValues).some(v => v) ? '設定済み' : '未設定'}
                 </span>
@@ -886,7 +886,7 @@ export default function ProfileSettings() {
           {activeTab === 'affiliation' && (
             <div className="section">
               <div className="section-header">
-                <div className="section-label">所属</div>
+                <div className="section-label">{t('profile.tab_affiliation')}</div>
                 <span className={`config-badge ${affiliations.length > 0 ? 'configured' : 'unconfigured'}`}>
                   {affiliations.length > 0 ? `${affiliations.length}件` : '未設定'}
                 </span>
@@ -908,7 +908,7 @@ export default function ProfileSettings() {
 
               {affiliations.length < 5 && (
                 <button type="button" className="add-affil-btn" onClick={addAffiliation}>
-                  + 所属を追加
+                  {t('profile.affil_add')}
                 </button>
               )}
 

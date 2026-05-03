@@ -224,7 +224,11 @@
     "name_placeholder": "表示名を入力",
     "sig_preview_title": "署名プレビュー",
     "sig_preview_desc": "メール送信時に自動で付く署名です。",
-    "open_profile": "プロフィールを開く"
+    "open_profile": "プロフィールを開く",
+    "tab_email": "メール設定",
+    "tab_affiliation": "所属",
+    "sns_label": "SNS / 連絡先リンク",
+    "affil_add": "+ 所属を追加"
   },
   "sns": {
     "qr_scan": "📷 QRコードのスクショから読み取る",
