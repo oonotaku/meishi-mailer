@@ -35,21 +35,21 @@ function SortableAffiliationItem({ item, onDelete, onChange }) {
 }
 
 const SNS_FIELDS = [
-  { key: 'sns_line',      label: 'LINE',      placeholder: 'https://line.me/ti/p/...' },
-  { key: 'sns_whatsapp',  label: 'WhatsApp',  placeholder: 'https://wa.me/819012345678' },
-  { key: 'sns_x',         label: 'X',         placeholder: 'https://x.com/username' },
-  { key: 'sns_instagram', label: 'Instagram', placeholder: 'https://instagram.com/username' },
-  { key: 'sns_facebook',  label: 'Facebook',  placeholder: 'https://facebook.com/username' },
-  { key: 'sns_linkedin',  label: 'LinkedIn',  placeholder: 'https://linkedin.com/in/username' },
-  { key: 'sns_tiktok',    label: 'TikTok',    placeholder: 'https://tiktok.com/@username' },
-  { key: 'sns_youtube',   label: 'YouTube',   placeholder: 'https://youtube.com/@channel' },
-  { key: 'sns_threads',   label: 'Threads',   placeholder: 'https://threads.net/@username' },
-  { key: 'sns_telegram',  label: 'Telegram',  placeholder: 'https://t.me/username' },
-  { key: 'sns_wechat',    label: 'WeChat',    placeholder: 'WeChat ID' },
-  { key: 'sns_discord',   label: 'Discord',   placeholder: 'username#0000 または サーバーURL' },
-  { key: 'sns_github',    label: 'GitHub',    placeholder: 'https://github.com/username' },
-  { key: 'sns_bluesky',   label: 'Bluesky',   placeholder: 'https://bsky.app/profile/...' },
-  { key: 'sns_pinterest', label: 'Pinterest', placeholder: 'https://pinterest.com/username' },
+  { key: 'sns_line',      label: 'LINE',      mode: 'qr' },
+  { key: 'sns_whatsapp',  label: 'WhatsApp',  mode: 'qr' },
+  { key: 'sns_x',         label: 'X',         mode: 'username', base: 'https://x.com/',           prefix: 'x.com/' },
+  { key: 'sns_instagram', label: 'Instagram', mode: 'username', base: 'https://instagram.com/',    prefix: 'instagram.com/' },
+  { key: 'sns_facebook',  label: 'Facebook',  mode: 'username', base: 'https://facebook.com/',     prefix: 'facebook.com/' },
+  { key: 'sns_linkedin',  label: 'LinkedIn',  mode: 'username', base: 'https://linkedin.com/in/',  prefix: 'linkedin.com/in/' },
+  { key: 'sns_tiktok',    label: 'TikTok',    mode: 'username', base: 'https://tiktok.com/@',      prefix: 'tiktok.com/@' },
+  { key: 'sns_youtube',   label: 'YouTube',   mode: 'username', base: 'https://youtube.com/@',     prefix: 'youtube.com/@' },
+  { key: 'sns_threads',   label: 'Threads',   mode: 'username', base: 'https://threads.net/@',     prefix: 'threads.net/@' },
+  { key: 'sns_telegram',  label: 'Telegram',  mode: 'username', base: 'https://t.me/',             prefix: 't.me/' },
+  { key: 'sns_wechat',    label: 'WeChat',    mode: 'url',      placeholder: 'https://...' },
+  { key: 'sns_discord',   label: 'Discord',   mode: 'url',      placeholder: 'https://discord.gg/...' },
+  { key: 'sns_github',    label: 'GitHub',    mode: 'username', base: 'https://github.com/',       prefix: 'github.com/' },
+  { key: 'sns_bluesky',   label: 'Bluesky',   mode: 'username', base: 'https://bsky.app/profile/', prefix: 'bsky.app/profile/' },
+  { key: 'sns_pinterest', label: 'Pinterest', mode: 'username', base: 'https://pinterest.com/',    prefix: 'pinterest.com/' },
 ]
 
 export default function ProfileSettings() {
@@ -97,7 +97,14 @@ export default function ProfileSettings() {
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
-      SNS_FIELDS.forEach(f => { initial[f.key] = profile?.[f.key] || '' })
+      SNS_FIELDS.forEach(f => {
+        const raw = profile?.[f.key] || ''
+        if (f.mode === 'username' && raw.startsWith(f.base)) {
+          initial[f.key] = raw.slice(f.base.length)
+        } else {
+          initial[f.key] = raw
+        }
+      })
       setSnsValues(initial)
     }
     if (profile !== null && provider === null) {
@@ -399,7 +406,14 @@ export default function ProfileSettings() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(snsValues),
+        body: JSON.stringify((() => {
+          const snsPayload = {}
+          SNS_FIELDS.forEach(f => {
+            const val = snsValues[f.key]?.trim() || ''
+            snsPayload[f.key] = (f.mode === 'username' && val) ? f.base + val : val
+          })
+          return snsPayload
+        })()),
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
@@ -790,38 +804,46 @@ export default function ProfileSettings() {
               )}
 
               <form onSubmit={handleSnsSave} className="email-form">
+                <input ref={qrFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleQrScan} />
+
                 {SNS_FIELDS.map(f => (
                   <div key={f.key} className="sns-field">
                     <div className="sns-field-label">
-                      <span>{f.label}</span>
+                      <span className="sns-field-key">{f.label.toUpperCase()}</span>
                       {snsValues[f.key] && (
                         <span className="config-badge configured">{t('profile.configured')}</span>
                       )}
                     </div>
 
-                    {(f.key === 'sns_line' || f.key === 'sns_whatsapp') ? (
+                    {f.mode === 'qr' && (
                       <div>
-                        <button
-                          type="button"
-                          className="qr-scan-btn"
-                          onClick={() => {
-                            setQrTarget(f.key)
-                            setTimeout(() => qrFileRef.current?.click(), 50)
-                          }}
-                        >
+                        <button type="button" className="qr-scan-btn"
+                          onClick={() => { setQrTarget(f.key); setTimeout(() => qrFileRef.current?.click(), 50) }}>
                           {snsValues[f.key] ? '📷 QRコードを更新する' : '📷 QRコードのスクショから読み取る'}
                         </button>
                         {snsValues[f.key] && (
-                          <button
-                            type="button"
-                            className="qr-clear-btn"
-                            onClick={() => setSnsValues(prev => ({ ...prev, [f.key]: '' }))}
-                          >
+                          <button type="button" className="qr-clear-btn"
+                            onClick={() => setSnsValues(prev => ({ ...prev, [f.key]: '' }))}>
                             削除
                           </button>
                         )}
                       </div>
-                    ) : (
+                    )}
+
+                    {f.mode === 'username' && (
+                      <div className="username-input-wrap">
+                        <span className="username-prefix">{f.prefix}</span>
+                        <input
+                          type="text"
+                          value={snsValues[f.key] || ''}
+                          onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                          placeholder="username"
+                          className={`username-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
+                        />
+                      </div>
+                    )}
+
+                    {f.mode === 'url' && (
                       <input
                         type="url"
                         value={snsValues[f.key] || ''}
@@ -832,14 +854,6 @@ export default function ProfileSettings() {
                     )}
                   </div>
                 ))}
-
-                <input
-                  ref={qrFileRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={handleQrScan}
-                />
 
                 {snsMsg && (
                   <div className={`msg ${snsMsg.ok ? 'success' : 'error'}`}>{snsMsg.text}</div>
@@ -1556,6 +1570,37 @@ export default function ProfileSettings() {
           transition: color .15s;
         }
         .qr-clear-btn:hover { color: #c08080; }
+        .username-input-wrap {
+          display: flex;
+          align-items: center;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .username-prefix {
+          padding: 11px 10px 11px 14px;
+          font-size: 12px;
+          color: #5a5650;
+          font-family: 'DM Mono', monospace;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .username-input {
+          flex: 1;
+          padding: 11px 14px 11px 0;
+          background: transparent;
+          border: none;
+          color: #f0ede8;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          outline: none;
+          min-width: 0;
+        }
+        .username-input::placeholder { color: #3a3a4a; }
+        .username-input-wrap:focus-within {
+          border-color: #7b9e87;
+        }
         .bio-textarea {
           resize: none;
           line-height: 1.6;
