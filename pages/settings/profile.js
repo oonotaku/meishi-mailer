@@ -268,7 +268,6 @@ export default function ProfileSettings() {
     }
 
     const handler = (event) => {
-      if (event.origin !== window.location.origin) return
       if (event.data?.type !== 'gmail-oauth') return
       window.removeEventListener('message', handler)
       clearInterval(pollTimer)

@@ -12,7 +12,7 @@ export default function GmailDone() {
     if (window.opener && !window.opener.closed) {
       window.opener.postMessage(
         { type: 'gmail-oauth', status, email: email || '' },
-        window.location.origin
+        '*'
       )
       window.close()
     } else {
