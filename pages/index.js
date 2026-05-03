@@ -57,6 +57,16 @@ export default function Home() {
     setSpeechSupported(!!(window.SpeechRecognition || window.webkitSpeechRecognition))
   }, [])
 
+  useEffect(() => {
+    if (authLoading) return
+    if (router.query.scan !== '1') return
+    // クエリパラメータを除去してからファイル選択を起動
+    router.replace('/', undefined, { shallow: true })
+    setTimeout(() => {
+      if (fileRef.current) fileRef.current.click()
+    }, 300)
+  }, [authLoading, router.query.scan])
+
   const TEMP_OPTIONS = [
     { value: 'hot',    label: t('temp.hot'),    emoji: '🔥' },
     { value: 'normal', label: t('temp.normal'), emoji: '🤝' },

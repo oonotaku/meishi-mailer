@@ -120,7 +120,7 @@ export default function Contacts() {
           if (displayContacts.length === 0 && !isSearchActive) return (
             <div className="empty">
               <p>{t('contacts.empty')}</p>
-              <button className="upload-btn" onClick={() => router.push('/')}>{t('contacts.capture')}</button>
+              <button className="upload-btn" onClick={() => router.push('/?scan=1')}>{t('contacts.capture')}</button>
             </div>
           )
           if (displayContacts.length === 0 && isSearchActive) return (
