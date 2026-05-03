@@ -103,7 +103,8 @@ Rules:
 - Start the body with "${greeting}"
 - Professional, warm business English
 - 80–120 words
-- Include anticipation of future connection`
+- Include anticipation of future connection
+- Do not include a closing signature or sign-off line (e.g. "Warm regards, [Name]") — a signature block is appended automatically`
       if (memo) mailPrompt += `\n- Conversation notes: "${memo}"\n- Naturally weave these notes into the email body without being pushy`
     } else {
       const greetingStart = sameDay ? '先ほどは' : '先日は'
@@ -117,7 +118,8 @@ Rules:
 - 「。」の後は必ず改行する
 - 丁寧でビジネス的、温かみのある日本語
 - 本文100〜150字
-- 今後のお付き合いへの期待を含める`
+- 今後のお付き合いへの期待を含める
+- 末尾に「敬具」「よろしくお願いいたします」などの締め文や署名は入れない（署名は自動で付与される）`
       if (memo) mailPrompt += `\n- 会話メモ：「${memo}」\n- このメモの内容を自然な形でメール本文に盛り込んでください。ただし押しつけがましくならないよう注意してください。`
     }
 
