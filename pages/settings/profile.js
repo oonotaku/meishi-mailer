@@ -37,19 +37,19 @@ function SortableAffiliationItem({ item, onDelete, onChange }) {
 const SNS_FIELDS = [
   { key: 'sns_line',      label: 'LINE',      mode: 'qr' },
   { key: 'sns_whatsapp',  label: 'WhatsApp',  mode: 'qr' },
-  { key: 'sns_x',         label: 'X',         mode: 'username', base: 'https://x.com/',           prefix: 'x.com/',           helpUrl: 'https://x.com/settings/account',               helpText: 'X設定 → ユーザー名' },
-  { key: 'sns_instagram', label: 'Instagram', mode: 'username', base: 'https://instagram.com/',    prefix: 'instagram.com/',    helpUrl: 'https://instagram.com/accounts/edit/',          helpText: 'プロフィール編集 → ユーザーネーム' },
-  { key: 'sns_facebook',  label: 'Facebook',  mode: 'url',      placeholder: 'https://facebook.com/username または profile.php?id=...', helpUrl: 'https://facebook.com/me', helpText: 'PCブラウザで facebook.com/me を開き、リダイレクト後のURLをコピー' },
-  { key: 'sns_linkedin',  label: 'LinkedIn',  mode: 'username', base: 'https://linkedin.com/in/',  prefix: 'linkedin.com/in/',  helpUrl: 'https://linkedin.com/public-profile/settings/', helpText: 'プロフィールURL設定で確認' },
-  { key: 'sns_tiktok',    label: 'TikTok',    mode: 'username', base: 'https://tiktok.com/@',      prefix: 'tiktok.com/@',      helpUrl: 'https://tiktok.com/',                          helpText: 'プロフィール画面のユーザー名（@の後）' },
-  { key: 'sns_youtube',   label: 'YouTube',   mode: 'username', base: 'https://youtube.com/@',     prefix: 'youtube.com/@',     helpUrl: 'https://studio.youtube.com/',                  helpText: 'YouTube Studio → カスタムURL' },
-  { key: 'sns_threads',   label: 'Threads',   mode: 'username', base: 'https://threads.net/@',     prefix: 'threads.net/@',     helpUrl: 'https://threads.net/',                         helpText: 'プロフィール画面のユーザー名' },
-  { key: 'sns_telegram',  label: 'Telegram',  mode: 'username', base: 'https://t.me/',             prefix: 't.me/',             helpUrl: 'https://t.me/',                                helpText: 'Telegram設定 → ユーザー名' },
+  { key: 'sns_x',         label: 'X',         mode: 'username', base: 'https://x.com/',           prefix: 'x.com/',           helpUrl: 'https://x.com/settings/account',               helpKey: 'sns.help_x' },
+  { key: 'sns_instagram', label: 'Instagram', mode: 'username', base: 'https://instagram.com/',    prefix: 'instagram.com/',    helpUrl: 'https://instagram.com/accounts/edit/',          helpKey: 'sns.help_instagram' },
+  { key: 'sns_facebook',  label: 'Facebook',  mode: 'url',      placeholder: 'https://facebook.com/username または profile.php?id=...', helpUrl: 'https://facebook.com/me', helpKey: 'sns.help_facebook' },
+  { key: 'sns_linkedin',  label: 'LinkedIn',  mode: 'username', base: 'https://linkedin.com/in/',  prefix: 'linkedin.com/in/',  helpUrl: 'https://linkedin.com/public-profile/settings/', helpKey: 'sns.help_linkedin' },
+  { key: 'sns_tiktok',    label: 'TikTok',    mode: 'username', base: 'https://tiktok.com/@',      prefix: 'tiktok.com/@',      helpUrl: 'https://tiktok.com/',                          helpKey: 'sns.help_tiktok' },
+  { key: 'sns_youtube',   label: 'YouTube',   mode: 'username', base: 'https://youtube.com/@',     prefix: 'youtube.com/@',     helpUrl: 'https://studio.youtube.com/',                  helpKey: 'sns.help_youtube' },
+  { key: 'sns_threads',   label: 'Threads',   mode: 'username', base: 'https://threads.net/@',     prefix: 'threads.net/@',     helpUrl: 'https://threads.net/',                         helpKey: 'sns.help_threads' },
+  { key: 'sns_telegram',  label: 'Telegram',  mode: 'username', base: 'https://t.me/',             prefix: 't.me/',             helpUrl: 'https://t.me/',                                helpKey: 'sns.help_telegram' },
   { key: 'sns_wechat',    label: 'WeChat',    mode: 'url',      placeholder: 'https://...' },
   { key: 'sns_discord',   label: 'Discord',   mode: 'url',      placeholder: 'https://discord.gg/...' },
-  { key: 'sns_github',    label: 'GitHub',    mode: 'username', base: 'https://github.com/',       prefix: 'github.com/',       helpUrl: 'https://github.com/settings/profile',          helpText: 'プロフィール設定 → Username' },
-  { key: 'sns_bluesky',   label: 'Bluesky',   mode: 'username', base: 'https://bsky.app/profile/', prefix: 'bsky.app/profile/', helpUrl: 'https://bsky.app/settings',                    helpText: 'Settings → Handle' },
-  { key: 'sns_pinterest', label: 'Pinterest', mode: 'username', base: 'https://pinterest.com/',    prefix: 'pinterest.com/',    helpUrl: 'https://pinterest.com/settings/',              helpText: 'プロフィール編集 → ユーザー名' },
+  { key: 'sns_github',    label: 'GitHub',    mode: 'username', base: 'https://github.com/',       prefix: 'github.com/',       helpUrl: 'https://github.com/settings/profile',          helpKey: 'sns.help_github' },
+  { key: 'sns_bluesky',   label: 'Bluesky',   mode: 'username', base: 'https://bsky.app/profile/', prefix: 'bsky.app/profile/', helpUrl: 'https://bsky.app/settings',                    helpKey: 'sns.help_bluesky' },
+  { key: 'sns_pinterest', label: 'Pinterest', mode: 'username', base: 'https://pinterest.com/',    prefix: 'pinterest.com/',    helpUrl: 'https://pinterest.com/settings/',              helpKey: 'sns.help_pinterest' },
 ]
 
 export default function ProfileSettings() {
@@ -388,7 +388,7 @@ export default function ProfileSettings() {
       if (code?.data) {
         setSnsValues(prev => ({ ...prev, [qrTarget]: code.data }))
       } else {
-        alert('QRコードが読み取れませんでした。スクショ全体が写っているか確認してください。')
+        alert(t('sns.qr_error'))
       }
       URL.revokeObjectURL(img.src)
     }
@@ -753,7 +753,7 @@ export default function ProfileSettings() {
                               style={{ display: 'block', border: 0 }}
                             />
                           </a>
-                          <div style={{ fontSize: '10px', color: '#999', textAlign: 'center', marginTop: '4px' }}>プロフィールを開く</div>
+                          <div style={{ fontSize: '10px', color: '#999', textAlign: 'center', marginTop: '4px' }}>{t('profile.open_profile')}</div>
                         </td>
                         <td style={{ verticalAlign: 'middle' }}>
                           {(localName || profile?.name) && (
@@ -819,12 +819,12 @@ export default function ProfileSettings() {
                       <div>
                         <button type="button" className="qr-scan-btn"
                           onClick={() => { setQrTarget(f.key); setTimeout(() => qrFileRef.current?.click(), 50) }}>
-                          {snsValues[f.key] ? '📷 QRコードを更新する' : '📷 QRコードのスクショから読み取る'}
+                          {snsValues[f.key] ? t('sns.qr_update') : t('sns.qr_scan')}
                         </button>
                         {snsValues[f.key] && (
                           <button type="button" className="qr-clear-btn"
                             onClick={() => setSnsValues(prev => ({ ...prev, [f.key]: '' }))}>
-                            削除
+                            {t('sns.qr_delete')}
                           </button>
                         )}
                       </div>
@@ -848,19 +848,26 @@ export default function ProfileSettings() {
                           rel="noopener noreferrer"
                           className="sns-help-link"
                         >
-                          ↗ {f.helpText}
+                          ↗ {t(f.helpKey)}
                         </a>
                       </div>
                     )}
 
                     {f.mode === 'url' && (
-                      <input
-                        type="url"
-                        value={snsValues[f.key] || ''}
-                        onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                        placeholder={f.placeholder}
-                        className={`text-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
-                      />
+                      <div>
+                        <input
+                          type="url"
+                          value={snsValues[f.key] || ''}
+                          onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                          placeholder={f.placeholder}
+                          className={`text-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
+                        />
+                        {f.helpKey && (
+                          <a href={f.helpUrl} target="_blank" rel="noopener noreferrer" className="sns-help-link">
+                            ↗ {t(f.helpKey)}
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}

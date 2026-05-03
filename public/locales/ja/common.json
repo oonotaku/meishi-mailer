@@ -223,7 +223,25 @@
     "name_saved": "表示名を更新しました",
     "name_placeholder": "表示名を入力",
     "sig_preview_title": "署名プレビュー",
-    "sig_preview_desc": "メール送信時に自動で付く署名です。"
+    "sig_preview_desc": "メール送信時に自動で付く署名です。",
+    "open_profile": "プロフィールを開く"
+  },
+  "sns": {
+    "qr_scan": "📷 QRコードのスクショから読み取る",
+    "qr_update": "📷 QRコードを更新する",
+    "qr_delete": "削除",
+    "qr_error": "QRコードが読み取れませんでした。スクショ全体が写っているか確認してください。",
+    "help_x": "X設定 → ユーザー名",
+    "help_instagram": "プロフィール編集 → ユーザーネーム",
+    "help_facebook": "PCブラウザで facebook.com/me を開き、リダイレクト後のURLをコピー",
+    "help_linkedin": "プロフィールURL設定で確認",
+    "help_tiktok": "プロフィール画面のユーザー名（@の後）",
+    "help_youtube": "YouTube Studio → カスタムURL",
+    "help_threads": "プロフィール画面のユーザー名",
+    "help_telegram": "Telegram設定 → ユーザー名",
+    "help_github": "プロフィール設定 → Username",
+    "help_bluesky": "Settings → Handle",
+    "help_pinterest": "プロフィール編集 → ユーザー名"
   },
   "billing": {
     "section_label": "プラン",

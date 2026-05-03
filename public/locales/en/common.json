@@ -223,7 +223,25 @@
     "name_saved": "Display name updated",
     "name_placeholder": "Enter display name",
     "sig_preview_title": "Signature Preview",
-    "sig_preview_desc": "This signature is automatically attached to your emails."
+    "sig_preview_desc": "This signature is automatically attached to your emails.",
+    "open_profile": "Open Profile"
+  },
+  "sns": {
+    "qr_scan": "📷 Scan from QR code screenshot",
+    "qr_update": "📷 Update QR code",
+    "qr_delete": "Remove",
+    "qr_error": "Could not read QR code. Make sure the full QR code is visible in the screenshot.",
+    "help_x": "X Settings → Username",
+    "help_instagram": "Edit Profile → Username",
+    "help_facebook": "Open facebook.com/me in a PC browser and copy the redirected URL",
+    "help_linkedin": "Profile URL settings",
+    "help_tiktok": "Your username on profile screen (after @)",
+    "help_youtube": "YouTube Studio → Custom URL",
+    "help_threads": "Your username on profile screen",
+    "help_telegram": "Telegram Settings → Username",
+    "help_github": "Profile Settings → Username",
+    "help_bluesky": "Settings → Handle",
+    "help_pinterest": "Edit Profile → Username"
   },
   "billing": {
     "section_label": "Plan",
