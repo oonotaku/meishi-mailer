@@ -56,6 +56,7 @@ export default function ProfileSettings() {
   const { t, i18n } = useTranslation('common')
   const { user, profile, loading: authLoading } = useRequireAuth()
   const [provider, setProvider] = useState(null)
+  const [savedProvider, setSavedProvider] = useState(null)
   const [senderEmail, setSenderEmail] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [gmailUser, setGmailUser] = useState('')
@@ -109,6 +110,7 @@ export default function ProfileSettings() {
     }
     if (profile !== null && provider === null) {
       setProvider(profile?.smtp_provider || 'sendgrid')
+      setSavedProvider(profile?.smtp_provider || 'sendgrid')
       setSenderEmail(profile?.sender_email || '')
       setGmailEmail(profile?.gmail_email || null)
 
@@ -243,7 +245,7 @@ export default function ProfileSettings() {
   const activeProvider = provider ?? profile?.smtp_provider ?? 'sendgrid'
   const normalizedProvider = activeProvider === 'other' ? 'custom' : activeProvider
 
-  const currentProvider = profile?.smtp_provider || 'sendgrid'
+  const currentProvider = savedProvider || profile?.smtp_provider || 'sendgrid'
   const isConfigured = currentProvider === 'gmail'
     ? !!profile?.gmail_email
     : (currentProvider === 'sendgrid'
@@ -273,6 +275,8 @@ export default function ProfileSettings() {
 
       if (event.data.status === 'connected') {
         setGmailEmail(event.data.email)
+        setProvider('gmail')
+        setSavedProvider('gmail')
         setMsg({ ok: true, text: t('profile.gmail_connect_success') })
       } else {
         setMsg({ ok: false, text: t('profile.gmail_connect_error') })
@@ -301,6 +305,7 @@ export default function ProfileSettings() {
       if (!r.ok) throw new Error(data.error)
       setGmailEmail(null)
       setProvider('sendgrid')
+      setSavedProvider('sendgrid')
       setMsg({ ok: true, text: t('profile.gmail_disconnect_done') })
     } catch (err) {
       setMsg({ ok: false, text: err.message })
@@ -341,6 +346,7 @@ export default function ProfileSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
+      setSavedProvider(normalizedProvider)
       setMsg({ ok: true, text: t('profile.saved') })
       setApiKey('')
       setSmtpPassword('')
@@ -620,10 +626,10 @@ export default function ProfileSettings() {
               {/* プロバイダー選択タブ */}
               <div className="provider-tabs">
                 {['sendgrid', 'gmail', 'custom'].map(p => {
+                  const effective = savedProvider || profile?.smtp_provider || 'sendgrid'
                   const isCurrentProvider =
-                    profile?.smtp_provider === p ||
-                    (profile?.smtp_provider === 'other' && p === 'custom') ||
-                    (!profile?.smtp_provider && p === 'sendgrid')
+                    effective === p ||
+                    (effective === 'other' && p === 'custom')
                   return (
                     <button
                       key={p}
