@@ -360,7 +360,7 @@ export default function ProfileSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      setAffilMsg({ ok: true, text: '保存しました' })
+      setAffilMsg({ ok: true, text: t('profile.saved') })
       setTimeout(() => setAffilMsg(null), 2500)
     } catch (err) {
       setAffilMsg({ ok: false, text: err.message })
@@ -417,7 +417,7 @@ export default function ProfileSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      setSnsMsg({ ok: true, text: '保存しました' })
+      setSnsMsg({ ok: true, text: t('profile.saved') })
       setTimeout(() => setSnsMsg(null), 2500)
     } catch (err) {
       setSnsMsg({ ok: false, text: err.message })
@@ -601,7 +601,7 @@ export default function ProfileSettings() {
                     >
                       {t(`profile.provider_${p}`)}
                       {isCurrentProvider && (
-                        <span className="in-use-badge">使用中</span>
+                        <span className="in-use-badge">{t('profile.in_use')}</span>
                       )}
                     </button>
                   )
@@ -877,7 +877,7 @@ export default function ProfileSettings() {
                 )}
 
                 <button type="submit" className="save-btn" disabled={snsSaving}>
-                  {snsSaving ? '保存中...' : '保存する'}
+                  {snsSaving ? t('profile.saving') : t('profile.save')}
                 </button>
               </form>
             </div>
@@ -891,7 +891,7 @@ export default function ProfileSettings() {
                   {affiliations.length > 0 ? t('profile.affil_count', { count: affiliations.length }) : t('profile.unconfigured')}
                 </span>
               </div>
-              <p className="desc" style={{ marginBottom: 14 }}>最大5件。⠿ ドラッグで並び替え可能。</p>
+              <p className="desc" style={{ marginBottom: 14 }}>{t('profile.affil_desc')}</p>
 
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={affiliations.map(a => a.id)} strategy={verticalListSortingStrategy}>

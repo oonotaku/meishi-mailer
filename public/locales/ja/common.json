@@ -229,7 +229,9 @@
     "tab_affiliation": "所属",
     "sns_label": "SNS / 連絡先リンク",
     "affil_add": "+ 所属を追加",
-    "affil_count": "{{count}}件"
+    "affil_count": "{{count}}件",
+    "in_use": "使用中",
+    "affil_desc": "最大5件。⠿ ドラッグで並び替え可能。"
   },
   "sns": {
     "qr_scan": "📷 QRコードのスクショから読み取る",

@@ -229,7 +229,9 @@
     "tab_affiliation": "Affiliations",
     "sns_label": "SNS / Contact Links",
     "affil_add": "+ Add Affiliation",
-    "affil_count": "{{count}} item(s)"
+    "affil_count": "{{count}} item(s)",
+    "in_use": "Active",
+    "affil_desc": "Up to 5. ⠿ Drag to reorder."
   },
   "sns": {
     "qr_scan": "📷 Scan from QR code screenshot",
