@@ -74,6 +74,21 @@ export default function PublicProfile({ profile, affiliations }) {
           )}
         </div>
 
+        <div className="app-banner">
+          <div className="app-banner-text">
+            <div className="app-banner-title">名刺交換、その場でお礼メール。</div>
+            <div className="app-banner-desc">あなたも meishi-mailer で出会いを記録しませんか？</div>
+          </div>
+          <a
+            href="https://www.meishi-mailer.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="app-banner-btn"
+          >
+            無料で始める →
+          </a>
+        </div>
+
         <div className="footer">
           このページは{' '}
           <a href="https://www.meishi-mailer.com" target="_blank" rel="noopener noreferrer" className="footer-link">
@@ -162,6 +177,40 @@ export default function PublicProfile({ profile, affiliations }) {
           padding: 8px 4px;
         }
         .sns-btn:active { opacity: .65; }
+        .app-banner {
+          border: 1px solid #1e1e2a;
+          border-radius: 16px;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          background: #0d0d14;
+        }
+        .app-banner-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #f0ede8;
+          margin-bottom: 6px;
+        }
+        .app-banner-desc {
+          font-size: 13px;
+          color: #5a5650;
+          line-height: 1.6;
+        }
+        .app-banner-btn {
+          display: block;
+          text-align: center;
+          background: #7b9e87;
+          color: #0a0a0f;
+          font-weight: 700;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          padding: 13px;
+          border-radius: 10px;
+          text-decoration: none;
+          transition: opacity .15s;
+        }
+        .app-banner-btn:active { opacity: .75; }
         .footer {
           font-size: 11px;
           color: #3a3a4a;
