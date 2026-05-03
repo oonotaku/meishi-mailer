@@ -221,7 +221,9 @@
     "name_saving": "Saving...",
     "name_cancel": "Cancel",
     "name_saved": "Display name updated",
-    "name_placeholder": "Enter display name"
+    "name_placeholder": "Enter display name",
+    "sig_preview_title": "Signature Preview",
+    "sig_preview_desc": "This signature is automatically attached to your emails."
   },
   "billing": {
     "section_label": "Plan",

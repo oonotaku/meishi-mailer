@@ -221,7 +221,9 @@
     "name_saving": "保存中...",
     "name_cancel": "キャンセル",
     "name_saved": "表示名を更新しました",
-    "name_placeholder": "表示名を入力"
+    "name_placeholder": "表示名を入力",
+    "sig_preview_title": "署名プレビュー",
+    "sig_preview_desc": "メール送信時に自動で付く署名です。"
   },
   "billing": {
     "section_label": "プラン",

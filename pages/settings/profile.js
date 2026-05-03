@@ -696,8 +696,8 @@ export default function ProfileSettings() {
 
               {/* 署名プレビュー */}
               <div className="sig-preview-wrap">
-                <div className="section-label" style={{ marginBottom: '12px' }}>署名プレビュー</div>
-                <p className="sig-preview-desc">メール送信時に自動で付く署名です。</p>
+                <div className="section-label" style={{ marginBottom: '12px' }}>{t('profile.sig_preview_title')}</div>
+                <p className="sig-preview-desc">{t('profile.sig_preview_desc')}</p>
                 <div className="sig-preview-box">
                   <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '0 0 16px 0' }} />
                   <table cellPadding="0" cellSpacing="0" border="0">
