@@ -253,7 +253,39 @@ export default function ProfileSettings() {
   async function handleGmailConnect() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-    window.location.href = `/api/auth/gmail/connect?token=${encodeURIComponent(session.access_token)}`
+
+    const oauthUrl = `/api/auth/gmail/connect?token=${encodeURIComponent(session.access_token)}`
+    const w = 600, h = 700
+    const left = Math.round(window.screenX + (window.outerWidth - w) / 2)
+    const top = Math.round(window.screenY + (window.outerHeight - h) / 2)
+    const popup = window.open(oauthUrl, 'gmail-oauth', `width=${w},height=${h},left=${left},top=${top}`)
+
+    if (!popup) {
+      window.location.href = oauthUrl
+      return
+    }
+
+    const handler = (event) => {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'gmail-oauth') return
+      window.removeEventListener('message', handler)
+      clearInterval(pollTimer)
+
+      if (event.data.status === 'connected') {
+        setGmailEmail(event.data.email)
+        setMsg({ ok: true, text: t('profile.gmail_connect_success') })
+      } else {
+        setMsg({ ok: false, text: t('profile.gmail_connect_error') })
+      }
+    }
+    window.addEventListener('message', handler)
+
+    const pollTimer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollTimer)
+        window.removeEventListener('message', handler)
+      }
+    }, 1000)
   }
 
   async function handleGmailDisconnect() {

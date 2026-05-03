@@ -9,12 +9,12 @@ export default async function handler(req, res) {
   ).trim()
 
   if (error || !code || !token) {
-    return res.redirect(`${siteUrl}/settings/profile?gmail=error`)
+    return res.redirect(`${siteUrl}/auth/gmail-done?status=error`)
   }
 
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) {
-    return res.redirect(`${siteUrl}/settings/profile?gmail=error`)
+    return res.redirect(`${siteUrl}/auth/gmail-done?status=error`)
   }
 
   const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/gmail/callback`
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   const tokenData = await tokenRes.json()
 
   if (!tokenData.refresh_token || !tokenData.access_token) {
-    return res.redirect(`${siteUrl}/settings/profile?gmail=error`)
+    return res.redirect(`${siteUrl}/auth/gmail-done?status=error`)
   }
 
   // Gmailアドレスを取得
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   const userInfo = await userInfoRes.json()
 
   if (!userInfo.email) {
-    return res.redirect(`${siteUrl}/settings/profile?gmail=error`)
+    return res.redirect(`${siteUrl}/auth/gmail-done?status=error`)
   }
 
   const { error: updateError } = await supabaseAdmin
@@ -59,8 +59,8 @@ export default async function handler(req, res) {
     .eq('id', user.id)
 
   if (updateError) {
-    return res.redirect(`${siteUrl}/settings/profile?gmail=error`)
+    return res.redirect(`${siteUrl}/auth/gmail-done?status=error`)
   }
 
-  res.redirect(`${siteUrl}/settings/profile?gmail=connected`)
+  res.redirect(`${siteUrl}/auth/gmail-done?status=connected&email=${encodeURIComponent(userInfo.email)}`)
 }
