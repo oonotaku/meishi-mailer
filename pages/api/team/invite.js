@@ -29,13 +29,46 @@ export default async function handler(req, res) {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'メールアドレスが必要です' })
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const organizationId = profile.current_organization_id
+
+  // 既存ユーザーか確認
+  const { data: existingProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single()
+
+  if (existingProfile) {
+    // 既存ユーザー：すでにチームメンバーか確認
+    const { data: existingMem } = await supabaseAdmin
+      .from('user_organizations')
+      .select('user_id')
+      .eq('user_id', existingProfile.id)
+      .eq('organization_id', organizationId)
+      .single()
+
+    if (existingMem) {
+      return res.status(400).json({ error: 'このユーザーはすでにチームのメンバーです' })
+    }
+
+    // 未参加 → 直接 user_organizations に追加
+    const { error: insertError } = await supabaseAdmin
+      .from('user_organizations')
+      .insert({ user_id: existingProfile.id, organization_id: organizationId, role: 'member' })
+
+    if (insertError) return res.status(400).json({ error: insertError.message })
+
+    return res.json({ ok: true, existing: true })
+  }
+
+  // 新規ユーザー → inviteUserByEmail
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').trim()
   const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-    data: { organization_id: profile.current_organization_id },
+    data: { organization_id: organizationId },
     redirectTo: `${siteUrl}/auth/confirm`,
   })
 
   if (error) return res.status(400).json({ error: error.message })
 
-  res.json({ ok: true })
+  res.json({ ok: true, existing: false })
 }
