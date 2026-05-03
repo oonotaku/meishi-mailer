@@ -788,7 +788,7 @@ export default function ProfileSettings() {
               <div className="section-header">
                 <div className="section-label">{t('profile.sns_label')}</div>
                 <span className={`config-badge ${Object.values(snsValues).some(v => v) ? 'configured' : 'unconfigured'}`}>
-                  {Object.values(snsValues).some(v => v) ? '設定済み' : '未設定'}
+                  {Object.values(snsValues).some(v => v) ? t('profile.configured') : t('profile.unconfigured')}
                 </span>
               </div>
 
@@ -888,7 +888,7 @@ export default function ProfileSettings() {
               <div className="section-header">
                 <div className="section-label">{t('profile.tab_affiliation')}</div>
                 <span className={`config-badge ${affiliations.length > 0 ? 'configured' : 'unconfigured'}`}>
-                  {affiliations.length > 0 ? `${affiliations.length}件` : '未設定'}
+                  {affiliations.length > 0 ? t('profile.affil_count', { count: affiliations.length }) : t('profile.unconfigured')}
                 </span>
               </div>
               <p className="desc" style={{ marginBottom: 14 }}>最大5件。⠿ ドラッグで並び替え可能。</p>

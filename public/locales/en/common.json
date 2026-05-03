@@ -228,7 +228,8 @@
     "tab_email": "Email Settings",
     "tab_affiliation": "Affiliations",
     "sns_label": "SNS / Contact Links",
-    "affil_add": "+ Add Affiliation"
+    "affil_add": "+ Add Affiliation",
+    "affil_count": "{{count}} item(s)"
   },
   "sns": {
     "qr_scan": "📷 Scan from QR code screenshot",

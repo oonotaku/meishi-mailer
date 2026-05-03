@@ -228,7 +228,8 @@
     "tab_email": "メール設定",
     "tab_affiliation": "所属",
     "sns_label": "SNS / 連絡先リンク",
-    "affil_add": "+ 所属を追加"
+    "affil_add": "+ 所属を追加",
+    "affil_count": "{{count}}件"
   },
   "sns": {
     "qr_scan": "📷 QRコードのスクショから読み取る",
