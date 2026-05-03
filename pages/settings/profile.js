@@ -39,7 +39,7 @@ const SNS_FIELDS = [
   { key: 'sns_whatsapp',  label: 'WhatsApp',  mode: 'qr' },
   { key: 'sns_x',         label: 'X',         mode: 'username', base: 'https://x.com/',           prefix: 'x.com/',           helpUrl: 'https://x.com/settings/account',               helpText: 'X設定 → ユーザー名' },
   { key: 'sns_instagram', label: 'Instagram', mode: 'username', base: 'https://instagram.com/',    prefix: 'instagram.com/',    helpUrl: 'https://instagram.com/accounts/edit/',          helpText: 'プロフィール編集 → ユーザーネーム' },
-  { key: 'sns_facebook',  label: 'Facebook',  mode: 'url',      placeholder: 'https://facebook.com/username または profile.php?id=...', helpUrl: 'https://facebook.com/me', helpText: 'あなたのプロフィールページのURLをそのまま貼り付け' },
+  { key: 'sns_facebook',  label: 'Facebook',  mode: 'url',      placeholder: 'https://facebook.com/username または profile.php?id=...', helpUrl: 'https://facebook.com/me', helpText: 'PCブラウザで facebook.com/me を開き、リダイレクト後のURLをコピー' },
   { key: 'sns_linkedin',  label: 'LinkedIn',  mode: 'username', base: 'https://linkedin.com/in/',  prefix: 'linkedin.com/in/',  helpUrl: 'https://linkedin.com/public-profile/settings/', helpText: 'プロフィールURL設定で確認' },
   { key: 'sns_tiktok',    label: 'TikTok',    mode: 'username', base: 'https://tiktok.com/@',      prefix: 'tiktok.com/@',      helpUrl: 'https://tiktok.com/',                          helpText: 'プロフィール画面のユーザー名（@の後）' },
   { key: 'sns_youtube',   label: 'YouTube',   mode: 'username', base: 'https://youtube.com/@',     prefix: 'youtube.com/@',     helpUrl: 'https://studio.youtube.com/',                  helpText: 'YouTube Studio → カスタムURL' },
