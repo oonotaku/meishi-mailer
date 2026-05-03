@@ -679,6 +679,52 @@ export default function ProfileSettings() {
                   </button>
                 )}
               </form>
+
+              {/* 署名プレビュー */}
+              <div className="sig-preview-wrap">
+                <div className="section-label" style={{ marginBottom: '12px' }}>署名プレビュー</div>
+                <p className="sig-preview-desc">メール送信時に自動で付く署名です。</p>
+                <div className="sig-preview-box">
+                  <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '0 0 16px 0' }} />
+                  <table cellPadding="0" cellSpacing="0" border="0">
+                    <tbody>
+                      <tr>
+                        <td style={{ paddingRight: '16px', verticalAlign: 'top' }}>
+                          <a href={`https://www.meishi-mailer.com/p/${user?.id}`} target="_blank" rel="noreferrer">
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user?.id}`)}&bgcolor=ffffff&color=000000&margin=2`}
+                              width="100" height="100"
+                              alt="Profile QR"
+                              style={{ display: 'block', border: 0 }}
+                            />
+                          </a>
+                          <div style={{ fontSize: '10px', color: '#999', textAlign: 'center', marginTop: '4px' }}>プロフィールを開く</div>
+                        </td>
+                        <td style={{ verticalAlign: 'middle' }}>
+                          {(localName || profile?.name) && (
+                            <strong style={{ fontSize: '14px', color: '#333' }}>{localName || profile?.name}</strong>
+                          )}
+                          {affiliations[0]?.company_name && (
+                            <div style={{ color: '#555', fontSize: '12px', marginTop: '4px' }}>{affiliations[0].company_name}</div>
+                          )}
+                          {affiliations[0]?.title && (
+                            <div style={{ color: '#777', fontSize: '12px' }}>{affiliations[0].title}</div>
+                          )}
+                          <div style={{ marginTop: '6px', fontSize: '11px' }}>
+                            <a
+                              href={`https://www.meishi-mailer.com/p/${user?.id}`}
+                              style={{ color: '#aaa', textDecoration: 'none' }}
+                              target="_blank" rel="noreferrer"
+                            >
+                              {`https://www.meishi-mailer.com/p/${user?.id}`}
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1394,6 +1440,25 @@ export default function ProfileSettings() {
         }
         .sns-input-active {
           border-color: #2a4a35 !important;
+        }
+        .sig-preview-wrap {
+          margin-top: 28px;
+          padding-top: 20px;
+          border-top: 1px solid #1e1e2a;
+        }
+        .sig-preview-desc {
+          font-size: 12px;
+          color: #5a5650;
+          margin-bottom: 16px;
+        }
+        .sig-preview-box {
+          background: #ffffff;
+          border-radius: 10px;
+          padding: 16px;
+          font-family: sans-serif;
+          font-size: 13px;
+          line-height: 1.7;
+          color: #333;
         }
       `}</style>
     </>
