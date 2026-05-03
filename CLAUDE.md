@@ -34,8 +34,8 @@ No test framework is configured.
 | `login.js` | Email/password login |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows) |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
-| `settings/profile.js` | Profile settings — tab UI (メール設定 / SNS / 所属). Display name, SendGrid/Gmail/SMTP config, SNS links (15 fields), affiliations (DnD sortable, max 5), billing plan + Stripe Checkout/Portal |
-| `p/[userId].js` | Public profile page — name, affiliations, SNS tap buttons. No auth. `getServerSideProps` + `supabaseAdmin`. |
+| `settings/profile.js` | Profile settings — tab UI (メール設定 / SNS / 所属). Display name + bio (一言コメント) inline edit, SendGrid/Gmail/SMTP config, SNS links (15 fields, 3 input modes: QR/username/url), affiliations (DnD sortable, max 5), email signature preview, billing plan + Stripe Checkout/Portal. 完全i18n対応。 |
+| `p/[userId].js` | Public profile page — name, bio, affiliations, SNS buttons with simpleicons icons, app invite banner. No auth. `getServerSideProps` + `supabaseAdmin`. |
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -55,7 +55,7 @@ No test framework is configured.
 
 **Core**
 - `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。
-- `POST /api/send` — requires Bearer token. Fetches provider config from profile (`smtp_provider`: `sendgrid` | `gmail` | custom SMTP). Gmail uses `googleapis` `gmail.users.messages.send` REST API (not nodemailer SMTP) — reason: `gmail.send` scope only works with REST API, not SMTP OAuth2. All providers send `text` + `html` (QR-code signature built with `buildHtmlEmail`). Returns 400 with setup instructions if not configured.
+- `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured.
 
 **Billing**
 - `POST /api/billing/create-checkout-session` — creates Stripe Checkout session for Pro plan. Reuses existing `stripe_customer_id` if present. `success_url`/`cancel_url` built from request headers.
@@ -63,12 +63,15 @@ No test framework is configured.
 - `POST /api/billing/webhook` — Stripe webhook handler (bodyParser: false, raw body). Handles: `checkout.session.completed` (sets customer_id, subscription_id, plan=pro), `customer.subscription.updated`, `customer.subscription.deleted` (plan=free).
 
 **Team**
-- `POST /api/team/invite` — sends Supabase invite email with `organization_id` in user metadata
+- `POST /api/team/invite` — 既存ユーザーの場合は `inviteUserByEmail` を使わず `user_organizations` に直接 insert し、招待者のメール設定（`lib/sendEmail.js`）で通知メールを送信（失敗しても招待は成功扱い）。新規ユーザーのみ `inviteUserByEmail`。
 - `GET /api/team/members` — returns `{ ownTeam: { organization, members }, memberTeams: [{ organization }] }`
 - `POST /api/team/update-name` — updates own org name via supabaseAdmin (bypasses RLS on organizations table)
 
+**Shared Library**
+- `lib/sendEmail.js` — sendgrid/gmail/smtp の送信ロジックを共通化。`send.js` と `team/invite.js` から使用。プロバイダー未設定時は Error を throw（呼び出し元でキャッチして 400/500 を返す）。
+
 **Profile**
-- `POST /api/profile/update-name` — updates `profiles.name` via supabaseAdmin
+- `POST /api/profile/update-name` — updates `profiles.name` and `profiles.bio` via supabaseAdmin
 - `POST /api/profile/update-email-settings` — updates `profiles.sender_email` and `profiles.sendgrid_api_key` via supabaseAdmin
 - `POST /api/profile/update-sns` — updates 15 SNS link fields on `profiles`; empty/whitespace strings saved as `null`
 - `GET /api/profile/affiliations` — returns `profile_affiliations` ordered by `order_index` ASC
@@ -86,12 +89,13 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 
 **`organizations`** — `id, name, created_at`
 
-**`profiles`** — `id, email, name, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
+**`profiles`** — `id, email, name, bio, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
 - `current_organization_id` always points to the org where the user is `owner`
 - `sender_email` + `sendgrid_api_key` are set by the user via `/settings/profile`; `sendgrid_api_key` is never returned to the client
 - `smtp_provider`: `'sendgrid'` (default) | `'gmail'` | `'smtp'`
 - `gmail_refresh_token` / `gmail_email`: set via Gmail OAuth callback; used by `send.js` with googleapis REST API
-- `sns_*` (15 fields): SNS link URLs; `null` when not set
+- `bio`: 一言コメント（最大100文字）; `null` when not set
+- `sns_*` (15 fields): SNS link URLs; `null` when not set. LINE/WhatsApp はQRスキャンで設定、X/Instagram等はユーザー名入力→保存時にベースURL補完、Facebook/Discord/WeChatはフルURL入力
 - `plan`: `'free'` (default) or `'pro'`; updated by Stripe webhook
 - `scan_count_month`: resets when `scan_count_reset_at < startOfMonth`; Free limit=10, Pro limit=100
 - `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
@@ -171,6 +175,10 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - Registered events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
 - Customer Portal business name: "node-bee"
 - To manually grant Pro to a beta user: `UPDATE profiles SET plan = 'pro' WHERE email = 'xxx';` in Supabase SQL Editor
+
+## Dependencies (notable)
+
+- `jsqr` — QRコード解析（クライアントサイド動的import）。LINE/WhatsAppのQRスクショ読み取りに使用。
 
 ## Current status
 

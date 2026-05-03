@@ -82,16 +82,18 @@
 ### 3. プロフィール・送信設定・課金 ✅ 完了
 
 **`/settings/profile`**（タブUI: メール設定 / SNS / 所属）
-- ログイン中のメールアドレス・表示名を表示（インライン編集可）
-- **メール設定タブ**: SendGrid / Gmail OAuth2 / カスタムSMTP を選択して設定。送信プロバイダーごとに設定フォームを切替表示。未設定の場合、メール送信時に設定を促すエラーを返す
-- **SNSタブ**: LINE / WhatsApp / X / Instagram / Facebook / LinkedIn / TikTok / YouTube / Threads / Telegram / WeChat / Discord / GitHub / Bluesky / Pinterest の15種のSNSリンクを登録。登録済みSNSはサマリーピルで一覧表示
+- ログイン中のメールアドレス・表示名 + 一言コメント（bio）を表示（インライン編集可）
+- **メール設定タブ**: SendGrid / Gmail OAuth2 / カスタムSMTP を選択して設定。送信プロバイダーごとに設定フォームを切替表示。メール署名プレビュー（QRコード付き）を表示。未設定の場合、メール送信時に設定を促すエラーを返す
+- **SNSタブ**: LINE / WhatsApp / X / Instagram / Facebook / LinkedIn / TikTok / YouTube / Threads / Telegram / WeChat / Discord / GitHub / Bluesky / Pinterest の15種のSNSリンクを登録。入力モードは3種：QRスキャン（LINE/WhatsApp）・ユーザー名入力（X/Instagram等）・URLフル入力（Facebook/Discord/WeChat）。各SNSにhelpリンクあり。
 - **所属タブ**: 会社名・役職を最大5件登録（ドラッグ&ドロップ並び替え対応）。先頭1件がメール署名・プロフィールページの主所属として使われる
 - プランバッジ（Free / Pro）と今月のスキャン使用数バーを表示
 - Stripe Checkout（アップグレード）・Stripe Customer Portal（管理）へのボタン
+- 全テキストi18n対応（日本語/英語）
 
 **公開プロフィールページ（`/p/[userId]`）**
-- 名前・所属（全件）・SNSタップボタンを表示（認証不要）
+- 名前・bio（一言コメント）・所属（全件）・SNSタップボタン（simpleiconsアイコン付き）を表示（認証不要）
 - メール送信時にQRコードとしてHTMLメール署名に自動挿入
+- アプリ招待バナーをフッター上部に表示
 
 **Stripe課金（本番稼働中）**
 - Free: 10スキャン/月、Pro: 100スキャン/月（¥980/月）
@@ -214,6 +216,7 @@ profiles (
   id,
   email,
   name,
+  bio text,                  -- 一言コメント（最大100文字）2026-05-03追加
   current_organization_id → organizations,  -- 常に自分がownerのorg
   sender_email,              -- 送信元アドレス（SendGrid/SMTP用）
   sendgrid_api_key,          -- SendGrid APIキー（クライアントには返さない）
@@ -323,6 +326,14 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] 招待ユーザーのチームメンバー登録漏れ修正（`app_metadata` フォールバック追加、`profiles` 先行upsertでFK制約23503を解消）
 - [x] Gmail OAuthコールバックのリダイレクトを絶対URLに変更（Vercelプレビュードメインからカスタムドメインのセッションを引き継げなかった問題を修正）
 - [x] Supabase Auth カスタムSMTP設定（smtp.gmail.com）でデフォルトレート制限を回避
+- [x] チーム招待の既存ユーザー対応（`user_organizations` 直接insert + 通知メール送信）（2026-05-03）
+- [x] メール送信共通ユーティリティ（`lib/sendEmail.js`）— send.js と invite.js で共用（2026-05-03）
+- [x] 公開プロフィールページ強化（SNSアイコン・bio・アプリ招待バナー）（2026-05-03）
+- [x] SNS入力UX改善（QRスキャン・ユーザー名入力・helpリンク）（2026-05-03）
+- [x] bio（一言コメント）フィールド追加（`profiles.bio`）（2026-05-03）
+- [x] メール署名プレビュー（プロフィール設定メール設定タブ内）（2026-05-03）
+- [x] プロフィール設定の多言語対応完備（全テキストi18n化）（2026-05-03）
+- [x] 名刺一覧の空状態ボタン修正（`/?scan=1` でホーム遷移時にファイル選択を自動起動）（2026-05-03）
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）
