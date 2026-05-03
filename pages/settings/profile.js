@@ -37,19 +37,19 @@ function SortableAffiliationItem({ item, onDelete, onChange }) {
 const SNS_FIELDS = [
   { key: 'sns_line',      label: 'LINE',      mode: 'qr' },
   { key: 'sns_whatsapp',  label: 'WhatsApp',  mode: 'qr' },
-  { key: 'sns_x',         label: 'X',         mode: 'username', base: 'https://x.com/',           prefix: 'x.com/' },
-  { key: 'sns_instagram', label: 'Instagram', mode: 'username', base: 'https://instagram.com/',    prefix: 'instagram.com/' },
-  { key: 'sns_facebook',  label: 'Facebook',  mode: 'username', base: 'https://facebook.com/',     prefix: 'facebook.com/' },
-  { key: 'sns_linkedin',  label: 'LinkedIn',  mode: 'username', base: 'https://linkedin.com/in/',  prefix: 'linkedin.com/in/' },
-  { key: 'sns_tiktok',    label: 'TikTok',    mode: 'username', base: 'https://tiktok.com/@',      prefix: 'tiktok.com/@' },
-  { key: 'sns_youtube',   label: 'YouTube',   mode: 'username', base: 'https://youtube.com/@',     prefix: 'youtube.com/@' },
-  { key: 'sns_threads',   label: 'Threads',   mode: 'username', base: 'https://threads.net/@',     prefix: 'threads.net/@' },
-  { key: 'sns_telegram',  label: 'Telegram',  mode: 'username', base: 'https://t.me/',             prefix: 't.me/' },
+  { key: 'sns_x',         label: 'X',         mode: 'username', base: 'https://x.com/',           prefix: 'x.com/',           helpUrl: 'https://x.com/settings/account',               helpText: 'X設定 → ユーザー名' },
+  { key: 'sns_instagram', label: 'Instagram', mode: 'username', base: 'https://instagram.com/',    prefix: 'instagram.com/',    helpUrl: 'https://instagram.com/accounts/edit/',          helpText: 'プロフィール編集 → ユーザーネーム' },
+  { key: 'sns_facebook',  label: 'Facebook',  mode: 'username', base: 'https://facebook.com/',     prefix: 'facebook.com/',     helpUrl: 'https://facebook.com/me',                      helpText: 'あなたのプロフィールURLを確認' },
+  { key: 'sns_linkedin',  label: 'LinkedIn',  mode: 'username', base: 'https://linkedin.com/in/',  prefix: 'linkedin.com/in/',  helpUrl: 'https://linkedin.com/public-profile/settings/', helpText: 'プロフィールURL設定で確認' },
+  { key: 'sns_tiktok',    label: 'TikTok',    mode: 'username', base: 'https://tiktok.com/@',      prefix: 'tiktok.com/@',      helpUrl: 'https://tiktok.com/',                          helpText: 'プロフィール画面のユーザー名（@の後）' },
+  { key: 'sns_youtube',   label: 'YouTube',   mode: 'username', base: 'https://youtube.com/@',     prefix: 'youtube.com/@',     helpUrl: 'https://studio.youtube.com/',                  helpText: 'YouTube Studio → カスタムURL' },
+  { key: 'sns_threads',   label: 'Threads',   mode: 'username', base: 'https://threads.net/@',     prefix: 'threads.net/@',     helpUrl: 'https://threads.net/',                         helpText: 'プロフィール画面のユーザー名' },
+  { key: 'sns_telegram',  label: 'Telegram',  mode: 'username', base: 'https://t.me/',             prefix: 't.me/',             helpUrl: 'https://t.me/',                                helpText: 'Telegram設定 → ユーザー名' },
   { key: 'sns_wechat',    label: 'WeChat',    mode: 'url',      placeholder: 'https://...' },
   { key: 'sns_discord',   label: 'Discord',   mode: 'url',      placeholder: 'https://discord.gg/...' },
-  { key: 'sns_github',    label: 'GitHub',    mode: 'username', base: 'https://github.com/',       prefix: 'github.com/' },
-  { key: 'sns_bluesky',   label: 'Bluesky',   mode: 'username', base: 'https://bsky.app/profile/', prefix: 'bsky.app/profile/' },
-  { key: 'sns_pinterest', label: 'Pinterest', mode: 'username', base: 'https://pinterest.com/',    prefix: 'pinterest.com/' },
+  { key: 'sns_github',    label: 'GitHub',    mode: 'username', base: 'https://github.com/',       prefix: 'github.com/',       helpUrl: 'https://github.com/settings/profile',          helpText: 'プロフィール設定 → Username' },
+  { key: 'sns_bluesky',   label: 'Bluesky',   mode: 'username', base: 'https://bsky.app/profile/', prefix: 'bsky.app/profile/', helpUrl: 'https://bsky.app/settings',                    helpText: 'Settings → Handle' },
+  { key: 'sns_pinterest', label: 'Pinterest', mode: 'username', base: 'https://pinterest.com/',    prefix: 'pinterest.com/',    helpUrl: 'https://pinterest.com/settings/',              helpText: 'プロフィール編集 → ユーザー名' },
 ]
 
 export default function ProfileSettings() {
@@ -831,15 +831,25 @@ export default function ProfileSettings() {
                     )}
 
                     {f.mode === 'username' && (
-                      <div className="username-input-wrap">
-                        <span className="username-prefix">{f.prefix}</span>
-                        <input
-                          type="text"
-                          value={snsValues[f.key] || ''}
-                          onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                          placeholder="username"
-                          className={`username-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
-                        />
+                      <div>
+                        <div className="username-input-wrap">
+                          <span className="username-prefix">{f.prefix}</span>
+                          <input
+                            type="text"
+                            value={snsValues[f.key] || ''}
+                            onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                            placeholder="username"
+                            className={`username-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
+                          />
+                        </div>
+                        <a
+                          href={f.helpUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="sns-help-link"
+                        >
+                          ↗ {f.helpText}
+                        </a>
                       </div>
                     )}
 
@@ -1601,6 +1611,16 @@ export default function ProfileSettings() {
         .username-input-wrap:focus-within {
           border-color: #7b9e87;
         }
+        .sns-help-link {
+          display: inline-block;
+          margin-top: 5px;
+          font-size: 11px;
+          color: #5a5650;
+          text-decoration: none;
+          font-family: 'DM Mono', monospace;
+          transition: color .15s;
+        }
+        .sns-help-link:hover { color: #7b9e87; }
         .bio-textarea {
           resize: none;
           line-height: 1.6;
