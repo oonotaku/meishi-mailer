@@ -77,9 +77,9 @@ export default async function handler(req, res) {
       const inviterName = inviterProfile?.name || user.email?.split('@')[0] || '招待者'
       const teamName = org?.name || 'チーム'
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').trim()
-      const subject = `【meishi-mailer】${inviterName} さんがあなたをチームに招待しました`
-      const text = `${inviterName}さんがあなたを「${teamName}」チームに招待しました。\nmeishi-mailerにログインして名刺を共有しましょう。\n${siteUrl}`
-      const html = `<p>${inviterName}さんがあなたを「${teamName}」チームに招待しました。</p><p>meishi-mailerにログインして名刺を共有しましょう。</p><p><a href="${siteUrl}">${siteUrl}</a></p>`
+      const subject = `こんな人を知っています — ${inviterName} さんからチームへの招待`
+      const text = `こんな人を知っています——${inviterName} さんがあなたを「${teamName}」チームに招待しました。\n\nログインして確かめてみてください。\n${siteUrl}`
+      const html = `<p>こんな人を知っています——</p><p><strong>${inviterName}</strong> さんがあなたを「<strong>${teamName}</strong>」チームに招待しました。</p><p>ログインして確かめてみてください。</p><p><a href="${siteUrl}">${siteUrl}</a></p>`
 
       await sendEmail(inviterProfile, { to: email, subject, text, html })
     } catch (e) {
