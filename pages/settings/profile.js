@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
@@ -81,6 +81,8 @@ export default function ProfileSettings() {
   const [activeTab, setActiveTab] = useState('email')
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
+  const qrFileRef = useRef(null)
+  const [qrTarget, setQrTarget] = useState(null)
   const [affilMsg, setAffilMsg] = useState(null)
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -357,6 +359,31 @@ export default function ProfileSettings() {
       setAffilMsg({ ok: false, text: err.message })
     } finally {
       setAffilSaving(false)
+    }
+  }
+
+  async function handleQrScan(e) {
+    const file = e.target.files?.[0]
+    if (!file || !qrTarget) return
+    e.target.value = ''
+
+    const jsQR = (await import('jsqr')).default
+    const img = new Image()
+    img.src = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0)
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const code = jsQR(imageData.data, imageData.width, imageData.height)
+      if (code?.data) {
+        setSnsValues(prev => ({ ...prev, [qrTarget]: code.data }))
+      } else {
+        alert('QRコードが読み取れませんでした。スクショ全体が写っているか確認してください。')
+      }
+      URL.revokeObjectURL(img.src)
     }
   }
 
@@ -763,6 +790,13 @@ export default function ProfileSettings() {
               )}
 
               <form onSubmit={handleSnsSave} className="email-form">
+                <input
+                  ref={qrFileRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleQrScan}
+                />
                 {SNS_FIELDS.map(f => (
                   <div key={f.key} style={{ marginBottom: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
@@ -778,6 +812,18 @@ export default function ProfileSettings() {
                       placeholder={f.placeholder}
                       className={`text-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
                     />
+                    {(f.key === 'sns_line' || f.key === 'sns_whatsapp') && (
+                      <button
+                        type="button"
+                        className="qr-scan-btn"
+                        onClick={() => {
+                          setQrTarget(f.key)
+                          setTimeout(() => qrFileRef.current?.click(), 50)
+                        }}
+                      >
+                        📷 QRコードのスクショから読み取る
+                      </button>
+                    )}
                   </div>
                 ))}
 
@@ -1454,6 +1500,23 @@ export default function ProfileSettings() {
         }
         .sns-input-active {
           border-color: #2a4a35 !important;
+        }
+        .qr-scan-btn {
+          margin-top: 6px;
+          width: 100%;
+          padding: 10px;
+          background: none;
+          border: 1px dashed #2a2a3a;
+          border-radius: 10px;
+          color: #7b9e87;
+          font-size: 13px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: border-color .15s, background .15s;
+        }
+        .qr-scan-btn:hover {
+          border-color: #7b9e87;
+          background: #0d1f15;
         }
         .bio-textarea {
           resize: none;
