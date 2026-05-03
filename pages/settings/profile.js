@@ -23,11 +23,11 @@ function SortableAffiliationItem({ item, onDelete, onChange }) {
       <div className="affiliation-inputs">
         <input type="text" value={item.company_name}
           onChange={e => onChange(item.id, 'company_name', e.target.value)}
-          placeholder="会社名・団体名" className="text-input" maxLength={100} />
+          placeholder="会社名・団体名" maxLength={100} />
         <input type="text" value={item.title || ''}
           onChange={e => onChange(item.id, 'title', e.target.value)}
-          placeholder="肩書き・役職（任意）" className="text-input"
-          style={{ marginTop: 6 }} maxLength={100} />
+          placeholder="肩書き・役職（任意）"
+          maxLength={100} />
       </div>
       <button type="button" className="affil-delete-btn" onClick={() => onDelete(item.id)}>✕</button>
     </div>
@@ -787,6 +787,30 @@ export default function ProfileSettings() {
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; background: #0a0a0f; color: #f0ede8; font-family: 'Noto Sans JP', sans-serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .affiliation-inputs {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .affiliation-inputs input {
+          width: 100%;
+          padding: 11px 14px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          color: #f0ede8;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          outline: none;
+          box-sizing: border-box;
+        }
+        .affiliation-inputs input:focus {
+          border-color: #7b9e87;
+        }
+        .affiliation-inputs input::placeholder {
+          color: #3a3a4a;
+        }
       `}</style>
 
       <style jsx>{`
@@ -963,7 +987,6 @@ export default function ProfileSettings() {
           letter-spacing: -2px;
         }
         .drag-handle:active { cursor: grabbing; }
-        .affiliation-inputs { flex: 1; }
         .affil-delete-btn {
           background: none;
           border: none;
