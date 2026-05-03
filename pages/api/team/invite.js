@@ -78,8 +78,37 @@ export default async function handler(req, res) {
       const teamName = org?.name || 'チーム'
       const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').trim()
       const subject = `こんな人を知っています — ${inviterName} さんからチームへの招待`
-      const text = `こんな人を知っています——${inviterName} さんがあなたを「${teamName}」チームに招待しました。\n\nログインして確かめてみてください。\n${siteUrl}`
-      const html = `<p>こんな人を知っています——</p><p><strong>${inviterName}</strong> さんがあなたを「<strong>${teamName}</strong>」チームに招待しました。</p><p>ログインして確かめてみてください。</p><p><a href="${siteUrl}">${siteUrl}</a></p>`
+      const text = `こんな人を知っています——\n${inviterName} さんがあなたを「${teamName}」チームに招待しました。\n\nログインして確かめてみてください。\n${siteUrl}`
+      const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#333;">
+  <h2 style="font-size:18px;margin-bottom:24px;">名刺メーラー / Meishi Mailer</h2>
+
+  <p style="margin-bottom:8px;">
+    こんな人を知っています——<br>
+    <em>Someone wants to share their connections with you.</em>
+  </p>
+
+  <p style="margin-bottom:24px;">
+    <strong>${inviterName}</strong> さんがあなたを「<strong>${teamName}</strong>」チームに招待しました。<br>
+    <span style="color:#666;font-size:13px;">${inviterName} has invited you to join the "${teamName}" team.</span>
+  </p>
+
+  <p style="margin-bottom:24px;">
+    ログインして確かめてみてください。<br>
+    <span style="color:#666;font-size:13px;">Log in to see who they've been meeting.</span>
+  </p>
+
+  <p style="margin-bottom:32px;">
+    <a href="${siteUrl}"
+      style="display:inline-block;background:#4CAF50;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">
+      チームを確認する / View Team
+    </a>
+  </p>
+
+  <p style="font-size:12px;color:#999;">
+    このメールに心当たりがない場合は破棄してください。<br>
+    If you did not expect this invitation, you can safely ignore this email.
+  </p>
+</div>`
 
       await sendEmail(inviterProfile, { to: email, subject, text, html })
     } catch (e) {
