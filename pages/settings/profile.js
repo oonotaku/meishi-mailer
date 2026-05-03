@@ -66,6 +66,7 @@ export default function ProfileSettings() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
   const [localName, setLocalName] = useState(null)
+  const [bio, setBio] = useState('')
   const [nameEdit, setNameEdit] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [nameSaving, setNameSaving] = useState(false)
@@ -90,6 +91,7 @@ export default function ProfileSettings() {
   useEffect(() => {
     if (profile !== null && localName === null) {
       setLocalName(profile?.name || '')
+      setBio(profile?.bio || '')
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
@@ -163,7 +165,7 @@ export default function ProfileSettings() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ name: trimmed, bio: bio.trim() }),
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
@@ -416,6 +418,18 @@ export default function ProfileSettings() {
                   maxLength={50}
                   className="name-input"
                 />
+                <div className="field-group" style={{ marginTop: 16 }}>
+                  <div className="field-label">一言コメント</div>
+                  <textarea
+                    value={bio}
+                    onChange={e => setBio(e.target.value)}
+                    placeholder="例：営業歴10年。出会いを大切にしています。"
+                    maxLength={100}
+                    rows={2}
+                    className="text-input bio-textarea"
+                  />
+                  <div className="char-count">{bio.length} / 100</div>
+                </div>
                 <div className="name-edit-actions">
                   <button type="submit" className="name-save-btn" disabled={nameSaving}>
                     {nameSaving ? t('profile.name_saving') : t('profile.name_save')}
@@ -1440,6 +1454,17 @@ export default function ProfileSettings() {
         }
         .sns-input-active {
           border-color: #2a4a35 !important;
+        }
+        .bio-textarea {
+          resize: none;
+          line-height: 1.6;
+        }
+        .char-count {
+          font-size: 11px;
+          color: #3a3a4a;
+          text-align: right;
+          margin-top: 4px;
+          font-family: 'DM Mono', monospace;
         }
         .sig-preview-wrap {
           margin-top: 28px;

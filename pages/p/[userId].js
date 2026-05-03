@@ -2,21 +2,21 @@ import Head from 'next/head'
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
 
 const SNS_DEFS = [
-  { key: 'sns_line',      label: 'LINE',      color: '#06C755' },
-  { key: 'sns_whatsapp',  label: 'WhatsApp',  color: '#25D366' },
-  { key: 'sns_x',         label: 'X',         color: '#e7e7e7' },
-  { key: 'sns_instagram', label: 'Instagram', color: '#E1306C' },
-  { key: 'sns_facebook',  label: 'Facebook',  color: '#1877F2' },
-  { key: 'sns_linkedin',  label: 'LinkedIn',  color: '#0A66C2' },
-  { key: 'sns_tiktok',    label: 'TikTok',    color: '#e7e7e7' },
-  { key: 'sns_youtube',   label: 'YouTube',   color: '#FF0000' },
-  { key: 'sns_threads',   label: 'Threads',   color: '#e7e7e7' },
-  { key: 'sns_telegram',  label: 'Telegram',  color: '#2AABEE' },
-  { key: 'sns_wechat',    label: 'WeChat',    color: '#07C160' },
-  { key: 'sns_discord',   label: 'Discord',   color: '#5865F2' },
-  { key: 'sns_github',    label: 'GitHub',    color: '#e7e7e7' },
-  { key: 'sns_bluesky',   label: 'Bluesky',   color: '#0085FF' },
-  { key: 'sns_pinterest', label: 'Pinterest', color: '#E60023' },
+  { key: 'sns_line',      label: 'LINE',      color: '#06C755', icon: 'line' },
+  { key: 'sns_whatsapp',  label: 'WhatsApp',  color: '#25D366', icon: 'whatsapp' },
+  { key: 'sns_x',         label: 'X',         color: '#e7e7e7', icon: 'x' },
+  { key: 'sns_instagram', label: 'Instagram', color: '#E1306C', icon: 'instagram' },
+  { key: 'sns_facebook',  label: 'Facebook',  color: '#1877F2', icon: 'facebook' },
+  { key: 'sns_linkedin',  label: 'LinkedIn',  color: '#0A66C2', icon: 'linkedin' },
+  { key: 'sns_tiktok',    label: 'TikTok',    color: '#e7e7e7', icon: 'tiktok' },
+  { key: 'sns_youtube',   label: 'YouTube',   color: '#FF0000', icon: 'youtube' },
+  { key: 'sns_threads',   label: 'Threads',   color: '#e7e7e7', icon: 'threads' },
+  { key: 'sns_telegram',  label: 'Telegram',  color: '#2AABEE', icon: 'telegram' },
+  { key: 'sns_wechat',    label: 'WeChat',    color: '#07C160', icon: 'wechat' },
+  { key: 'sns_discord',   label: 'Discord',   color: '#5865F2', icon: 'discord' },
+  { key: 'sns_github',    label: 'GitHub',    color: '#e7e7e7', icon: 'github' },
+  { key: 'sns_bluesky',   label: 'Bluesky',   color: '#0085FF', icon: 'bluesky' },
+  { key: 'sns_pinterest', label: 'Pinterest', color: '#E60023', icon: 'pinterest' },
 ]
 
 export default function PublicProfile({ profile, affiliations }) {
@@ -33,6 +33,10 @@ export default function PublicProfile({ profile, affiliations }) {
       <div className="shell">
         <div className="card">
           <div className="name">{profile.name || '名前未設定'}</div>
+
+          {profile.bio && (
+            <div className="bio">{profile.bio}</div>
+          )}
 
           {affiliations.length > 0 && (
             <div className="affiliations">
@@ -56,7 +60,13 @@ export default function PublicProfile({ profile, affiliations }) {
                     style={{ '--sns-color': d.color }}
                     onClick={() => window.open(profile[d.key], '_blank')}
                   >
-                    {d.label}
+                    <img
+                      src={`https://cdn.simpleicons.org/${d.icon}/${d.color.replace('#','')}`}
+                      width="22" height="22"
+                      alt={d.label}
+                      style={{ display: 'block', margin: '0 auto 6px' }}
+                    />
+                    <span>{d.label}</span>
                   </button>
                 ))}
               </div>
@@ -129,17 +139,27 @@ export default function PublicProfile({ profile, affiliations }) {
           grid-template-columns: repeat(3, 1fr);
           gap: 10px;
         }
+        .bio {
+          font-size: 14px;
+          color: #a0a0b0;
+          line-height: 1.7;
+        }
         .sns-btn {
-          height: 72px;
+          height: 80px;
           background: transparent;
           border: 2px solid var(--sns-color);
           border-radius: 12px;
           color: var(--sns-color);
-          font-size: 14px;
+          font-size: 11px;
           font-weight: 700;
           font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
           transition: opacity .15s;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 8px 4px;
         }
         .sns-btn:active { opacity: .65; }
         .footer {
@@ -164,7 +184,7 @@ export async function getServerSideProps({ params }) {
 
   const [profileRes, affilRes] = await Promise.all([
     supabaseAdmin.from('profiles')
-      .select('name, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest')
+      .select('name, bio, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_affiliations')
       .select('company_name, title, order_index')

@@ -9,12 +9,15 @@ export default async function handler(req, res) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return res.status(401).json({ error: '認証が必要です' })
 
-  const { name } = req.body
+  const { name, bio } = req.body
   if (typeof name !== 'string') return res.status(400).json({ error: 'name が必要です' })
+
+  const updates = { name: name.trim() }
+  if (typeof bio === 'string') updates.bio = bio.trim()
 
   const { error } = await supabaseAdmin
     .from('profiles')
-    .update({ name: name.trim() })
+    .update(updates)
     .eq('id', user.id)
 
   if (error) return res.status(500).json({ error: error.message })
