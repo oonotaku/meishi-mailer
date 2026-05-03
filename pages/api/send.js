@@ -1,7 +1,5 @@
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
-import sgMail from '@sendgrid/mail'
-import nodemailer from 'nodemailer'
-import { google } from 'googleapis'
+import { sendEmail } from '../../lib/sendEmail'
 
 function escapeHtml(str) {
   if (!str) return ''
@@ -13,50 +11,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;')
 }
 
-async function sendWithGmail(gmailRefreshToken, gmailEmail, { to, subject, text, html }) {
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    `${process.env.NEXT_PUBLIC_SITE_URL}/api/auth/gmail-callback`
-  )
-  oauth2Client.setCredentials({ refresh_token: gmailRefreshToken })
-
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
-
-  const boundary = 'boundary_' + Date.now()
-  const mimeMessage = [
-    `To: ${to}`,
-    `From: ${gmailEmail}`,
-    `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    '',
-    `--${boundary}`,
-    'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: base64',
-    '',
-    Buffer.from(text || '').toString('base64'),
-    '',
-    `--${boundary}`,
-    'Content-Type: text/html; charset=UTF-8',
-    'Content-Transfer-Encoding: base64',
-    '',
-    Buffer.from(html || text || '').toString('base64'),
-    '',
-    `--${boundary}--`,
-  ].join('\r\n')
-
-  const encodedMessage = Buffer.from(mimeMessage)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-
-  await gmail.users.messages.send({
-    userId: 'me',
-    requestBody: { raw: encodedMessage },
-  })
-}
 
 function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
   const htmlBody = body
@@ -122,78 +76,18 @@ export default async function handler(req, res) {
   const profileUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/p/${user.id}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(profileUrl)}&bgcolor=ffffff&color=000000&margin=2`
 
-  const provider = profile?.smtp_provider || 'sendgrid'
-
-  if (provider === 'sendgrid') {
-    if (!profile?.sender_email || !profile?.sendgrid_api_key) {
-      return res.status(400).json({
-        error: 'メール送信設定が未完了です。プロフィール設定からSendGridのAPIキーを設定してください。',
-      })
-    }
-
-    sgMail.setApiKey(profile.sendgrid_api_key)
-
-    try {
-      await sgMail.send({
-        to,
-        from: profile.sender_email,
-        subject,
-        text: body,
-        html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
-      })
-      return res.json({ ok: true })
-    } catch (e) {
-      console.error(e)
-      const msg = e.response?.body?.errors?.[0]?.message || e.message
-      return res.status(500).json({ error: msg })
-    }
-  } else if (provider === 'gmail') {
-    if (!profile?.gmail_refresh_token || !profile?.gmail_email) {
-      return res.status(400).json({
-        error: 'Gmailの連携が未設定です。プロフィール設定からGoogleアカウントを連携してください。',
-      })
-    }
-
-    try {
-      await sendWithGmail(profile.gmail_refresh_token, profile.gmail_email, {
-        to,
-        subject,
-        text: body,
-        html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
-      })
-      return res.json({ ok: true })
-    } catch (e) {
-      console.error(e)
-      return res.status(500).json({ error: e.message })
-    }
-  } else {
-    if (!profile?.sender_email || !profile?.smtp_host) {
-      return res.status(400).json({
-        error: 'メール送信設定が未完了です。プロフィール設定からSMTP情報を設定してください。',
-      })
-    }
-
-    try {
-      const transporter = nodemailer.createTransport({
-        host: profile.smtp_host,
-        port: profile.smtp_port,
-        secure: profile.smtp_port === 465,
-        auth: {
-          user: profile.smtp_user,
-          pass: profile.smtp_password,
-        },
-      })
-      await transporter.sendMail({
-        from: profile.sender_email,
-        to,
-        subject,
-        text: body,
-        html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
-      })
-      return res.json({ ok: true })
-    } catch (e) {
-      console.error(e)
-      return res.status(500).json({ error: e.message })
-    }
+  try {
+    await sendEmail(profile, {
+      to,
+      subject,
+      text: body,
+      html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
+    })
+    return res.json({ ok: true })
+  } catch (e) {
+    console.error(e)
+    const msg = e.response?.body?.errors?.[0]?.message || e.message
+    const isSetupError = e.message.includes('未設定') || e.message.includes('未完了')
+    return res.status(isSetupError ? 400 : 500).json({ error: msg })
   }
 }

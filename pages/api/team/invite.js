@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin'
+import { sendEmail } from '../../../lib/sendEmail'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -57,6 +58,33 @@ export default async function handler(req, res) {
       .insert({ user_id: existingProfile.id, organization_id: organizationId, role: 'member' })
 
     if (insertError) return res.status(400).json({ error: insertError.message })
+
+    // 招待者プロフィールとチーム名を取得して通知メール送信
+    try {
+      const [{ data: inviterProfile }, { data: org }] = await Promise.all([
+        supabaseAdmin
+          .from('profiles')
+          .select('name, sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email')
+          .eq('id', user.id)
+          .single(),
+        supabaseAdmin
+          .from('organizations')
+          .select('name')
+          .eq('id', organizationId)
+          .single(),
+      ])
+
+      const inviterName = inviterProfile?.name || user.email?.split('@')[0] || '招待者'
+      const teamName = org?.name || 'チーム'
+      const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').trim()
+      const subject = `【meishi-mailer】${inviterName} さんがあなたをチームに招待しました`
+      const text = `${inviterName}さんがあなたを「${teamName}」チームに招待しました。\nmeishi-mailerにログインして名刺を共有しましょう。\n${siteUrl}`
+      const html = `<p>${inviterName}さんがあなたを「${teamName}」チームに招待しました。</p><p>meishi-mailerにログインして名刺を共有しましょう。</p><p><a href="${siteUrl}">${siteUrl}</a></p>`
+
+      await sendEmail(inviterProfile, { to: email, subject, text, html })
+    } catch (e) {
+      console.error('招待通知メール送信失敗:', e.message)
+    }
 
     return res.json({ ok: true, existing: true })
   }
