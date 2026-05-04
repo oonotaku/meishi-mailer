@@ -34,12 +34,17 @@ async function compressImage(file) {
 }
 
 const SCAN_SNS_MAP = {
+  line:      'sns_line',
+  whatsapp:  'sns_whatsapp',
   instagram: 'sns_instagram',
   x:         'sns_x',
+  facebook:  'sns_facebook',
   linkedin:  'sns_linkedin',
   github:    'sns_github',
-  line:      'sns_line',
-  facebook:  'sns_facebook',
+  youtube:   'sns_youtube',
+  tiktok:    'sns_tiktok',
+  note:      'sns_note',
+  wantedly:  'sns_wantedly',
 }
 
 function SortableAffiliationItem({ item, onDelete, onChange }) {
@@ -92,7 +97,7 @@ export default function ProfileSettings() {
   const [snsMsg, setSnsMsg] = useState(null)
   const [presetTab, setPresetTab] = useState('business')
   const [expandedSns, setExpandedSns] = useState({})
-  const [activeTab, setActiveTab] = useState('email')
+  const [activeTab, setActiveTab] = useState('profile_tab')
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
   const qrFileRef = useRef(null)
@@ -106,9 +111,23 @@ export default function ProfileSettings() {
   const [scanName, setScanName] = useState('')
   const [scanCompany, setScanCompany] = useState('')
   const [scanTitle, setScanTitle] = useState('')
+  const [scanPhone, setScanPhone] = useState('')
+  const [scanWebsite, setScanWebsite] = useState('')
+  const [scanContactEmail, setScanContactEmail] = useState('')
+  const [scanShowPhone, setScanShowPhone] = useState(false)
+  const [scanShowWebsite, setScanShowWebsite] = useState(true)
+  const [scanShowEmail, setScanShowEmail] = useState(false)
   const [scanSnsChecked, setScanSnsChecked] = useState({})
   const [scanSaving, setScanSaving] = useState(false)
   const [scanError, setScanError] = useState(null)
+  const [phone, setPhone] = useState('')
+  const [website, setWebsite] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [showPhone, setShowPhone] = useState(false)
+  const [showWebsite, setShowWebsite] = useState(true)
+  const [showEmail, setShowEmail] = useState(false)
+  const [contactSaving, setContactSaving] = useState(false)
+  const [contactMsg, setContactMsg] = useState(null)
   const [affilMsg, setAffilMsg] = useState(null)
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -120,6 +139,12 @@ export default function ProfileSettings() {
     if (profile !== null && localName === null) {
       setLocalName(profile?.name || '')
       setBio(profile?.bio || '')
+      setPhone(profile?.phone || '')
+      setWebsite(profile?.website || '')
+      setContactEmail(profile?.contact_email || '')
+      setShowPhone(profile?.show_phone ?? false)
+      setShowWebsite(profile?.show_website ?? true)
+      setShowEmail(profile?.show_email ?? false)
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
@@ -488,6 +513,34 @@ export default function ProfileSettings() {
     }
   }
 
+  async function handleContactSave() {
+    setContactSaving(true)
+    setContactMsg(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/update-contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          phone: phone.trim() || null,
+          website: website.trim() || null,
+          contact_email: contactEmail.trim() || null,
+          show_phone: showPhone,
+          show_website: showWebsite,
+          show_email: showEmail,
+        }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setContactMsg({ ok: true, text: t('profile.saved') })
+      setTimeout(() => setContactMsg(null), 2500)
+    } catch (err) {
+      setContactMsg({ ok: false, text: err.message })
+    } finally {
+      setContactSaving(false)
+    }
+  }
+
   async function handleCardFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -509,6 +562,12 @@ export default function ProfileSettings() {
       setScanName(data.name || '')
       setScanCompany(data.company || '')
       setScanTitle(data.title || '')
+      setScanPhone(data.phones?.[0] || '')
+      setScanWebsite(data.website || '')
+      setScanContactEmail(data.email || '')
+      setScanShowPhone(false)
+      setScanShowWebsite(true)
+      setScanShowEmail(false)
 
       const checked = {}
       if (data.sns) {
@@ -552,6 +611,25 @@ export default function ProfileSettings() {
         })
         setAffiliations(merged.map((a, i) => ({ ...a, id: `scanned-${i}` })))
       }
+
+      await fetch('/api/profile/update-contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          phone: scanPhone.trim() || null,
+          website: scanWebsite.trim() || null,
+          contact_email: scanContactEmail.trim() || null,
+          show_phone: scanShowPhone,
+          show_website: scanShowWebsite,
+          show_email: scanShowEmail,
+        }),
+      })
+      setPhone(scanPhone.trim())
+      setWebsite(scanWebsite.trim())
+      setContactEmail(scanContactEmail.trim())
+      setShowPhone(scanShowPhone)
+      setShowWebsite(scanShowWebsite)
+      setShowEmail(scanShowEmail)
 
       const hasSns = scanResult?.sns && Object.entries(SCAN_SNS_MAP).some(([cat]) => scanSnsChecked[cat] && scanResult.sns[cat])
       if (hasSns) {
@@ -736,9 +814,9 @@ export default function ProfileSettings() {
 
           <div className="tab-bar">
             {[
-              { key: 'email',       label: t('profile.tab_email') },
+              { key: 'profile_tab', label: 'プロフィール' },
               { key: 'sns',         label: 'SNS' },
-              { key: 'affiliation', label: t('profile.tab_affiliation') },
+              { key: 'email',       label: t('profile.tab_email') },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -919,51 +997,6 @@ export default function ProfileSettings() {
                 )}
               </form>
 
-              {/* 署名プレビュー */}
-              <div className="sig-preview-wrap">
-                <div className="section-label" style={{ marginBottom: '12px' }}>{t('profile.sig_preview_title')}</div>
-                <p className="sig-preview-desc">{t('profile.sig_preview_desc')}</p>
-                <div className="sig-preview-box">
-                  <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '0 0 16px 0' }} />
-                  <table cellPadding="0" cellSpacing="0" border="0">
-                    <tbody>
-                      <tr>
-                        <td style={{ paddingRight: '16px', verticalAlign: 'top' }}>
-                          <a href={`https://www.meishi-mailer.com/p/${user?.id}`} target="_blank" rel="noreferrer">
-                            <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user?.id}`)}&bgcolor=ffffff&color=000000&margin=2`}
-                              width="100" height="100"
-                              alt="Profile QR"
-                              style={{ display: 'block', border: 0 }}
-                            />
-                          </a>
-                          <div style={{ fontSize: '10px', color: '#999', textAlign: 'center', marginTop: '4px' }}>{t('profile.open_profile')}</div>
-                        </td>
-                        <td style={{ verticalAlign: 'middle' }}>
-                          {(localName || profile?.name) && (
-                            <strong style={{ fontSize: '14px', color: '#333' }}>{localName || profile?.name}</strong>
-                          )}
-                          {affiliations[0]?.company_name && (
-                            <div style={{ color: '#555', fontSize: '12px', marginTop: '4px' }}>{affiliations[0].company_name}</div>
-                          )}
-                          {affiliations[0]?.title && (
-                            <div style={{ color: '#777', fontSize: '12px' }}>{affiliations[0].title}</div>
-                          )}
-                          <div style={{ marginTop: '6px', fontSize: '11px' }}>
-                            <a
-                              href={`https://www.meishi-mailer.com/p/${user?.id}`}
-                              style={{ color: '#aaa', textDecoration: 'none' }}
-                              target="_blank" rel="noreferrer"
-                            >
-                              {`https://www.meishi-mailer.com/p/${user?.id}`}
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           )}
 
@@ -1145,8 +1178,10 @@ export default function ProfileSettings() {
             </div>
           )}
 
-          {activeTab === 'affiliation' && (
+          {activeTab === 'profile_tab' && (
             <div className="section">
+
+              {/* ── 所属 ── */}
               <div className="section-header">
                 <div className="section-label">{t('profile.tab_affiliation')}</div>
                 <span className={`config-badge ${affiliations.length > 0 ? 'configured' : 'unconfigured'}`}>
@@ -1181,6 +1216,120 @@ export default function ProfileSettings() {
               <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleAffilSave} disabled={affilSaving}>
                 {affilSaving ? '保存中...' : '保存する'}
               </button>
+
+              <div className="section-divider" />
+
+              {/* ── 連絡先情報 ── */}
+              <div className="section-header">
+                <div className="section-label">連絡先情報</div>
+                <span className="desc" style={{ fontSize: 11, margin: 0 }}>公開プロフィールへの表示設定</span>
+              </div>
+
+              <div className="contact-field">
+                <div className="contact-field-top">
+                  <label className="field-label">電話番号</label>
+                  <label className="toggle-label">
+                    <input type="checkbox" className="toggle-check" checked={showPhone} onChange={e => setShowPhone(e.target.checked)} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span className="toggle-text">{showPhone ? '公開' : '非公開'}</span>
+                  </label>
+                </div>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="090-0000-0000"
+                  className="text-input"
+                />
+              </div>
+
+              <div className="contact-field">
+                <div className="contact-field-top">
+                  <label className="field-label">ウェブサイト</label>
+                  <label className="toggle-label">
+                    <input type="checkbox" className="toggle-check" checked={showWebsite} onChange={e => setShowWebsite(e.target.checked)} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span className="toggle-text">{showWebsite ? '公開' : '非公開'}</span>
+                  </label>
+                </div>
+                <input
+                  type="url"
+                  value={website}
+                  onChange={e => setWebsite(e.target.value)}
+                  placeholder="https://example.com"
+                  className="text-input"
+                />
+              </div>
+
+              <div className="contact-field">
+                <div className="contact-field-top">
+                  <label className="field-label">連絡先メール</label>
+                  <label className="toggle-label">
+                    <input type="checkbox" className="toggle-check" checked={showEmail} onChange={e => setShowEmail(e.target.checked)} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span className="toggle-text">{showEmail ? '公開' : '非公開'}</span>
+                  </label>
+                </div>
+                <input
+                  type="email"
+                  value={contactEmail}
+                  onChange={e => setContactEmail(e.target.value)}
+                  placeholder="info@example.com"
+                  className="text-input"
+                />
+              </div>
+
+              {contactMsg && (
+                <div className={`msg ${contactMsg.ok ? 'success' : 'error'}`}>{contactMsg.text}</div>
+              )}
+
+              <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleContactSave} disabled={contactSaving}>
+                {contactSaving ? '保存中...' : '保存する'}
+              </button>
+
+              <div className="section-divider" />
+
+              {/* ── 署名プレビュー ── */}
+              <div className="sig-preview-wrap">
+                <div className="section-label" style={{ marginBottom: '12px' }}>{t('profile.sig_preview_title')}</div>
+                <p className="sig-preview-desc">{t('profile.sig_preview_desc')}</p>
+                <div className="sig-preview-box">
+                  <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '0 0 16px 0' }} />
+                  <table cellPadding="0" cellSpacing="0" border="0">
+                    <tbody>
+                      <tr>
+                        <td style={{ paddingRight: '16px', verticalAlign: 'top' }}>
+                          <a href={`https://www.meishi-mailer.com/p/${user?.id}`} target="_blank" rel="noreferrer">
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user?.id}`)}&bgcolor=ffffff&color=000000&margin=2`}
+                              width="100" height="100"
+                              alt="Profile QR"
+                              style={{ display: 'block', border: 0 }}
+                            />
+                          </a>
+                          <div style={{ fontSize: '10px', color: '#999', textAlign: 'center', marginTop: '4px' }}>{t('profile.open_profile')}</div>
+                        </td>
+                        <td style={{ verticalAlign: 'middle' }}>
+                          {(localName || profile?.name) && (
+                            <strong style={{ fontSize: '14px', color: '#333' }}>{localName || profile?.name}</strong>
+                          )}
+                          {affiliations[0]?.company_name && (
+                            <div style={{ color: '#555', fontSize: '12px', marginTop: '4px' }}>{affiliations[0].company_name}</div>
+                          )}
+                          {affiliations[0]?.title && (
+                            <div style={{ color: '#777', fontSize: '12px' }}>{affiliations[0].title}</div>
+                          )}
+                          <div style={{ marginTop: '6px', fontSize: '11px' }}>
+                            <a href={`https://www.meishi-mailer.com/p/${user?.id}`} style={{ color: '#aaa', textDecoration: 'none' }} target="_blank" rel="noreferrer">
+                              {`https://www.meishi-mailer.com/p/${user?.id}`}
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1236,6 +1385,65 @@ export default function ProfileSettings() {
                   placeholder="役職・肩書き"
                 />
               </div>
+
+              <div className="scan-section-divider" />
+              <div className="scan-field-label" style={{ marginBottom: 12 }}>連絡先情報</div>
+
+              <div className="scan-field-group">
+                <div className="scan-contact-row">
+                  <label className="scan-field-label">電話番号</label>
+                  <label className="toggle-label">
+                    <input type="checkbox" className="toggle-check" checked={scanShowPhone} onChange={e => setScanShowPhone(e.target.checked)} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span className="toggle-text">{scanShowPhone ? '公開' : '非公開'}</span>
+                  </label>
+                </div>
+                <input
+                  type="tel"
+                  value={scanPhone}
+                  onChange={e => setScanPhone(e.target.value)}
+                  className="scan-field-input"
+                  placeholder="090-0000-0000"
+                />
+              </div>
+
+              <div className="scan-field-group">
+                <div className="scan-contact-row">
+                  <label className="scan-field-label">ウェブサイト</label>
+                  <label className="toggle-label">
+                    <input type="checkbox" className="toggle-check" checked={scanShowWebsite} onChange={e => setScanShowWebsite(e.target.checked)} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span className="toggle-text">{scanShowWebsite ? '公開' : '非公開'}</span>
+                  </label>
+                </div>
+                <input
+                  type="url"
+                  value={scanWebsite}
+                  onChange={e => setScanWebsite(e.target.value)}
+                  className="scan-field-input"
+                  placeholder="https://example.com"
+                />
+              </div>
+
+              <div className="scan-field-group">
+                <div className="scan-contact-row">
+                  <label className="scan-field-label">連絡先メール</label>
+                  <label className="toggle-label">
+                    <input type="checkbox" className="toggle-check" checked={scanShowEmail} onChange={e => setScanShowEmail(e.target.checked)} />
+                    <span className="toggle-track"><span className="toggle-thumb" /></span>
+                    <span className="toggle-text">{scanShowEmail ? '公開' : '非公開'}</span>
+                  </label>
+                </div>
+                <input
+                  type="email"
+                  value={scanContactEmail}
+                  onChange={e => setScanContactEmail(e.target.value)}
+                  className="scan-field-input"
+                  placeholder="info@example.com"
+                />
+              </div>
+
+              <div className="scan-section-divider" />
 
               {(() => {
                 const found = Object.entries(SCAN_SNS_MAP).filter(([cat]) => scanResult.sns?.[cat])

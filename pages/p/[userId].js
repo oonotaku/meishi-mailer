@@ -32,6 +32,29 @@ export default function PublicProfile({ profile, affiliations }) {
             </div>
           )}
 
+          {(profile.show_website && profile.website) || (profile.show_phone && profile.phone) || (profile.show_email && profile.contact_email) ? (
+            <div className="contact-links">
+              {profile.show_website && profile.website && (
+                <a href={profile.website} target="_blank" rel="noopener noreferrer" className="contact-link">
+                  <span className="contact-icon">🌐</span>
+                  <span>{profile.website.replace(/^https?:\/\//, '')}</span>
+                </a>
+              )}
+              {profile.show_phone && profile.phone && (
+                <a href={`tel:${profile.phone}`} className="contact-link">
+                  <span className="contact-icon">📞</span>
+                  <span>{profile.phone}</span>
+                </a>
+              )}
+              {profile.show_email && profile.contact_email && (
+                <a href={`mailto:${profile.contact_email}`} className="contact-link">
+                  <span className="contact-icon">✉</span>
+                  <span>{profile.contact_email}</span>
+                </a>
+              )}
+            </div>
+          ) : null}
+
           {activeSns.length > 0 && (
             <>
               <div className="sns-heading">SNSで繋がる</div>
@@ -132,6 +155,28 @@ export default function PublicProfile({ profile, affiliations }) {
           font-size: 13px;
           color: #6a6a7a;
         }
+        .contact-links {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .contact-link {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 13px;
+          color: #a0a0b0;
+          text-decoration: none;
+          transition: color .15s;
+          word-break: break-all;
+        }
+        .contact-link:hover { color: #7b9e87; }
+        .contact-icon {
+          font-size: 15px;
+          flex-shrink: 0;
+          width: 20px;
+          text-align: center;
+        }
         .sns-heading {
           font-size: 11px;
           letter-spacing: .1em;
@@ -223,7 +268,7 @@ export async function getServerSideProps({ params }) {
 
   const [profileRes, affilRes] = await Promise.all([
     supabaseAdmin.from('profiles')
-      .select('name, bio, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
+      .select('name, bio, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_affiliations')
       .select('company_name, title, order_index')

@@ -105,7 +105,8 @@ export default async function handler(req, res) {
       sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
       sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
       sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
-      sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note`)
+      sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note,
+      phone, website, contact_email, show_phone, show_website, show_email`)
     .eq('id', user.id)
     .single()
 
@@ -146,6 +147,12 @@ export default async function handler(req, res) {
       sns_vercel: billingData?.sns_vercel ?? null,
       sns_wantedly: billingData?.sns_wantedly ?? null,
       sns_note: billingData?.sns_note ?? null,
+      phone: billingData?.phone ?? null,
+      website: billingData?.website ?? null,
+      contact_email: billingData?.contact_email ?? null,
+      show_phone: billingData?.show_phone ?? false,
+      show_website: billingData?.show_website ?? true,
+      show_email: billingData?.show_email ?? false,
       organization_id: ownerOrgId,
       role: 'owner',
       organizations,

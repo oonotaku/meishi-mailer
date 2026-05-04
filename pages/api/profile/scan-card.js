@@ -5,8 +5,11 @@ export const config = { api: { bodyParser: { sizeLimit: '10mb' } } }
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const PROMPT = `この名刺画像から以下の情報をJSONのみで抽出してください。値が見つからない場合はnullにしてください。SNSはURLまたはアカウント名が名刺に記載されている場合のみ抽出してください。他のテキストは一切出力せずJSONのみ返してください。
-{"name":"氏名","company":"会社名","title":"肩書き・役職","email":"メールアドレス","phones":["電話番号"],"website":"WebサイトURL","sns":{"instagram":"アカウント名またはURL","x":"アカウント名またはURL","linkedin":"URL","github":"アカウント名またはURL","line":"URL","facebook":"URL"}}`
+const PROMPT = `この名刺画像から以下の情報をJSON形式で抽出してください。他のテキストは一切出力せずJSONのみ返してください。
+{"name":"氏名","company":"会社名","title":"肩書き・役職","email":"メールアドレス","phones":["電話番号1","電話番号2"],"website":"WebサイトURL","sns":{"line":"URLまたはQRコード検出の旨","whatsapp":"電話番号またはURL","instagram":"@アカウント名またはURL","x":"@アカウント名またはURL","facebook":"URL","linkedin":"URL","github":"アカウント名またはURL","youtube":"URL","tiktok":"@アカウント名またはURL","note":"アカウント名またはURL","wantedly":"URL"}}
+・値が見つからない場合はnullにしてください
+・SNSはアイコン・@マーク・known URLパターン・QRコードの存在も含めて検出してください
+・phonesは複数ある場合は全て配列で返してください`
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
