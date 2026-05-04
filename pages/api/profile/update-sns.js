@@ -4,6 +4,7 @@ const SNS_KEYS = [
   'sns_line', 'sns_whatsapp', 'sns_x', 'sns_instagram', 'sns_facebook',
   'sns_linkedin', 'sns_tiktok', 'sns_youtube', 'sns_threads', 'sns_telegram',
   'sns_wechat', 'sns_discord', 'sns_github', 'sns_bluesky', 'sns_pinterest',
+  'sns_sansan', 'sns_eight', 'sns_mybridge', 'sns_vercel', 'sns_wantedly', 'sns_note',
 ]
 
 export default async function handler(req, res) {

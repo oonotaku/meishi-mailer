@@ -1,26 +1,9 @@
 import Head from 'next/head'
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
-
-const SNS_DEFS = [
-  { key: 'sns_line',      label: 'LINE',      color: '#06C755', icon: 'line' },
-  { key: 'sns_whatsapp',  label: 'WhatsApp',  color: '#25D366', icon: 'whatsapp' },
-  { key: 'sns_x',         label: 'X',         color: '#e7e7e7', icon: 'x' },
-  { key: 'sns_instagram', label: 'Instagram', color: '#E1306C', icon: 'instagram' },
-  { key: 'sns_facebook',  label: 'Facebook',  color: '#1877F2', icon: 'facebook' },
-  { key: 'sns_linkedin',  label: 'LinkedIn',  color: '#0A66C2', icon: 'linkedin' },
-  { key: 'sns_tiktok',    label: 'TikTok',    color: '#e7e7e7', icon: 'tiktok' },
-  { key: 'sns_youtube',   label: 'YouTube',   color: '#FF0000', icon: 'youtube' },
-  { key: 'sns_threads',   label: 'Threads',   color: '#e7e7e7', icon: 'threads' },
-  { key: 'sns_telegram',  label: 'Telegram',  color: '#2AABEE', icon: 'telegram' },
-  { key: 'sns_wechat',    label: 'WeChat',    color: '#07C160', icon: 'wechat' },
-  { key: 'sns_discord',   label: 'Discord',   color: '#5865F2', icon: 'discord' },
-  { key: 'sns_github',    label: 'GitHub',    color: '#e7e7e7', icon: 'github' },
-  { key: 'sns_bluesky',   label: 'Bluesky',   color: '#0085FF', icon: 'bluesky' },
-  { key: 'sns_pinterest', label: 'Pinterest', color: '#E60023', icon: 'pinterest' },
-]
+import { SNS_CONFIG } from '../../lib/snsConfig'
 
 export default function PublicProfile({ profile, affiliations }) {
-  const activeSns = SNS_DEFS.filter(d => profile[d.key])
+  const activeSns = SNS_CONFIG.filter(d => profile[d.key])
 
   return (
     <>
@@ -60,12 +43,19 @@ export default function PublicProfile({ profile, affiliations }) {
                     style={{ '--sns-color': d.color }}
                     onClick={() => window.open(profile[d.key], '_blank')}
                   >
-                    <img
-                      src={`https://cdn.simpleicons.org/${d.icon}/${d.color.replace('#','')}`}
-                      width="22" height="22"
-                      alt={d.label}
-                      style={{ display: 'block', margin: '0 auto 6px' }}
-                    />
+                    {d.icon ? (
+                      <img
+                        src={`https://cdn.simpleicons.org/${d.icon}/${d.color.replace('#','')}`}
+                        width="22" height="22"
+                        alt={d.label}
+                        style={{ display: 'block', margin: '0 auto 6px' }}
+                        onError={e => { e.target.style.display = 'none' }}
+                      />
+                    ) : (
+                      <div style={{ width: 22, height: 22, borderRadius: 4, background: d.color, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontSize: 11, fontWeight: 700, color: '#fff' }}>
+                        {d.label[0]}
+                      </div>
+                    )}
                     <span>{d.label}</span>
                   </button>
                 ))}
@@ -233,7 +223,7 @@ export async function getServerSideProps({ params }) {
 
   const [profileRes, affilRes] = await Promise.all([
     supabaseAdmin.from('profiles')
-      .select('name, bio, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest')
+      .select('name, bio, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_affiliations')
       .select('company_name, title, order_index')

@@ -104,7 +104,8 @@ export default async function handler(req, res) {
     .select(`plan, scan_count_month, smtp_provider, smtp_host, smtp_port, smtp_user, gmail_email,
       sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
       sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
-      sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest`)
+      sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
+      sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note`)
     .eq('id', user.id)
     .single()
 
@@ -139,6 +140,12 @@ export default async function handler(req, res) {
       sns_github: billingData?.sns_github ?? null,
       sns_bluesky: billingData?.sns_bluesky ?? null,
       sns_pinterest: billingData?.sns_pinterest ?? null,
+      sns_sansan: billingData?.sns_sansan ?? null,
+      sns_eight: billingData?.sns_eight ?? null,
+      sns_mybridge: billingData?.sns_mybridge ?? null,
+      sns_vercel: billingData?.sns_vercel ?? null,
+      sns_wantedly: billingData?.sns_wantedly ?? null,
+      sns_note: billingData?.sns_note ?? null,
       organization_id: ownerOrgId,
       role: 'owner',
       organizations,

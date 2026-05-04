@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
+import { SNS_CONFIG, PRESET_CATEGORIES } from '../../lib/snsConfig'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
 } from '@dnd-kit/core'
@@ -34,23 +35,6 @@ function SortableAffiliationItem({ item, onDelete, onChange }) {
   )
 }
 
-const SNS_FIELDS = [
-  { key: 'sns_line',      label: 'LINE',      mode: 'qr' },
-  { key: 'sns_whatsapp',  label: 'WhatsApp',  mode: 'qr' },
-  { key: 'sns_x',         label: 'X',         mode: 'username', base: 'https://x.com/',           prefix: 'x.com/',           helpUrl: 'https://x.com/settings/account',               helpKey: 'sns.help_x' },
-  { key: 'sns_instagram', label: 'Instagram', mode: 'username', base: 'https://instagram.com/',    prefix: 'instagram.com/',    helpUrl: 'https://instagram.com/accounts/edit/',          helpKey: 'sns.help_instagram' },
-  { key: 'sns_facebook',  label: 'Facebook',  mode: 'url',      placeholder: 'https://facebook.com/username または profile.php?id=...', helpUrl: 'https://facebook.com/me', helpKey: 'sns.help_facebook' },
-  { key: 'sns_linkedin',  label: 'LinkedIn',  mode: 'username', base: 'https://linkedin.com/in/',  prefix: 'linkedin.com/in/',  helpUrl: 'https://linkedin.com/public-profile/settings/', helpKey: 'sns.help_linkedin' },
-  { key: 'sns_tiktok',    label: 'TikTok',    mode: 'username', base: 'https://tiktok.com/@',      prefix: 'tiktok.com/@',      helpUrl: 'https://tiktok.com/',                          helpKey: 'sns.help_tiktok' },
-  { key: 'sns_youtube',   label: 'YouTube',   mode: 'username', base: 'https://youtube.com/@',     prefix: 'youtube.com/@',     helpUrl: 'https://studio.youtube.com/',                  helpKey: 'sns.help_youtube' },
-  { key: 'sns_threads',   label: 'Threads',   mode: 'username', base: 'https://threads.net/@',     prefix: 'threads.net/@',     helpUrl: 'https://threads.net/',                         helpKey: 'sns.help_threads' },
-  { key: 'sns_telegram',  label: 'Telegram',  mode: 'username', base: 'https://t.me/',             prefix: 't.me/',             helpUrl: 'https://t.me/',                                helpKey: 'sns.help_telegram' },
-  { key: 'sns_wechat',    label: 'WeChat',    mode: 'url',      placeholder: 'https://...' },
-  { key: 'sns_discord',   label: 'Discord',   mode: 'url',      placeholder: 'https://discord.gg/...' },
-  { key: 'sns_github',    label: 'GitHub',    mode: 'username', base: 'https://github.com/',       prefix: 'github.com/',       helpUrl: 'https://github.com/settings/profile',          helpKey: 'sns.help_github' },
-  { key: 'sns_bluesky',   label: 'Bluesky',   mode: 'username', base: 'https://bsky.app/profile/', prefix: 'bsky.app/profile/', helpUrl: 'https://bsky.app/settings',                    helpKey: 'sns.help_bluesky' },
-  { key: 'sns_pinterest', label: 'Pinterest', mode: 'username', base: 'https://pinterest.com/',    prefix: 'pinterest.com/',    helpUrl: 'https://pinterest.com/settings/',              helpKey: 'sns.help_pinterest' },
-]
 
 export default function ProfileSettings() {
   const { t, i18n } = useTranslation('common')
@@ -79,10 +63,15 @@ export default function ProfileSettings() {
   const [snsValues, setSnsValues] = useState({})
   const [snsSaving, setSnsSaving] = useState(false)
   const [snsMsg, setSnsMsg] = useState(null)
+  const [presetTab, setPresetTab] = useState('business')
+  const [expandedSns, setExpandedSns] = useState({})
   const [activeTab, setActiveTab] = useState('email')
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
   const qrFileRef = useRef(null)
+  const personalRef = useRef(null)
+  const businessRef = useRef(null)
+  const cardappRef = useRef(null)
   const [qrTarget, setQrTarget] = useState(null)
   const [affilMsg, setAffilMsg] = useState(null)
   const sensors = useSensors(
@@ -98,10 +87,10 @@ export default function ProfileSettings() {
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
-      SNS_FIELDS.forEach(f => {
+      SNS_CONFIG.forEach(f => {
         const raw = profile?.[f.key] || ''
-        if (f.mode === 'username' && raw.startsWith(f.base)) {
-          initial[f.key] = raw.slice(f.base.length)
+        if (f.inputMode === 'username' && f.baseUrl && raw.startsWith(f.baseUrl)) {
+          initial[f.key] = raw.slice(f.baseUrl.length)
         } else {
           initial[f.key] = raw
         }
@@ -445,9 +434,9 @@ export default function ProfileSettings() {
         },
         body: JSON.stringify((() => {
           const snsPayload = {}
-          SNS_FIELDS.forEach(f => {
+          SNS_CONFIG.forEach(f => {
             const val = snsValues[f.key]?.trim() || ''
-            snsPayload[f.key] = (f.mode === 'username' && val) ? f.base + val : val
+            snsPayload[f.key] = (f.inputMode === 'username' && f.baseUrl && val) ? f.baseUrl + val : val
           })
           return snsPayload
         })()),
@@ -822,101 +811,179 @@ export default function ProfileSettings() {
 
           {activeTab === 'sns' && (
             <div className="section">
-              <div className="section-header">
-                <div className="section-label">{t('profile.sns_label')}</div>
-                <span className={`config-badge ${Object.values(snsValues).some(v => v) ? 'configured' : 'unconfigured'}`}>
-                  {Object.values(snsValues).some(v => v) ? t('profile.configured') : t('profile.unconfigured')}
-                </span>
+              {/* プリセットプレビューパネル */}
+              <div className="preset-panel">
+                <div className="preset-panel-header">
+                  <span className="section-label">プレビュー</span>
+                  <div className="preset-tabs">
+                    {[
+                      { key: 'business', label: 'ビジネス' },
+                      { key: 'personal', label: '個人' },
+                      { key: 'all',      label: 'すべて' },
+                    ].map(p => (
+                      <button key={p.key} type="button"
+                        className={`preset-tab-btn ${presetTab === p.key ? 'active' : ''}`}
+                        onClick={() => setPresetTab(p.key)}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="preset-icons">
+                  {SNS_CONFIG
+                    .filter(f => PRESET_CATEGORIES[presetTab].includes(f.category))
+                    .map(f => {
+                      const isSet = !!snsValues[f.key]
+                      const sectionRef = f.category === 'personal' ? personalRef : f.category === 'business' ? businessRef : cardappRef
+                      return (
+                        <button key={f.key} type="button"
+                          className={`preset-icon-btn ${isSet ? 'set' : 'unset'}`}
+                          title={isSet ? f.label : `${f.label}（未設定）`}
+                          onClick={() => {
+                            if (!isSet) {
+                              setExpandedSns(prev => ({ ...prev, [f.key]: true }))
+                              setTimeout(() => sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+                            }
+                          }}>
+                          {f.icon ? (
+                            <img
+                              src={`https://cdn.simpleicons.org/${f.icon}/${isSet ? f.color.replace('#','') : '3a3a4a'}`}
+                              width="18" height="18" alt={f.label}
+                              style={{ display: 'block' }}
+                              onError={e => { e.target.style.display = 'none' }}
+                            />
+                          ) : (
+                            <span className="preset-icon-text" style={{ color: isSet ? f.color : '#3a3a4a' }}>
+                              {f.label[0]}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                </div>
+                <p className="preset-hint">
+                  {presetTab === 'business' ? 'ビジネス相手に共有されるSNSのプレビュー' :
+                   presetTab === 'personal' ? '個人として共有されるSNSのプレビュー' :
+                   'すべてのSNSが相手に表示されます'}
+                  {' · '}グレー = 未設定（タップして追加）
+                </p>
               </div>
 
-              {Object.values(snsValues).some(v => v) && (
-                <div className="sns-registered-summary">
-                  {SNS_FIELDS.filter(f => snsValues[f.key]).map(f => (
-                    <span key={f.key} className="sns-registered-pill">✓ {f.label}</span>
-                  ))}
-                </div>
-              )}
-              {!Object.values(snsValues).some(v => v) && (
-                <p className="sns-empty-hint">まだSNSが登録されていません</p>
-              )}
+              <input ref={qrFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleQrScan} />
 
-              <form onSubmit={handleSnsSave} className="email-form">
-                <input ref={qrFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleQrScan} />
-
-                {SNS_FIELDS.map(f => (
-                  <div key={f.key} className="sns-field">
-                    <div className="sns-field-label">
-                      <span className="sns-field-key">{f.label.toUpperCase()}</span>
-                      {snsValues[f.key] && (
-                        <span className="config-badge configured">{t('profile.configured')}</span>
-                      )}
-                    </div>
-
-                    {f.mode === 'qr' && (
-                      <div>
-                        <button type="button" className="qr-scan-btn"
-                          onClick={() => { setQrTarget(f.key); setTimeout(() => qrFileRef.current?.click(), 50) }}>
-                          {snsValues[f.key] ? t('sns.qr_update') : t('sns.qr_scan')}
-                        </button>
-                        {snsValues[f.key] && (
-                          <button type="button" className="qr-clear-btn"
-                            onClick={() => setSnsValues(prev => ({ ...prev, [f.key]: '' }))}>
-                            {t('sns.qr_delete')}
+              {/* カテゴリ別セクション */}
+              {[
+                { cat: 'personal', label: '個人でつながる',       ref: personalRef },
+                { cat: 'business', label: 'ビジネス・クリエイター', ref: businessRef },
+                { cat: 'cardapp',  label: '名刺管理アプリ',        ref: cardappRef },
+              ].map(({ cat, label, ref }) => (
+                <div key={cat} className="sns-category-section" ref={ref}>
+                  <div className="sns-category-header">{label}</div>
+                  {SNS_CONFIG.filter(f => f.category === cat).map(f => {
+                    const val = snsValues[f.key] || ''
+                    const isExpanded = !!expandedSns[f.key]
+                    return (
+                      <div key={f.key} className="sns-item">
+                        <div className="sns-item-row">
+                          <div className="sns-item-info">
+                            {f.icon ? (
+                              <img
+                                src={`https://cdn.simpleicons.org/${f.icon}/${f.color.replace('#','')}`}
+                                width="18" height="18" alt={f.label}
+                                className="sns-item-icon"
+                                onError={e => { e.target.style.display = 'none' }}
+                              />
+                            ) : (
+                              <div className="sns-item-icon-fallback" style={{ background: f.color }}>
+                                {f.label[0]}
+                              </div>
+                            )}
+                            <div className="sns-item-meta">
+                              <span className="sns-item-label">{f.label}</span>
+                              {val && !isExpanded && (
+                                <span className="sns-item-value-preview">
+                                  {f.inputMode === 'username' ? `@${val}` : val}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className={`sns-toggle-btn ${val ? 'edit' : 'add'}${isExpanded ? ' open' : ''}`}
+                            onClick={() => setExpandedSns(prev => ({ ...prev, [f.key]: !prev[f.key] }))}
+                          >
+                            {isExpanded ? '閉じる' : val ? '編集' : '+ 追加'}
                           </button>
-                        )}
-                      </div>
-                    )}
-
-                    {f.mode === 'username' && (
-                      <div>
-                        <div className="username-input-wrap">
-                          <span className="username-prefix">{f.prefix}</span>
-                          <input
-                            type="text"
-                            value={snsValues[f.key] || ''}
-                            onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                            placeholder="username"
-                            className={`username-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
-                          />
                         </div>
-                        <a
-                          href={f.helpUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="sns-help-link"
-                        >
-                          ↗ {t(f.helpKey)}
-                        </a>
-                      </div>
-                    )}
 
-                    {f.mode === 'url' && (
-                      <div>
-                        <input
-                          type="url"
-                          value={snsValues[f.key] || ''}
-                          onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-                          placeholder={f.placeholder}
-                          className={`text-input ${snsValues[f.key] ? 'sns-input-active' : ''}`}
-                        />
-                        {f.helpKey && (
-                          <a href={f.helpUrl} target="_blank" rel="noopener noreferrer" className="sns-help-link">
-                            ↗ {t(f.helpKey)}
-                          </a>
+                        {isExpanded && (
+                          <div className="sns-item-form">
+                            {f.inputMode === 'qr' && (
+                              <div>
+                                <button type="button" className="qr-scan-btn"
+                                  onClick={() => { setQrTarget(f.key); setTimeout(() => qrFileRef.current?.click(), 50) }}>
+                                  {val ? t('sns.qr_update') : t('sns.qr_scan')}
+                                </button>
+                                {val && (
+                                  <button type="button" className="qr-clear-btn"
+                                    onClick={() => setSnsValues(prev => ({ ...prev, [f.key]: '' }))}>
+                                    {t('sns.qr_delete')}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            {f.inputMode === 'username' && (
+                              <div>
+                                <div className="username-input-wrap">
+                                  <span className="username-prefix">{f.prefix}</span>
+                                  <input
+                                    type="text"
+                                    value={val}
+                                    onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                    placeholder="username"
+                                    autoFocus
+                                    className={`username-input ${val ? 'sns-input-active' : ''}`}
+                                  />
+                                </div>
+                                {f.helpUrl && (
+                                  <a href={f.helpUrl} target="_blank" rel="noopener noreferrer" className="sns-help-link">
+                                    ↗ {f.label}を確認
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                            {f.inputMode === 'url' && (
+                              <div>
+                                <input
+                                  type="url"
+                                  value={val}
+                                  onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                  placeholder={f.placeholder || 'https://...'}
+                                  autoFocus
+                                  className={`text-input ${val ? 'sns-input-active' : ''}`}
+                                />
+                                {f.helpUrl && (
+                                  <a href={f.helpUrl} target="_blank" rel="noopener noreferrer" className="sns-help-link">
+                                    ↗ {f.label}を確認
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                    )
+                  })}
+                </div>
+              ))}
 
-                {snsMsg && (
-                  <div className={`msg ${snsMsg.ok ? 'success' : 'error'}`}>{snsMsg.text}</div>
-                )}
+              {snsMsg && (
+                <div className={`msg ${snsMsg.ok ? 'success' : 'error'}`} style={{ marginBottom: 12 }}>{snsMsg.text}</div>
+              )}
 
-                <button type="submit" className="save-btn" disabled={snsSaving}>
-                  {snsSaving ? t('profile.saving') : t('profile.save')}
-                </button>
-              </form>
+              <button type="button" className="save-btn" onClick={handleSnsSave} disabled={snsSaving}>
+                {snsSaving ? t('profile.saving') : t('profile.save')}
+              </button>
             </div>
           )}
 
@@ -1694,6 +1761,180 @@ export default function ProfileSettings() {
           font-size: 13px;
           line-height: 1.7;
           color: #333;
+        }
+
+        /* ── プリセットパネル ── */
+        .preset-panel {
+          background: #0d0d14;
+          border: 1px solid #1e1e2a;
+          border-radius: 12px;
+          padding: 14px;
+          margin-bottom: 24px;
+        }
+        .preset-panel-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+        }
+        .preset-tabs {
+          display: flex;
+          gap: 4px;
+        }
+        .preset-tab-btn {
+          padding: 4px 10px;
+          background: none;
+          border: 1px solid #1e1e2a;
+          border-radius: 6px;
+          color: #5a5650;
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          transition: color .15s, border-color .15s;
+        }
+        .preset-tab-btn.active {
+          border-color: #7b9e87;
+          color: #f0ede8;
+        }
+        .preset-tab-btn:hover:not(.active) { color: #f0ede8; }
+        .preset-icons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-height: 36px;
+        }
+        .preset-icon-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          border: 1px solid #1e1e2a;
+          background: #12121a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: border-color .15s, opacity .15s;
+          padding: 0;
+        }
+        .preset-icon-btn.set { border-color: #2a4a35; }
+        .preset-icon-btn.unset { opacity: .4; }
+        .preset-icon-btn.unset:hover { opacity: .75; border-color: #7b9e87; }
+        .preset-icon-text {
+          font-size: 13px;
+          font-weight: 700;
+          font-family: 'DM Mono', monospace;
+        }
+        .preset-hint {
+          font-size: 11px;
+          color: #3a3a4a;
+          margin-top: 10px;
+          line-height: 1.5;
+        }
+
+        /* ── SNSカテゴリセクション ── */
+        .sns-category-section {
+          margin-bottom: 8px;
+          scroll-margin-top: 80px;
+        }
+        .sns-category-header {
+          font-size: 10px;
+          letter-spacing: .1em;
+          color: #3a3a4a;
+          text-transform: uppercase;
+          font-family: 'DM Mono', monospace;
+          margin-bottom: 4px;
+          padding: 16px 0 8px;
+          border-bottom: 1px solid #1e1e2a;
+        }
+        .sns-item {
+          border-bottom: 1px solid #0f0f18;
+          padding: 10px 0;
+        }
+        .sns-item:last-child { border-bottom: none; }
+        .sns-item-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .sns-item-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex: 1;
+          min-width: 0;
+        }
+        .sns-item-icon {
+          flex-shrink: 0;
+          display: block;
+        }
+        .sns-item-icon-fallback {
+          width: 18px;
+          height: 18px;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10px;
+          font-weight: 700;
+          font-family: 'DM Mono', monospace;
+          color: #fff;
+          flex-shrink: 0;
+        }
+        .sns-item-meta {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+        }
+        .sns-item-label {
+          font-size: 14px;
+          color: #f0ede8;
+          font-weight: 500;
+        }
+        .sns-item-value-preview {
+          font-size: 11px;
+          color: #5a5650;
+          font-family: 'DM Mono', monospace;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 160px;
+        }
+        .sns-toggle-btn {
+          flex-shrink: 0;
+          padding: 5px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          transition: all .15s;
+          border: 1px solid;
+          white-space: nowrap;
+        }
+        .sns-toggle-btn.add {
+          background: none;
+          border-color: #2a2a3a;
+          color: #5a5650;
+        }
+        .sns-toggle-btn.add:hover { border-color: #7b9e87; color: #7b9e87; }
+        .sns-toggle-btn.edit {
+          background: #0d1f15;
+          border-color: #1a3525;
+          color: #7b9e87;
+        }
+        .sns-toggle-btn.open {
+          background: none;
+          border-color: #2a2a3a;
+          color: #5a5650;
+        }
+        .sns-item-form {
+          margin-top: 10px;
+          padding: 12px;
+          background: #0d0d14;
+          border-radius: 10px;
+          border: 1px solid #1e1e2a;
         }
       `}</style>
     </>
