@@ -237,6 +237,7 @@
     "affil_count": "{{count}} item(s)",
     "in_use": "Active",
     "affil_desc": "Up to 5. Use ↑↓ to reorder. Each affiliation can have its own phone, website, and email.",
+    "tab_profile": "Profile",
     "scan_card_btn": "Import from Business Card",
     "scan_camera_btn": "Take Photo",
     "scan_library_btn": "Choose from Library",

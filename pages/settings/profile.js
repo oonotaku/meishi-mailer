@@ -768,7 +768,7 @@ export default function ProfileSettings() {
 
           <div className="tab-bar">
             {[
-              { key: 'profile_tab',  label: 'プロフィール' },
+              { key: 'profile_tab',  label: t('profile.tab_profile') },
               { key: 'sns',          label: 'SNS' },
               { key: 'email',        label: t('profile.tab_email') },
               { key: 'subscription', label: t('profile.tab_subscription') },
@@ -1457,6 +1457,96 @@ export default function ProfileSettings() {
         .affiliation-inputs input::placeholder {
           color: #3a3a4a;
         }
+
+        /* AffiliationItem inner elements — must be global (separate component) */
+        .affil-right {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          flex-shrink: 0;
+          gap: 0;
+        }
+        .affil-reorder-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 8px;
+          color: #5a5650;
+          font-size: 16px;
+          width: 44px;
+          height: 44px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color .15s, background .15s, border-color .15s;
+          padding: 0;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .affil-reorder-btn:hover:not(:disabled) {
+          color: #f0ede8;
+          background: #1e1e2a;
+          border-color: #3a3a4a;
+        }
+        .affil-reorder-btn:disabled { opacity: .2; cursor: not-allowed; }
+        .affil-delete-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 8px;
+          color: #4a4a5a;
+          font-size: 13px;
+          cursor: pointer;
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          transition: color .15s, background .15s, border-color .15s;
+          padding: 0;
+          -webkit-tap-highlight-color: transparent;
+          margin-top: auto;
+        }
+        .affil-delete-btn:hover {
+          color: #c08080;
+          border-color: #3a1010;
+          background: #1a0808;
+        }
+        .affiliation-body {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .affil-contact-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding-top: 8px;
+          border-top: 1px solid #1e1e2a;
+        }
+        .affil-contact-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .affil-contact-input {
+          flex: 1;
+          min-width: 0;
+          width: 100%;
+          padding: 11px 14px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          color: #f0ede8;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          outline: none;
+          box-sizing: border-box;
+          -webkit-appearance: none;
+        }
+        .affil-contact-input:focus { border-color: #7b9e87; }
+        .affil-contact-input::placeholder { color: #3a3a4a; }
       `}</style>
 
       <style jsx>{`
@@ -1623,84 +1713,6 @@ export default function ProfileSettings() {
           border-radius: 10px;
           padding: 10px 8px 10px 12px;
         }
-        .affil-right {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          flex-shrink: 0;
-          gap: 0;
-        }
-        .affil-reorder-btn {
-          background: none;
-          border: none;
-          color: #4a4a5a;
-          font-size: 18px;
-          width: 44px;
-          height: 44px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: color .15s;
-          padding: 0;
-          border-radius: 8px;
-          -webkit-tap-highlight-color: transparent;
-        }
-        .affil-reorder-btn:hover:not(:disabled) { color: #f0ede8; background: #1e1e2a; }
-        .affil-reorder-btn:disabled { opacity: .2; cursor: not-allowed; }
-        .affiliation-body {
-          flex: 1;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .affil-contact-fields {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          padding-top: 8px;
-          border-top: 1px solid #1e1e2a;
-        }
-        .affil-contact-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .affil-contact-input {
-          flex: 1;
-          min-width: 0;
-          width: 100%;
-          padding: 11px 14px;
-          background: #12121a;
-          border: 1px solid #1e1e2a;
-          border-radius: 10px;
-          color: #f0ede8;
-          font-size: 14px;
-          font-family: 'Noto Sans JP', sans-serif;
-          outline: none;
-          box-sizing: border-box;
-        }
-        .affil-contact-input:focus { border-color: #7b9e87; }
-        .affil-contact-input::placeholder { color: #3a3a4a; }
-        .affil-delete-btn {
-          background: none;
-          border: none;
-          color: #4a4a5a;
-          font-size: 14px;
-          cursor: pointer;
-          width: 44px;
-          height: 36px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          transition: color .15s;
-          border-radius: 8px;
-          padding: 0;
-          -webkit-tap-highlight-color: transparent;
-        }
-        .affil-delete-btn:hover { color: #c08080; }
         .add-affil-btn {
           width: 100%;
           padding: 11px;

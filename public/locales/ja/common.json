@@ -237,6 +237,7 @@
     "affil_count": "{{count}}件",
     "in_use": "使用中",
     "affil_desc": "最大5件。↑↓ボタンで並び替え可能。各所属に電話・ウェブサイト・メールを紐付けられます。",
+    "tab_profile": "プロフィール",
     "scan_card_btn": "名刺からプロフィールを入力",
     "scan_camera_btn": "カメラで撮影",
     "scan_library_btn": "ライブラリから選択",
