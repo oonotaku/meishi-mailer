@@ -42,10 +42,6 @@ const SCAN_SNS_MAP = {
 function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onMoveDown }) {
   return (
     <div className="affiliation-item">
-      <div className="affil-reorder">
-        <button type="button" className="affil-reorder-btn" onClick={() => onMoveUp(index)} disabled={index === 0}>↑</button>
-        <button type="button" className="affil-reorder-btn" onClick={() => onMoveDown(index)} disabled={index === total - 1}>↓</button>
-      </div>
       <div className="affiliation-body">
         <div className="affiliation-inputs">
           <input type="text" value={item.company_name}
@@ -91,7 +87,11 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
           </div>
         </div>
       </div>
-      <button type="button" className="affil-delete-btn" onClick={() => onDelete(item.id)}>✕</button>
+      <div className="affil-right">
+        <button type="button" className="affil-reorder-btn" onClick={() => onMoveUp(index)} disabled={index === 0}>↑</button>
+        <button type="button" className="affil-reorder-btn" onClick={() => onMoveDown(index)} disabled={index === total - 1}>↓</button>
+        <button type="button" className="affil-delete-btn" onClick={() => onDelete(item.id)}>✕</button>
+      </div>
     </div>
   )
 }
@@ -1616,37 +1616,38 @@ export default function ProfileSettings() {
         .affiliation-item {
           display: flex;
           align-items: flex-start;
-          gap: 10px;
+          gap: 8px;
           margin-bottom: 12px;
           background: #12121a;
           border: 1px solid #1e1e2a;
           border-radius: 10px;
-          padding: 10px 12px;
+          padding: 10px 8px 10px 12px;
         }
-        .affil-reorder {
+        .affil-right {
           display: flex;
           flex-direction: column;
-          gap: 3px;
+          align-items: center;
           flex-shrink: 0;
-          padding-top: 6px;
+          gap: 0;
         }
         .affil-reorder-btn {
           background: none;
-          border: 1px solid #2a2a3a;
-          border-radius: 4px;
-          color: #5a5650;
-          font-size: 11px;
-          width: 24px;
-          height: 24px;
+          border: none;
+          color: #4a4a5a;
+          font-size: 18px;
+          width: 44px;
+          height: 44px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: color .15s, border-color .15s;
+          transition: color .15s;
           padding: 0;
+          border-radius: 8px;
+          -webkit-tap-highlight-color: transparent;
         }
-        .affil-reorder-btn:hover:not(:disabled) { color: #f0ede8; border-color: #3a3a4a; }
-        .affil-reorder-btn:disabled { opacity: .25; cursor: not-allowed; }
+        .affil-reorder-btn:hover:not(:disabled) { color: #f0ede8; background: #1e1e2a; }
+        .affil-reorder-btn:disabled { opacity: .2; cursor: not-allowed; }
         .affiliation-body {
           flex: 1;
           min-width: 0;
@@ -1657,8 +1658,8 @@ export default function ProfileSettings() {
         .affil-contact-fields {
           display: flex;
           flex-direction: column;
-          gap: 6px;
-          padding-top: 4px;
+          gap: 8px;
+          padding-top: 8px;
           border-top: 1px solid #1e1e2a;
         }
         .affil-contact-row {
@@ -1669,14 +1670,16 @@ export default function ProfileSettings() {
         .affil-contact-input {
           flex: 1;
           min-width: 0;
-          padding: 7px 10px;
-          background: #0d0d14;
+          width: 100%;
+          padding: 11px 14px;
+          background: #12121a;
           border: 1px solid #1e1e2a;
-          border-radius: 8px;
+          border-radius: 10px;
           color: #f0ede8;
-          font-size: 12px;
+          font-size: 14px;
           font-family: 'Noto Sans JP', sans-serif;
           outline: none;
+          box-sizing: border-box;
         }
         .affil-contact-input:focus { border-color: #7b9e87; }
         .affil-contact-input::placeholder { color: #3a3a4a; }
@@ -1686,9 +1689,16 @@ export default function ProfileSettings() {
           color: #4a4a5a;
           font-size: 14px;
           cursor: pointer;
-          padding: 8px 4px;
+          width: 44px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           flex-shrink: 0;
           transition: color .15s;
+          border-radius: 8px;
+          padding: 0;
+          -webkit-tap-highlight-color: transparent;
         }
         .affil-delete-btn:hover { color: #c08080; }
         .add-affil-btn {
