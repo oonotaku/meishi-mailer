@@ -334,6 +334,11 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] メール署名プレビュー（プロフィール設定メール設定タブ内）（2026-05-03）
 - [x] プロフィール設定の多言語対応完備（全テキストi18n化）（2026-05-03）
 - [x] 名刺一覧の空状態ボタン修正（`/?scan=1` でホーム遷移時にファイル選択を自動起動）（2026-05-03）
+- [x] Gmail OAuth後のログアウト問題修正（`window.open()` ポップアップ方式 + `pages/auth/gmail-done.js` 新設 + `postMessage` でUI即時更新）（2026-05-04）
+- [x] Gmail OAuth完了後のUI即時更新（`savedProvider` state追加、`postMessage` origin不一致修正）（2026-05-04）
+- [x] メール本文末尾の署名行バグ修正（EN/JAプロンプトに「署名は自動付与されるので本文に含めない」指示を追加）（2026-05-04）
+- [x] パスワードリセット機能追加（`login.js` に forgot モード、`resetPasswordForEmail` + `/auth/confirm` 再利用）（2026-05-04）
+- [x] サインアップ後の言語維持（`signUp` に `emailRedirectTo` でロケール付きURLを渡す、Supabase Redirect URLs に `/en/` 追加）（2026-05-04）
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）

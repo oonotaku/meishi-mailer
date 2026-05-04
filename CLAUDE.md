@@ -31,10 +31,11 @@ No test framework is configured.
 | `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。DUPLICATE画面から「この出会いを記録する」でCONTEXTへ進み `encounters/save` を呼ぶ。 |
 | `contacts.js` | Saved contacts list (own + team-shared). Shows team name badge for contacts from other orgs. |
 | `contacts/[id].js` | Contact detail — view, resend email, edit context, toggle visibility. Send/resend buttons shown only to `owner_id === user.id`. 出会い履歴セクション（encounters）を表示。`/api/encounters/list` から取得し新しい順で一覧表示。 |
-| `login.js` | Email/password login |
-| `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows) |
+| `login.js` | Email/password login + signup + password reset (forgot mode). signUp に `emailRedirectTo` を指定して現在のロケールURLへリダイレクト。 |
+| `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
+| `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
-| `settings/profile.js` | Profile settings — tab UI (メール設定 / SNS / 所属). Display name + bio (一言コメント) inline edit, SendGrid/Gmail/SMTP config, SNS links (15 fields, 3 input modes: QR/username/url), affiliations (DnD sortable, max 5), email signature preview, billing plan + Stripe Checkout/Portal. 完全i18n対応。 |
+| `settings/profile.js` | Profile settings — tab UI (メール設定 / SNS / 所属). Display name + bio (一言コメント) inline edit, SendGrid/Gmail/SMTP config, SNS links (15 fields, 3 input modes: QR/username/url), affiliations (DnD sortable, max 5), email signature preview, billing plan + Stripe Checkout/Portal. 完全i18n対応。Gmail OAuth は `window.open()` ポップアップ方式で実行し、`postMessage` 受信後に `savedProvider` state を更新してUI即時反映。 |
 | `p/[userId].js` | Public profile page — name, bio, affiliations, SNS buttons with simpleicons icons, app invite banner. No auth. `getServerSideProps` + `supabaseAdmin`. |
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
@@ -42,7 +43,7 @@ No test framework is configured.
 
 **Auth**
 - `POST /api/auth/ensure-profile` — idempotent profile + org setup. Gets all user memberships; if no `role='owner'` exists: (1) upserts `profiles` first to satisfy FK constraint on `user_organizations.user_id → profiles.id`, (2) registers invited org membership from `user.user_metadata?.organization_id || user.app_metadata?.organization_id` (Supabase may store invite metadata in either field), (3) creates a new owner org. `current_organization_id` always points to the user's own (owner) org. Returns `organizations` array `[{ organization_id, name, role }, ...]`.
-- `GET /api/auth/gmail/callback` — Gmail OAuth2 callback. Exchanges authorization code for tokens, fetches Gmail address via userinfo, saves `gmail_refresh_token` + `gmail_email` + `smtp_provider='gmail'` to `profiles`. All `res.redirect()` calls use absolute URL (`NEXT_PUBLIC_SITE_URL || NEXT_PUBLIC_BASE_URL` with `.trim()`) to ensure the user lands on the custom domain even when the callback is processed on a Vercel preview URL.
+- `GET /api/auth/gmail/callback` — Gmail OAuth2 callback. Exchanges authorization code for tokens, fetches Gmail address via userinfo, saves `gmail_refresh_token` + `gmail_email` + `smtp_provider='gmail'` to `profiles`. 成功・エラーともに `/auth/gmail-done?status=...&email=...` にリダイレクト（旧: `/settings/profile?gmail=...`）。ポップアップ経由なのでメインウィンドウのSupabaseセッションを破壊しない。
 
 **Contacts**
 - `POST /api/contacts/save` — saves contact; looks up `profiles.current_organization_id` server-side to set `organization_id`. insert成功後、`encounters` テーブルに初回出会いを自動挿入。
@@ -79,7 +80,7 @@ No test framework is configured.
 
 ### AI model usage
 
-Both API calls in `/api/analyze` use `claude-opus-4-5`. OCR prompt forces JSON-only output. Email template: 100–150 chars, ends with `。`. No signature in the prompt — signature (QR code + name + affiliation) is added by `send.js` as HTML.
+Both API calls in `/api/analyze` use `claude-opus-4-5`. OCR prompt forces JSON-only output. Email template: 100–150 chars, ends with `。`. No signature in the prompt — signature (QR code + name + affiliation) is added by `send.js` as HTML. Both EN/JA prompts explicitly instruct the model not to include a closing sign-off or signature line.
 
 Email generation language follows the UI locale (`Accept-Language` header from client): EN UI → English email, JA UI → Japanese email.
 
