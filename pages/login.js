@@ -48,7 +48,17 @@ export default function Login() {
         setInfo(t('login.reset_sent'))
       }
     } else {
-      const { error: err } = await supabase.auth.signUp({ email, password })
+      const locale = i18n.language || 'ja'
+      const baseUrl = window.location.origin
+      const redirectTo = locale === 'ja'
+        ? `${baseUrl}/`
+        : `${baseUrl}/${locale}/`
+
+      const { error: err } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: redirectTo }
+      })
       if (err) {
         setError(err.message)
       } else {
