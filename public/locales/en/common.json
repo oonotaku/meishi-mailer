@@ -109,7 +109,12 @@
     "submit_login": "Sign In →",
     "submit_register": "Create account →",
     "loading": "Processing...",
-    "confirm_sent": "Confirmation email sent. Please check your inbox."
+    "confirm_sent": "Confirmation email sent. Please check your inbox.",
+    "forgot_link": "Forgot your password?",
+    "forgot_desc": "Enter your registered email address and we'll send you a link to reset your password.",
+    "submit_forgot": "Send reset email",
+    "reset_sent": "Password reset email sent. Please check your inbox.",
+    "back_to_login": "← Back to login"
   },
   "contacts": {
     "page_title": "Saved Contacts — Card Mailer",

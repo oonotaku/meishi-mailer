@@ -39,6 +39,14 @@ export default function Login() {
       } else {
         router.replace('/')
       }
+    } else if (mode === 'forgot') {
+      const redirectTo = `${window.location.origin}/auth/confirm`
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+      if (err) {
+        setError(err.message)
+      } else {
+        setInfo(t('login.reset_sent'))
+      }
     } else {
       const { error: err } = await supabase.auth.signUp({ email, password })
       if (err) {
@@ -97,16 +105,33 @@ export default function Login() {
               className="text-input"
             />
 
-            <label className="field-label" style={{ marginTop: 14 }}>{t('login.password_label')}</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder={mode === 'register' ? t('login.password_hint_register') : ''}
-              required
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              className="text-input"
-            />
+            {mode !== 'forgot' && (
+              <>
+                <label className="field-label" style={{ marginTop: 14 }}>{t('login.password_label')}</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder={mode === 'register' ? t('login.password_hint_register') : ''}
+                  required
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  className="text-input"
+                />
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    className="forgot-link"
+                    onClick={() => switchMode('forgot')}
+                  >
+                    {t('login.forgot_link')}
+                  </button>
+                )}
+              </>
+            )}
+
+            {mode === 'forgot' && (
+              <p className="forgot-desc">{t('login.forgot_desc')}</p>
+            )}
 
             {error && (
               <div className="error-box">
@@ -124,8 +149,18 @@ export default function Login() {
             <button type="submit" className="submit-btn" disabled={loading}>
               {loading
                 ? t('login.loading')
-                : mode === 'login' ? t('login.submit_login') : t('login.submit_register')}
+                : mode === 'login'
+                  ? t('login.submit_login')
+                  : mode === 'forgot'
+                    ? t('login.submit_forgot')
+                    : t('login.submit_register')}
             </button>
+
+            {info && mode === 'forgot' && (
+              <button type="button" className="ghost-link" onClick={() => switchMode('login')}>
+                {t('login.back_to_login')}
+              </button>
+            )}
 
             {mode === 'register' && (
               <p className="privacy-notice">
@@ -310,6 +345,39 @@ export default function Login() {
           text-decoration: underline;
         }
         .privacy-link:hover { color: #7b9e87; }
+        .forgot-link {
+          background: none;
+          border: none;
+          color: #5a5650;
+          font-size: 12px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          padding: 4px 0;
+          margin-top: 6px;
+          text-decoration: underline;
+          text-align: right;
+          align-self: flex-end;
+        }
+        .forgot-link:hover { color: #7b9e87; }
+        .forgot-desc {
+          font-size: 13px;
+          color: #5a5650;
+          line-height: 1.7;
+          margin-bottom: 1.25rem;
+          margin-top: 14px;
+        }
+        .ghost-link {
+          background: none;
+          border: none;
+          color: #7b9e87;
+          font-size: 13px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          padding: 8px 0;
+          text-decoration: underline;
+          margin-top: 8px;
+          text-align: center;
+        }
         .page-footer {
           display: flex;
           justify-content: center;
