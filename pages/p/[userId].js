@@ -27,33 +27,32 @@ export default function PublicProfile({ profile, affiliations }) {
                 <div key={i} className="affil-row">
                   <span className="affil-company">{a.company_name}</span>
                   {a.title && <span className="affil-title">{a.title}</span>}
+                  {((a.show_website && a.website) || (a.show_phone && a.phone) || (a.show_email && a.contact_email)) && (
+                    <div className="contact-links">
+                      {a.show_website && a.website && (
+                        <a href={a.website} target="_blank" rel="noopener noreferrer" className="contact-link">
+                          <span className="contact-icon">🌐</span>
+                          <span>{a.website.replace(/^https?:\/\//, '')}</span>
+                        </a>
+                      )}
+                      {a.show_phone && a.phone && (
+                        <a href={`tel:${a.phone}`} className="contact-link">
+                          <span className="contact-icon">📞</span>
+                          <span>{a.phone}</span>
+                        </a>
+                      )}
+                      {a.show_email && a.contact_email && (
+                        <a href={`mailto:${a.contact_email}`} className="contact-link">
+                          <span className="contact-icon">✉</span>
+                          <span>{a.contact_email}</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
-
-          {(profile.show_website && profile.website) || (profile.show_phone && profile.phone) || (profile.show_email && profile.contact_email) ? (
-            <div className="contact-links">
-              {profile.show_website && profile.website && (
-                <a href={profile.website} target="_blank" rel="noopener noreferrer" className="contact-link">
-                  <span className="contact-icon">🌐</span>
-                  <span>{profile.website.replace(/^https?:\/\//, '')}</span>
-                </a>
-              )}
-              {profile.show_phone && profile.phone && (
-                <a href={`tel:${profile.phone}`} className="contact-link">
-                  <span className="contact-icon">📞</span>
-                  <span>{profile.phone}</span>
-                </a>
-              )}
-              {profile.show_email && profile.contact_email && (
-                <a href={`mailto:${profile.contact_email}`} className="contact-link">
-                  <span className="contact-icon">✉</span>
-                  <span>{profile.contact_email}</span>
-                </a>
-              )}
-            </div>
-          ) : null}
 
           {activeSns.length > 0 && (
             <>
@@ -271,7 +270,7 @@ export async function getServerSideProps({ params }) {
       .select('name, bio, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_affiliations')
-      .select('company_name, title, order_index')
+      .select('company_name, title, order_index, phone, website, contact_email, show_phone, show_website, show_email')
       .eq('user_id', userId).order('order_index'),
   ])
 

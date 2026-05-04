@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { data, error } = await supabaseAdmin
       .from('profile_affiliations')
-      .select('id, company_name, title, order_index')
+      .select('id, company_name, title, order_index, phone, website, contact_email, show_phone, show_website, show_email')
       .eq('user_id', user.id)
       .order('order_index')
     if (error) return res.status(500).json({ error: error.message })
@@ -34,6 +34,12 @@ export default async function handler(req, res) {
         company_name: a.company_name,
         title: a.title || null,
         order_index: i,
+        phone: a.phone || null,
+        website: a.website || null,
+        contact_email: a.contact_email || null,
+        show_phone: a.show_phone ?? false,
+        show_website: a.show_website ?? true,
+        show_email: a.show_email ?? false,
       }))
       const { error: insertError } = await supabaseAdmin
         .from('profile_affiliations')

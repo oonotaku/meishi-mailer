@@ -6,14 +6,6 @@ import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslation
 import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 import { SNS_CONFIG, PRESET_CATEGORIES } from '../../lib/snsConfig'
-import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
-} from '@dnd-kit/core'
-import {
-  arrayMove, SortableContext, sortableKeyboardCoordinates,
-  useSortable, verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 
 async function compressImage(file) {
   return new Promise((resolve) => {
@@ -47,20 +39,57 @@ const SCAN_SNS_MAP = {
   wantedly:  'sns_wantedly',
 }
 
-function SortableAffiliationItem({ item, onDelete, onChange }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
-  const style = { transform: CSS.Transform.toString(transform), transition }
+function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onMoveDown }) {
   return (
-    <div ref={setNodeRef} style={style} className="affiliation-item">
-      <span className="drag-handle" {...attributes} {...listeners}>⠿</span>
-      <div className="affiliation-inputs">
-        <input type="text" value={item.company_name}
-          onChange={e => onChange(item.id, 'company_name', e.target.value)}
-          placeholder="会社名・団体名" maxLength={100} />
-        <input type="text" value={item.title || ''}
-          onChange={e => onChange(item.id, 'title', e.target.value)}
-          placeholder="肩書き・役職（任意）"
-          maxLength={100} />
+    <div className="affiliation-item">
+      <div className="affil-reorder">
+        <button type="button" className="affil-reorder-btn" onClick={() => onMoveUp(index)} disabled={index === 0}>↑</button>
+        <button type="button" className="affil-reorder-btn" onClick={() => onMoveDown(index)} disabled={index === total - 1}>↓</button>
+      </div>
+      <div className="affiliation-body">
+        <div className="affiliation-inputs">
+          <input type="text" value={item.company_name}
+            onChange={e => onChange(item.id, 'company_name', e.target.value)}
+            placeholder="会社名・団体名" maxLength={100} />
+          <input type="text" value={item.title || ''}
+            onChange={e => onChange(item.id, 'title', e.target.value)}
+            placeholder="肩書き・役職（任意）" maxLength={100} />
+        </div>
+        <div className="affil-contact-fields">
+          <div className="affil-contact-row">
+            <input type="tel" value={item.phone || ''}
+              onChange={e => onChange(item.id, 'phone', e.target.value)}
+              placeholder="📞 電話番号" className="affil-contact-input" />
+            <label className="toggle-label small">
+              <input type="checkbox" className="toggle-check" checked={item.show_phone ?? false}
+                onChange={e => onChange(item.id, 'show_phone', e.target.checked)} />
+              <span className="toggle-track"><span className="toggle-thumb" /></span>
+              <span className="toggle-text">{(item.show_phone ?? false) ? '公開' : '非公開'}</span>
+            </label>
+          </div>
+          <div className="affil-contact-row">
+            <input type="url" value={item.website || ''}
+              onChange={e => onChange(item.id, 'website', e.target.value)}
+              placeholder="🌐 ウェブサイト" className="affil-contact-input" />
+            <label className="toggle-label small">
+              <input type="checkbox" className="toggle-check" checked={item.show_website ?? true}
+                onChange={e => onChange(item.id, 'show_website', e.target.checked)} />
+              <span className="toggle-track"><span className="toggle-thumb" /></span>
+              <span className="toggle-text">{(item.show_website ?? true) ? '公開' : '非公開'}</span>
+            </label>
+          </div>
+          <div className="affil-contact-row">
+            <input type="email" value={item.contact_email || ''}
+              onChange={e => onChange(item.id, 'contact_email', e.target.value)}
+              placeholder="✉ メール" className="affil-contact-input" />
+            <label className="toggle-label small">
+              <input type="checkbox" className="toggle-check" checked={item.show_email ?? false}
+                onChange={e => onChange(item.id, 'show_email', e.target.checked)} />
+              <span className="toggle-track"><span className="toggle-thumb" /></span>
+              <span className="toggle-text">{(item.show_email ?? false) ? '公開' : '非公開'}</span>
+            </label>
+          </div>
+        </div>
       </div>
       <button type="button" className="affil-delete-btn" onClick={() => onDelete(item.id)}>✕</button>
     </div>
@@ -101,7 +130,8 @@ export default function ProfileSettings() {
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
   const qrFileRef = useRef(null)
-  const cardFileRef = useRef(null)
+  const cameraRef = useRef(null)
+  const libraryRef = useRef(null)
   const personalRef = useRef(null)
   const businessRef = useRef(null)
   const cardappRef = useRef(null)
@@ -120,31 +150,13 @@ export default function ProfileSettings() {
   const [scanSnsChecked, setScanSnsChecked] = useState({})
   const [scanSaving, setScanSaving] = useState(false)
   const [scanError, setScanError] = useState(null)
-  const [phone, setPhone] = useState('')
-  const [website, setWebsite] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [showPhone, setShowPhone] = useState(false)
-  const [showWebsite, setShowWebsite] = useState(true)
-  const [showEmail, setShowEmail] = useState(false)
-  const [contactSaving, setContactSaving] = useState(false)
-  const [contactMsg, setContactMsg] = useState(null)
   const [affilMsg, setAffilMsg] = useState(null)
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
   const router = useRouter()
 
   useEffect(() => {
     if (profile !== null && localName === null) {
       setLocalName(profile?.name || '')
       setBio(profile?.bio || '')
-      setPhone(profile?.phone || '')
-      setWebsite(profile?.website || '')
-      setContactEmail(profile?.contact_email || '')
-      setShowPhone(profile?.show_phone ?? false)
-      setShowWebsite(profile?.show_website ?? true)
-      setShowEmail(profile?.show_email ?? false)
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
@@ -406,20 +418,31 @@ export default function ProfileSettings() {
     }
   }
 
-  function handleDragEnd(event) {
-    const { active, over } = event
-    if (active.id !== over?.id) {
-      setAffiliations(items => {
-        const oldIndex = items.findIndex(i => i.id === active.id)
-        const newIndex = items.findIndex(i => i.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
+  function moveUp(index) {
+    if (index === 0) return
+    setAffiliations(prev => {
+      const next = [...prev]
+      ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+      return next
+    })
+  }
+
+  function moveDown(index) {
+    setAffiliations(prev => {
+      if (index >= prev.length - 1) return prev
+      const next = [...prev]
+      ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
+      return next
+    })
   }
 
   function addAffiliation() {
     if (affiliations.length >= 5) return
-    setAffiliations(prev => [...prev, { id: `new-${Date.now()}`, company_name: '', title: '' }])
+    setAffiliations(prev => [...prev, {
+      id: `new-${Date.now()}`, company_name: '', title: '',
+      phone: '', website: '', contact_email: '',
+      show_phone: false, show_website: true, show_email: false,
+    }])
   }
 
   function changeAffiliation(id, field, value) {
@@ -442,7 +465,13 @@ export default function ProfileSettings() {
         body: JSON.stringify({ affiliations: valid.map((a, i) => ({
           company_name: a.company_name.trim(),
           title: a.title?.trim() || null,
-          order_index: i
+          order_index: i,
+          phone: a.phone?.trim() || null,
+          website: a.website?.trim() || null,
+          contact_email: a.contact_email?.trim() || null,
+          show_phone: a.show_phone ?? false,
+          show_website: a.show_website ?? true,
+          show_email: a.show_email ?? false,
         })) })
       })
       const data = await r.json()
@@ -513,34 +542,6 @@ export default function ProfileSettings() {
     }
   }
 
-  async function handleContactSave() {
-    setContactSaving(true)
-    setContactMsg(null)
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const r = await fetch('/api/profile/update-contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({
-          phone: phone.trim() || null,
-          website: website.trim() || null,
-          contact_email: contactEmail.trim() || null,
-          show_phone: showPhone,
-          show_website: showWebsite,
-          show_email: showEmail,
-        }),
-      })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error)
-      setContactMsg({ ok: true, text: t('profile.saved') })
-      setTimeout(() => setContactMsg(null), 2500)
-    } catch (err) {
-      setContactMsg({ ok: false, text: err.message })
-    } finally {
-      setContactSaving(false)
-    }
-  }
-
   async function handleCardFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -599,10 +600,24 @@ export default function ProfileSettings() {
       }
 
       if (scanCompany.trim()) {
-        const newEntry = { company_name: scanCompany.trim(), title: scanTitle.trim() || null, order_index: 0 }
+        const newEntry = {
+          company_name: scanCompany.trim(),
+          title: scanTitle.trim() || null,
+          order_index: 0,
+          phone: scanPhone.trim() || null,
+          website: scanWebsite.trim() || null,
+          contact_email: scanContactEmail.trim() || null,
+          show_phone: scanShowPhone,
+          show_website: scanShowWebsite,
+          show_email: scanShowEmail,
+        }
         const rest = affiliations
           .filter(a => a.company_name?.trim())
-          .map((a, i) => ({ company_name: a.company_name, title: a.title || null, order_index: i + 1 }))
+          .map((a, i) => ({
+            company_name: a.company_name, title: a.title || null, order_index: i + 1,
+            phone: a.phone || null, website: a.website || null, contact_email: a.contact_email || null,
+            show_phone: a.show_phone ?? false, show_website: a.show_website ?? true, show_email: a.show_email ?? false,
+          }))
         const merged = [newEntry, ...rest].slice(0, 5)
         await fetch('/api/profile/affiliations', {
           method: 'POST',
@@ -611,25 +626,6 @@ export default function ProfileSettings() {
         })
         setAffiliations(merged.map((a, i) => ({ ...a, id: `scanned-${i}` })))
       }
-
-      await fetch('/api/profile/update-contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          phone: scanPhone.trim() || null,
-          website: scanWebsite.trim() || null,
-          contact_email: scanContactEmail.trim() || null,
-          show_phone: scanShowPhone,
-          show_website: scanShowWebsite,
-          show_email: scanShowEmail,
-        }),
-      })
-      setPhone(scanPhone.trim())
-      setWebsite(scanWebsite.trim())
-      setContactEmail(scanContactEmail.trim())
-      setShowPhone(scanShowPhone)
-      setShowWebsite(scanShowWebsite)
-      setShowEmail(scanShowEmail)
 
       const hasSns = scanResult?.sns && Object.entries(SCAN_SNS_MAP).some(([cat]) => scanSnsChecked[cat] && scanResult.sns[cat])
       if (hasSns) {
@@ -741,24 +737,27 @@ export default function ProfileSettings() {
 
             <div className="hero-email">{user?.email}</div>
 
-            <input
-              ref={cardFileRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleCardFile}
-            />
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+              style={{ display: 'none' }} onChange={handleCardFile} />
+            <input ref={libraryRef} type="file" accept="image/*"
+              style={{ display: 'none' }} onChange={handleCardFile} />
 
-            <button
-              type="button"
-              className={`card-scan-btn ${scanStep === 'analyzing' ? 'scanning' : ''}`}
-              onClick={() => { if (scanStep === 'idle') { setScanError(null); cardFileRef.current?.click() } }}
-              disabled={scanStep === 'analyzing'}
-            >
-              {scanStep === 'analyzing' ? (
-                <><span className="card-scan-spinner" />名刺を読み取っています...</>
-              ) : '📷 名刺からプロフィールを入力'}
-            </button>
+            {scanStep === 'analyzing' ? (
+              <div className="card-scan-btn scanning">
+                <span className="card-scan-spinner" />名刺を読み取っています...
+              </div>
+            ) : (
+              <div className="scan-btn-row">
+                <button type="button" className="card-scan-btn"
+                  onClick={() => { setScanError(null); cameraRef.current?.click() }}>
+                  📷 {t('profile.scan_camera_btn')}
+                </button>
+                <button type="button" className="card-scan-btn"
+                  onClick={() => { setScanError(null); libraryRef.current?.click() }}>
+                  🖼 {t('profile.scan_library_btn')}
+                </button>
+              </div>
+            )}
 
             {scanError && scanStep === 'idle' && (
               <div className="scan-error-msg">{scanError}</div>
@@ -767,56 +766,12 @@ export default function ProfileSettings() {
 
           <div className="divider" />
 
-          {/* ── プランセクション ── */}
-          {(() => {
-            const isPro = profile?.plan === 'pro'
-            const scanUsed = profile?.scan_count_month || 0
-            const scanLimit = isPro ? 100 : 10
-            const pct = Math.min(100, (scanUsed / scanLimit) * 100)
-            return (
-              <div className="section">
-                <div className="section-header">
-                  <div className="section-label">{t('billing.section_label')}</div>
-                  <span className={`plan-badge ${isPro ? 'pro' : 'free'}`}>
-                    {isPro ? t('billing.plan_pro') : t('billing.plan_free')}
-                  </span>
-                </div>
-
-                {upgradeMsg && (
-                  <div className="msg success" style={{ marginBottom: 12 }}>{upgradeMsg}</div>
-                )}
-
-                <div className="scan-bar-wrap">
-                  <div className="scan-bar">
-                    <div className="scan-fill" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="scan-label">
-                    {t('billing.scan_count', { used: scanUsed, limit: scanLimit })}
-                  </span>
-                </div>
-
-                <p className="desc" style={{ marginBottom: 14 }}>
-                  {isPro ? t('billing.limit_note_pro') : t('billing.limit_note_free')}
-                </p>
-
-                {isPro ? (
-                  <button className="manage-btn" onClick={handlePortal} disabled={billingLoading}>
-                    {billingLoading ? t('billing.redirecting') : t('billing.manage_btn')}
-                  </button>
-                ) : (
-                  <button className="upgrade-btn" onClick={handleCheckout} disabled={billingLoading}>
-                    {billingLoading ? t('billing.redirecting') : t('billing.upgrade_btn')}
-                  </button>
-                )}
-              </div>
-            )
-          })()}
-
           <div className="tab-bar">
             {[
-              { key: 'profile_tab', label: 'プロフィール' },
-              { key: 'sns',         label: 'SNS' },
-              { key: 'email',       label: t('profile.tab_email') },
+              { key: 'profile_tab',  label: 'プロフィール' },
+              { key: 'sns',          label: 'SNS' },
+              { key: 'email',        label: t('profile.tab_email') },
+              { key: 'subscription', label: t('profile.tab_subscription') },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -1181,7 +1136,7 @@ export default function ProfileSettings() {
           {activeTab === 'profile_tab' && (
             <div className="section">
 
-              {/* ── 所属 ── */}
+              {/* ── 所属＋連絡先 ── */}
               <div className="section-header">
                 <div className="section-label">{t('profile.tab_affiliation')}</div>
                 <span className={`config-badge ${affiliations.length > 0 ? 'configured' : 'unconfigured'}`}>
@@ -1190,18 +1145,18 @@ export default function ProfileSettings() {
               </div>
               <p className="desc" style={{ marginBottom: 14 }}>{t('profile.affil_desc')}</p>
 
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={affiliations.map(a => a.id)} strategy={verticalListSortingStrategy}>
-                  {affiliations.map(item => (
-                    <SortableAffiliationItem
-                      key={item.id}
-                      item={item}
-                      onDelete={deleteAffiliation}
-                      onChange={changeAffiliation}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
+              {affiliations.map((item, index) => (
+                <AffiliationItem
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  total={affiliations.length}
+                  onDelete={deleteAffiliation}
+                  onChange={changeAffiliation}
+                  onMoveUp={moveUp}
+                  onMoveDown={moveDown}
+                />
+              ))}
 
               {affiliations.length < 5 && (
                 <button type="button" className="add-affil-btn" onClick={addAffiliation}>
@@ -1214,77 +1169,7 @@ export default function ProfileSettings() {
               )}
 
               <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleAffilSave} disabled={affilSaving}>
-                {affilSaving ? '保存中...' : '保存する'}
-              </button>
-
-              <div className="section-divider" />
-
-              {/* ── 連絡先情報 ── */}
-              <div className="section-header">
-                <div className="section-label">連絡先情報</div>
-                <span className="desc" style={{ fontSize: 11, margin: 0 }}>公開プロフィールへの表示設定</span>
-              </div>
-
-              <div className="contact-field">
-                <div className="contact-field-top">
-                  <label className="field-label">電話番号</label>
-                  <label className="toggle-label">
-                    <input type="checkbox" className="toggle-check" checked={showPhone} onChange={e => setShowPhone(e.target.checked)} />
-                    <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    <span className="toggle-text">{showPhone ? '公開' : '非公開'}</span>
-                  </label>
-                </div>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="090-0000-0000"
-                  className="text-input"
-                />
-              </div>
-
-              <div className="contact-field">
-                <div className="contact-field-top">
-                  <label className="field-label">ウェブサイト</label>
-                  <label className="toggle-label">
-                    <input type="checkbox" className="toggle-check" checked={showWebsite} onChange={e => setShowWebsite(e.target.checked)} />
-                    <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    <span className="toggle-text">{showWebsite ? '公開' : '非公開'}</span>
-                  </label>
-                </div>
-                <input
-                  type="url"
-                  value={website}
-                  onChange={e => setWebsite(e.target.value)}
-                  placeholder="https://example.com"
-                  className="text-input"
-                />
-              </div>
-
-              <div className="contact-field">
-                <div className="contact-field-top">
-                  <label className="field-label">連絡先メール</label>
-                  <label className="toggle-label">
-                    <input type="checkbox" className="toggle-check" checked={showEmail} onChange={e => setShowEmail(e.target.checked)} />
-                    <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    <span className="toggle-text">{showEmail ? '公開' : '非公開'}</span>
-                  </label>
-                </div>
-                <input
-                  type="email"
-                  value={contactEmail}
-                  onChange={e => setContactEmail(e.target.value)}
-                  placeholder="info@example.com"
-                  className="text-input"
-                />
-              </div>
-
-              {contactMsg && (
-                <div className={`msg ${contactMsg.ok ? 'success' : 'error'}`}>{contactMsg.text}</div>
-              )}
-
-              <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleContactSave} disabled={contactSaving}>
-                {contactSaving ? '保存中...' : '保存する'}
+                {affilSaving ? t('profile.saving') : t('profile.save')}
               </button>
 
               <div className="section-divider" />
@@ -1332,6 +1217,50 @@ export default function ProfileSettings() {
               </div>
             </div>
           )}
+
+          {activeTab === 'subscription' && (() => {
+            const isPro = profile?.plan === 'pro'
+            const scanUsed = profile?.scan_count_month || 0
+            const scanLimit = isPro ? 100 : 10
+            const pct = Math.min(100, (scanUsed / scanLimit) * 100)
+            return (
+              <div className="section">
+                <div className="section-header">
+                  <div className="section-label">{t('billing.section_label')}</div>
+                  <span className={`plan-badge ${isPro ? 'pro' : 'free'}`}>
+                    {isPro ? t('billing.plan_pro') : t('billing.plan_free')}
+                  </span>
+                </div>
+
+                {upgradeMsg && (
+                  <div className="msg success" style={{ marginBottom: 12 }}>{upgradeMsg}</div>
+                )}
+
+                <div className="scan-bar-wrap">
+                  <div className="scan-bar">
+                    <div className="scan-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="scan-label">
+                    {t('billing.scan_count', { used: scanUsed, limit: scanLimit })}
+                  </span>
+                </div>
+
+                <p className="desc" style={{ marginBottom: 14 }}>
+                  {isPro ? t('billing.limit_note_pro') : t('billing.limit_note_free')}
+                </p>
+
+                {isPro ? (
+                  <button className="manage-btn" onClick={handlePortal} disabled={billingLoading}>
+                    {billingLoading ? t('billing.redirecting') : t('billing.manage_btn')}
+                  </button>
+                ) : (
+                  <button className="upgrade-btn" onClick={handleCheckout} disabled={billingLoading}>
+                    {billingLoading ? t('billing.redirecting') : t('billing.upgrade_btn')}
+                  </button>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         <div className="page-footer">
@@ -1694,16 +1623,63 @@ export default function ProfileSettings() {
           border-radius: 10px;
           padding: 10px 12px;
         }
-        .drag-handle {
-          color: #3a3a4a;
-          cursor: grab;
-          font-size: 18px;
-          padding-top: 10px;
+        .affil-reorder {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
           flex-shrink: 0;
-          user-select: none;
-          letter-spacing: -2px;
+          padding-top: 6px;
         }
-        .drag-handle:active { cursor: grabbing; }
+        .affil-reorder-btn {
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 4px;
+          color: #5a5650;
+          font-size: 11px;
+          width: 24px;
+          height: 24px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color .15s, border-color .15s;
+          padding: 0;
+        }
+        .affil-reorder-btn:hover:not(:disabled) { color: #f0ede8; border-color: #3a3a4a; }
+        .affil-reorder-btn:disabled { opacity: .25; cursor: not-allowed; }
+        .affiliation-body {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .affil-contact-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding-top: 4px;
+          border-top: 1px solid #1e1e2a;
+        }
+        .affil-contact-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .affil-contact-input {
+          flex: 1;
+          min-width: 0;
+          padding: 7px 10px;
+          background: #0d0d14;
+          border: 1px solid #1e1e2a;
+          border-radius: 8px;
+          color: #f0ede8;
+          font-size: 12px;
+          font-family: 'Noto Sans JP', sans-serif;
+          outline: none;
+        }
+        .affil-contact-input:focus { border-color: #7b9e87; }
+        .affil-contact-input::placeholder { color: #3a3a4a; }
         .affil-delete-btn {
           background: none;
           border: none;
@@ -2226,24 +2202,30 @@ export default function ProfileSettings() {
         }
 
         /* ── 名刺スキャンボタン ── */
+        .scan-btn-row {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
+          width: 100%;
+        }
         .card-scan-btn {
+          flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
-          padding: 10px 20px;
+          padding: 10px 14px;
           background: none;
           border: 1px dashed #2a4a35;
           border-radius: 10px;
           color: #7b9e87;
-          font-size: 13px;
+          font-size: 12px;
           font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
           transition: background .15s, border-color .15s;
-          margin-top: 4px;
         }
-        .card-scan-btn:hover:not(:disabled) { background: #0d1f15; border-color: #7b9e87; }
-        .card-scan-btn.scanning { color: #5a5650; border-color: #1e1e2a; cursor: default; }
+        .card-scan-btn:hover { background: #0d1f15; border-color: #7b9e87; }
+        .card-scan-btn.scanning { color: #5a5650; border-color: #1e1e2a; cursor: default; flex: none; width: 100%; margin-top: 4px; }
         @keyframes spin-btn { to { transform: rotate(360deg); } }
         .card-scan-spinner {
           display: inline-block;
@@ -2576,6 +2558,68 @@ export default function ProfileSettings() {
           background: #0d0d14;
           border-radius: 10px;
           border: 1px solid #1e1e2a;
+        }
+
+        /* ── トグルスイッチ ── */
+        .toggle-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+          flex-shrink: 0;
+          white-space: nowrap;
+        }
+        .toggle-label.small .toggle-track { width: 28px; height: 16px; }
+        .toggle-label.small .toggle-thumb { width: 12px; height: 12px; }
+        .toggle-check { display: none; }
+        .toggle-track {
+          position: relative;
+          width: 34px;
+          height: 20px;
+          background: #2a2a3a;
+          border-radius: 999px;
+          transition: background .2s;
+          flex-shrink: 0;
+        }
+        .toggle-check:checked + .toggle-track { background: #7b9e87; }
+        .toggle-thumb {
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #f0ede8;
+          transition: transform .2s;
+        }
+        .toggle-check:checked + .toggle-track .toggle-thumb { transform: translateX(14px); }
+        .toggle-label.small .toggle-check:checked + .toggle-track .toggle-thumb { transform: translateX(12px); }
+        .toggle-text {
+          font-size: 10px;
+          color: #5a5650;
+          font-family: 'DM Mono', monospace;
+        }
+
+        /* ── スキャン確認 連絡先行 ── */
+        .scan-contact-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 4px;
+        }
+
+        /* ── section-divider ── */
+        .section-divider {
+          height: 1px;
+          background: #1e1e2a;
+          margin: 24px 0;
+        }
+
+        /* ── scan-section-divider ── */
+        .scan-section-divider {
+          height: 1px;
+          background: #1e1e2a;
+          margin: 8px 0;
         }
       `}</style>
     </>

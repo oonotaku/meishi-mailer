@@ -236,7 +236,11 @@
     "affil_add": "+ 所属を追加",
     "affil_count": "{{count}}件",
     "in_use": "使用中",
-    "affil_desc": "最大5件。⠿ ドラッグで並び替え可能。"
+    "affil_desc": "最大5件。↑↓ボタンで並び替え可能。各所属に電話・ウェブサイト・メールを紐付けられます。",
+    "scan_card_btn": "名刺からプロフィールを入力",
+    "scan_camera_btn": "カメラで撮影",
+    "scan_library_btn": "ライブラリから選択",
+    "tab_subscription": "サブスク"
   },
   "sns": {
     "qr_scan": "📷 QRコードのスクショから読み取る",
@@ -265,7 +269,8 @@
     "upgrade_btn": "Pro にアップグレード（¥980/月）",
     "manage_btn": "サブスクリプションを管理する",
     "upgrade_success": "Proプランへのアップグレードが完了しました！",
-    "redirecting": "Stripeへ移動中..."
+    "redirecting": "Stripeへ移動中...",
+    "tab_label": "サブスクリプション"
   },
   "landing": {
     "login": "ログイン",
