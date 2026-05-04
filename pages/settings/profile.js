@@ -90,7 +90,9 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
       <div className="affil-right">
         <button type="button" className="affil-reorder-btn" onClick={() => onMoveUp(index)} disabled={index === 0}>↑</button>
         <button type="button" className="affil-reorder-btn" onClick={() => onMoveDown(index)} disabled={index === total - 1}>↓</button>
-        <button type="button" className="affil-delete-btn" onClick={() => onDelete(item.id)}>✕</button>
+        <button type="button" className="affil-delete-btn" onClick={() => {
+          if (window.confirm(`「${item.company_name || '所属'}」の情報を削除しますか？`)) onDelete(item.id)
+        }}>✕</button>
       </div>
     </div>
   )
