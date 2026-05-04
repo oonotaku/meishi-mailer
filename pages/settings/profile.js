@@ -15,6 +15,33 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const MAX = 1600
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    img.src = url
+  })
+}
+
+const SCAN_SNS_MAP = {
+  instagram: 'sns_instagram',
+  x:         'sns_x',
+  linkedin:  'sns_linkedin',
+  github:    'sns_github',
+  line:      'sns_line',
+  facebook:  'sns_facebook',
+}
+
 function SortableAffiliationItem({ item, onDelete, onChange }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -69,10 +96,19 @@ export default function ProfileSettings() {
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
   const qrFileRef = useRef(null)
+  const cardFileRef = useRef(null)
   const personalRef = useRef(null)
   const businessRef = useRef(null)
   const cardappRef = useRef(null)
   const [qrTarget, setQrTarget] = useState(null)
+  const [scanStep, setScanStep] = useState('idle')
+  const [scanResult, setScanResult] = useState(null)
+  const [scanName, setScanName] = useState('')
+  const [scanCompany, setScanCompany] = useState('')
+  const [scanTitle, setScanTitle] = useState('')
+  const [scanSnsChecked, setScanSnsChecked] = useState({})
+  const [scanSaving, setScanSaving] = useState(false)
+  const [scanError, setScanError] = useState(null)
   const [affilMsg, setAffilMsg] = useState(null)
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -452,6 +488,105 @@ export default function ProfileSettings() {
     }
   }
 
+  async function handleCardFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setScanError(null)
+    setScanStep('analyzing')
+    try {
+      const dataUrl = await compressImage(file)
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/scan-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ imageBase64: dataUrl.split(',')[1] }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+
+      setScanResult(data)
+      setScanName(data.name || '')
+      setScanCompany(data.company || '')
+      setScanTitle(data.title || '')
+
+      const checked = {}
+      if (data.sns) {
+        Object.entries(SCAN_SNS_MAP).forEach(([cat, snsKey]) => {
+          if (data.sns[cat] && !snsValues[snsKey]) checked[cat] = true
+        })
+      }
+      setScanSnsChecked(checked)
+      setScanStep('confirm')
+    } catch {
+      setScanError('読み取れませんでした。手動で入力してください。')
+      setScanStep('idle')
+    }
+  }
+
+  async function handleScanSave() {
+    setScanSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session.access_token
+
+      if (scanName.trim()) {
+        await fetch('/api/profile/update-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: scanName.trim(), bio: profile?.bio || '' }),
+        })
+        setLocalName(scanName.trim())
+      }
+
+      if (scanCompany.trim()) {
+        const newEntry = { company_name: scanCompany.trim(), title: scanTitle.trim() || null, order_index: 0 }
+        const rest = affiliations
+          .filter(a => a.company_name?.trim())
+          .map((a, i) => ({ company_name: a.company_name, title: a.title || null, order_index: i + 1 }))
+        const merged = [newEntry, ...rest].slice(0, 5)
+        await fetch('/api/profile/affiliations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ affiliations: merged }),
+        })
+        setAffiliations(merged.map((a, i) => ({ ...a, id: `scanned-${i}` })))
+      }
+
+      const hasSns = scanResult?.sns && Object.entries(SCAN_SNS_MAP).some(([cat]) => scanSnsChecked[cat] && scanResult.sns[cat])
+      if (hasSns) {
+        const next = { ...snsValues }
+        Object.entries(SCAN_SNS_MAP).forEach(([cat, snsKey]) => {
+          if (!scanSnsChecked[cat] || !scanResult.sns[cat]) return
+          const raw = scanResult.sns[cat].trim().replace(/^@/, '')
+          const cfg = SNS_CONFIG.find(f => f.key === snsKey)
+          if (!cfg) return
+          next[snsKey] = (cfg.inputMode === 'username' && cfg.baseUrl && raw.startsWith(cfg.baseUrl))
+            ? raw.slice(cfg.baseUrl.length) : raw
+        })
+        const snsPayload = {}
+        SNS_CONFIG.forEach(f => {
+          const val = next[f.key]?.trim() || ''
+          snsPayload[f.key] = (f.inputMode === 'username' && f.baseUrl && val) ? f.baseUrl + val : val
+        })
+        await fetch('/api/profile/update-sns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(snsPayload),
+        })
+        setSnsValues(next)
+      }
+
+      setScanStep('idle')
+      setScanResult(null)
+    } catch (err) {
+      setScanError(err.message)
+      setScanStep('idle')
+    } finally {
+      setScanSaving(false)
+    }
+  }
+
   return (
     <>
       <Head>
@@ -527,6 +662,29 @@ export default function ProfileSettings() {
             )}
 
             <div className="hero-email">{user?.email}</div>
+
+            <input
+              ref={cardFileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleCardFile}
+            />
+
+            <button
+              type="button"
+              className={`card-scan-btn ${scanStep === 'analyzing' ? 'scanning' : ''}`}
+              onClick={() => { if (scanStep === 'idle') { setScanError(null); cardFileRef.current?.click() } }}
+              disabled={scanStep === 'analyzing'}
+            >
+              {scanStep === 'analyzing' ? (
+                <><span className="card-scan-spinner" />名刺を読み取っています...</>
+              ) : '📷 名刺からプロフィールを入力'}
+            </button>
+
+            {scanError && scanStep === 'idle' && (
+              <div className="scan-error-msg">{scanError}</div>
+            )}
           </div>
 
           <div className="divider" />
@@ -1037,6 +1195,102 @@ export default function ProfileSettings() {
           </a>
         </div>
       </div>
+
+      {/* ── 名刺スキャン確認オーバーレイ ── */}
+      {scanStep === 'confirm' && scanResult && (
+        <div className="scan-overlay">
+          <div className="scan-sheet">
+            <div className="scan-sheet-header">
+              <span className="scan-sheet-title">名刺から読み取った情報</span>
+              <button type="button" className="scan-sheet-close" onClick={() => setScanStep('idle')}>✕</button>
+            </div>
+
+            <div className="scan-sheet-body">
+              <div className="scan-field-group">
+                <label className="scan-field-label">名前</label>
+                <input
+                  type="text"
+                  value={scanName}
+                  onChange={e => setScanName(e.target.value)}
+                  className="scan-field-input"
+                  placeholder="氏名"
+                />
+              </div>
+              <div className="scan-field-group">
+                <label className="scan-field-label">会社</label>
+                <input
+                  type="text"
+                  value={scanCompany}
+                  onChange={e => setScanCompany(e.target.value)}
+                  className="scan-field-input"
+                  placeholder="会社名"
+                />
+              </div>
+              <div className="scan-field-group">
+                <label className="scan-field-label">肩書き</label>
+                <input
+                  type="text"
+                  value={scanTitle}
+                  onChange={e => setScanTitle(e.target.value)}
+                  className="scan-field-input"
+                  placeholder="役職・肩書き"
+                />
+              </div>
+
+              {(() => {
+                const found = Object.entries(SCAN_SNS_MAP).filter(([cat]) => scanResult.sns?.[cat])
+                if (found.length === 0) return null
+                return (
+                  <div className="scan-sns-section">
+                    <div className="scan-field-label" style={{ marginBottom: 10 }}>名刺で見つかったSNS</div>
+                    {found.map(([cat, snsKey]) => {
+                      const isRegistered = !!snsValues[snsKey]
+                      const raw = scanResult.sns[cat]
+                      const cfg = SNS_CONFIG.find(f => f.key === snsKey)
+                      return (
+                        <label key={cat} className={`scan-sns-row ${isRegistered ? 'registered' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={isRegistered ? false : !!scanSnsChecked[cat]}
+                            disabled={isRegistered}
+                            onChange={e => setScanSnsChecked(prev => ({ ...prev, [cat]: e.target.checked }))}
+                            className="scan-sns-check"
+                          />
+                          <div className="scan-sns-info">
+                            <span className="scan-sns-label">{cfg?.label || cat}</span>
+                            <span className="scan-sns-value">{raw.replace(/^@/, '')}</span>
+                          </div>
+                          {isRegistered && <span className="scan-registered-tag">登録済み</span>}
+                        </label>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+
+            <div className="scan-sheet-actions">
+              <button
+                type="button"
+                className="save-btn"
+                onClick={handleScanSave}
+                disabled={scanSaving}
+              >
+                {scanSaving ? '保存中...' : 'プロフィールに保存'}
+              </button>
+              <button
+                type="button"
+                className="name-cancel-btn"
+                onClick={() => setScanStep('idle')}
+                disabled={scanSaving}
+                style={{ marginTop: 10 }}
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1761,6 +2015,185 @@ export default function ProfileSettings() {
           font-size: 13px;
           line-height: 1.7;
           color: #333;
+        }
+
+        /* ── 名刺スキャンボタン ── */
+        .card-scan-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 10px 20px;
+          background: none;
+          border: 1px dashed #2a4a35;
+          border-radius: 10px;
+          color: #7b9e87;
+          font-size: 13px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: background .15s, border-color .15s;
+          margin-top: 4px;
+        }
+        .card-scan-btn:hover:not(:disabled) { background: #0d1f15; border-color: #7b9e87; }
+        .card-scan-btn.scanning { color: #5a5650; border-color: #1e1e2a; cursor: default; }
+        @keyframes spin-btn { to { transform: rotate(360deg); } }
+        .card-scan-spinner {
+          display: inline-block;
+          width: 14px;
+          height: 14px;
+          border: 2px solid #2a2a3a;
+          border-top-color: #7b9e87;
+          border-radius: 50%;
+          animation: spin-btn .7s linear infinite;
+          flex-shrink: 0;
+        }
+        .scan-error-msg {
+          font-size: 12px;
+          color: #c08080;
+          background: #1a0a0a;
+          border: 1px solid #2a1010;
+          border-radius: 8px;
+          padding: 8px 12px;
+          text-align: center;
+          margin-top: 4px;
+        }
+
+        /* ── 名刺スキャン確認オーバーレイ ── */
+        .scan-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(10,10,15,0.97);
+          z-index: 200;
+          display: flex;
+          flex-direction: column;
+          overflow-y: auto;
+        }
+        .scan-sheet {
+          max-width: 430px;
+          width: 100%;
+          margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+          min-height: 100%;
+          padding: 0 0 2rem;
+        }
+        .scan-sheet-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid #1e1e2a;
+          position: sticky;
+          top: 0;
+          background: rgba(10,10,15,0.97);
+          z-index: 1;
+        }
+        .scan-sheet-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #f0ede8;
+        }
+        .scan-sheet-close {
+          background: none;
+          border: none;
+          color: #5a5650;
+          font-size: 18px;
+          cursor: pointer;
+          padding: 4px 8px;
+          transition: color .15s;
+        }
+        .scan-sheet-close:hover { color: #f0ede8; }
+        .scan-sheet-body {
+          flex: 1;
+          padding: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .scan-field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .scan-field-label {
+          font-size: 10px;
+          letter-spacing: .1em;
+          color: #5a5650;
+          text-transform: uppercase;
+          font-family: 'DM Mono', monospace;
+        }
+        .scan-field-input {
+          width: 100%;
+          padding: 11px 14px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          color: #f0ede8;
+          font-size: 15px;
+          font-weight: 500;
+          font-family: 'Noto Sans JP', sans-serif;
+          outline: none;
+        }
+        .scan-field-input:focus { border-color: #7b9e87; }
+        .scan-field-input::placeholder { color: #3a3a4a; font-weight: 400; }
+        .scan-sns-section {
+          padding: 14px;
+          background: #0d0d14;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+        }
+        .scan-sns-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 0;
+          border-bottom: 1px solid #0f0f18;
+          cursor: pointer;
+        }
+        .scan-sns-row:last-child { border-bottom: none; }
+        .scan-sns-row.registered { opacity: .45; cursor: default; }
+        .scan-sns-check {
+          width: 18px;
+          height: 18px;
+          accent-color: #7b9e87;
+          flex-shrink: 0;
+          cursor: pointer;
+        }
+        .scan-sns-row.registered .scan-sns-check { cursor: default; }
+        .scan-sns-info {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .scan-sns-label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #f0ede8;
+        }
+        .scan-sns-value {
+          font-size: 12px;
+          color: #5a5650;
+          font-family: 'DM Mono', monospace;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .scan-registered-tag {
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: #0d1f15;
+          color: #7b9e87;
+          border: 1px solid #1a3525;
+          flex-shrink: 0;
+        }
+        .scan-sheet-actions {
+          padding: 1rem 1.5rem 0;
+          display: flex;
+          flex-direction: column;
         }
 
         /* ── プリセットパネル ── */
