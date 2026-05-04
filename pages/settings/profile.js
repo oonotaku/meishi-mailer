@@ -153,7 +153,12 @@ export default function ProfileSettings() {
   const [scanSaving, setScanSaving] = useState(false)
   const [scanError, setScanError] = useState(null)
   const [affilMsg, setAffilMsg] = useState(null)
+  const [snsDirty, setSnsDirty] = useState(false)
+  const [affilDirty, setAffilDirty] = useState(false)
   const router = useRouter()
+
+  const isDirtyAny = snsDirty || affilDirty
+  const isDirtyCurrent = (activeTab === 'sns' && snsDirty) || (activeTab === 'profile_tab' && affilDirty)
 
   useEffect(() => {
     if (profile !== null && localName === null) {
@@ -208,6 +213,30 @@ export default function ProfileSettings() {
       router.replace('/settings/profile', undefined, { shallow: true })
     }
   }, [router.query])
+
+  useEffect(() => {
+    const msg = '保存されていない変更があります。このページを離れますか？'
+    if (!isDirtyAny) {
+      window.onbeforeunload = null
+      return
+    }
+    window.onbeforeunload = (e) => {
+      e.preventDefault()
+      e.returnValue = msg
+      return msg
+    }
+    const handleRouteChange = () => {
+      if (!window.confirm(msg)) {
+        router.events.emit('routeChangeError')
+        throw 'routeChange aborted'
+      }
+    }
+    router.events.on('routeChangeStart', handleRouteChange)
+    return () => {
+      window.onbeforeunload = null
+      router.events.off('routeChangeStart', handleRouteChange)
+    }
+  }, [isDirtyAny])
 
   useEffect(() => {
     if (!user) return
@@ -420,6 +449,11 @@ export default function ProfileSettings() {
     }
   }
 
+  function onSnsChange(key, value) {
+    setSnsValues(prev => ({ ...prev, [key]: value }))
+    setSnsDirty(true)
+  }
+
   function moveUp(index) {
     if (index === 0) return
     setAffiliations(prev => {
@@ -427,6 +461,7 @@ export default function ProfileSettings() {
       ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
       return next
     })
+    setAffilDirty(true)
   }
 
   function moveDown(index) {
@@ -436,6 +471,7 @@ export default function ProfileSettings() {
       ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
       return next
     })
+    setAffilDirty(true)
   }
 
   function addAffiliation() {
@@ -445,14 +481,17 @@ export default function ProfileSettings() {
       phone: '', website: '', contact_email: '',
       show_phone: false, show_website: true, show_email: false,
     }])
+    setAffilDirty(true)
   }
 
   function changeAffiliation(id, field, value) {
     setAffiliations(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a))
+    setAffilDirty(true)
   }
 
   function deleteAffiliation(id) {
     setAffiliations(prev => prev.filter(a => a.id !== id))
+    setAffilDirty(true)
   }
 
   async function handleAffilSave() {
@@ -478,6 +517,7 @@ export default function ProfileSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
+      setAffilDirty(false)
       setAffilMsg({ ok: true, text: t('profile.saved') })
       setTimeout(() => setAffilMsg(null), 2500)
     } catch (err) {
@@ -504,7 +544,7 @@ export default function ProfileSettings() {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       const code = jsQR(imageData.data, imageData.width, imageData.height)
       if (code?.data) {
-        setSnsValues(prev => ({ ...prev, [qrTarget]: code.data }))
+        onSnsChange(qrTarget, code.data)
       } else {
         alert(t('sns.qr_error'))
       }
@@ -535,6 +575,7 @@ export default function ProfileSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
+      setSnsDirty(false)
       setSnsMsg({ ok: true, text: t('profile.saved') })
       setTimeout(() => setSnsMsg(null), 2500)
     } catch (err) {
@@ -1074,7 +1115,7 @@ export default function ProfileSettings() {
                                 </button>
                                 {val && (
                                   <button type="button" className="qr-clear-btn"
-                                    onClick={() => setSnsValues(prev => ({ ...prev, [f.key]: '' }))}>
+                                    onClick={() => onSnsChange(f.key, '')}>
                                     {t('sns.qr_delete')}
                                   </button>
                                 )}
@@ -1087,7 +1128,7 @@ export default function ProfileSettings() {
                                   <input
                                     type="text"
                                     value={val}
-                                    onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                    onChange={e => onSnsChange(f.key, e.target.value)}
                                     placeholder="username"
                                     autoFocus
                                     className={`username-input ${val ? 'sns-input-active' : ''}`}
@@ -1105,7 +1146,7 @@ export default function ProfileSettings() {
                                 <input
                                   type="url"
                                   value={val}
-                                  onChange={e => setSnsValues(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                  onChange={e => onSnsChange(f.key, e.target.value)}
                                   placeholder={f.placeholder || 'https://...'}
                                   autoFocus
                                   className={`text-input ${val ? 'sns-input-active' : ''}`}
@@ -1428,6 +1469,21 @@ export default function ProfileSettings() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {isDirtyCurrent && (
+        <div className="sticky-save-bar">
+          <button
+            type="button"
+            className="sticky-save-btn"
+            onClick={() => activeTab === 'sns'
+              ? handleSnsSave({ preventDefault: () => {} })
+              : handleAffilSave()}
+            disabled={activeTab === 'sns' ? snsSaving : affilSaving}
+          >
+            {(activeTab === 'sns' ? snsSaving : affilSaving) ? t('profile.saving') : t('profile.save')}
+          </button>
         </div>
       )}
 
@@ -2645,6 +2701,38 @@ export default function ProfileSettings() {
           background: #1e1e2a;
           margin: 8px 0;
         }
+
+        /* ── 固定保存バー ── */
+        .sticky-save-bar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 50;
+          padding: 12px 16px;
+          padding-bottom: calc(12px + env(safe-area-inset-bottom));
+          background: rgba(10,10,15,0.95);
+          backdrop-filter: blur(8px);
+          border-top: 1px solid #1e1e2a;
+        }
+        .sticky-save-btn {
+          width: 100%;
+          max-width: 430px;
+          margin: 0 auto;
+          display: block;
+          padding: 15px;
+          background: #7b9e87;
+          color: #0a0a0f;
+          border: none;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: opacity .15s;
+        }
+        .sticky-save-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .sticky-save-btn:not(:disabled):active { opacity: .8; }
       `}</style>
     </>
   )
