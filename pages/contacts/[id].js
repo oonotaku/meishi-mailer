@@ -2,11 +2,15 @@ import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
-import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 import { SNS_CONFIG } from '../../lib/snsConfig'
 import i18nConfig from '../../next-i18next.config'
+
+// Locale files are bundled at build time via require() to avoid Vercel serverless cwd issues
+// (process.cwd() differs between build time and runtime in serverless functions)
+const jaCommon = require('../../public/locales/ja/common.json')
+const enCommon = require('../../public/locales/en/common.json')
 
 // Build a clickable URL from an extracted SNS value
 function buildSnsUrl(platform, value) {
@@ -819,6 +823,14 @@ export default function ContactDetail() {
 
 export const getServerSideProps = async ({ locale }) => ({
   props: {
-    ...(await serverSideTranslations(locale, ['common'], i18nConfig)),
+    _nextI18Next: {
+      initialI18nStore: {
+        ja: { common: jaCommon },
+        en: { common: enCommon },
+      },
+      initialLocale: locale || 'ja',
+      ns: ['common'],
+      userConfig: i18nConfig,
+    },
   },
 })
