@@ -481,7 +481,7 @@ export default function ContactDetail() {
                 </select>
                 {addSnsPlatform && (
                   <input
-                    type="text"
+                    type="url"
                     className="text-input"
                     style={{ marginTop: 8 }}
                     placeholder={t('contact.sns_url_placeholder')}

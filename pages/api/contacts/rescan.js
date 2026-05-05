@@ -17,9 +17,10 @@ export default async function handler(req, res) {
   const { contactId, image, mediaType = 'image/jpeg' } = req.body
   if (!contactId || !image) return res.status(400).json({ error: 'contactId and image required' })
 
+  // Ownership check + fetch existing extracted_sns for merge (single DB call)
   const { data: contact, error: fetchError } = await supabaseAdmin
     .from('contacts')
-    .select('owner_id')
+    .select('owner_id, extracted_sns')
     .eq('id', contactId)
     .single()
 
@@ -44,13 +45,16 @@ export default async function handler(req, res) {
     const raw = ocrRes.content[0].text.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(raw)
 
-    const extracted_sns = {}
+    const newExtractedSns = {}
     for (const [platform, value] of Object.entries(parsed.sns || {})) {
-      if (value) extracted_sns[platform] = value
+      if (value) newExtractedSns[platform] = value
     }
 
+    // Merge with existing extracted_sns so single-side scans don't erase the other side's SNS
+    const mergedExtractedSns = { ...(contact.extracted_sns || {}), ...newExtractedSns }
+
     // Only update extracted_sns and basic fields — never touch manual_sns
-    const updateFields = { extracted_sns }
+    const updateFields = { extracted_sns: mergedExtractedSns }
     if (parsed.name) updateFields.name = parsed.name
     if (parsed.company) updateFields.company = parsed.company
     if (parsed.department !== undefined) updateFields.department = parsed.department || null
@@ -65,7 +69,7 @@ export default async function handler(req, res) {
 
     if (updateError) return res.status(500).json({ error: updateError.message })
 
-    res.json({ success: true, extracted_sns, updated: updateFields })
+    res.json({ success: true, extracted_sns: mergedExtractedSns, updated: updateFields })
   } catch (e) {
     console.error('[rescan] error:', e)
     res.status(500).json({ error: e.message })
