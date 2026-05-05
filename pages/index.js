@@ -201,6 +201,7 @@ export default function Home() {
         met_at: new Date().toISOString().slice(0, 10),
         temperature,
         memo: memo || null,
+        extracted_sns: contact?.sns || null,
       }),
     })
     const json = await r.json()
