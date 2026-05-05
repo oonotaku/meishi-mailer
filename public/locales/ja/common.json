@@ -159,7 +159,16 @@
     "body": "本文",
     "send": "メールを送信する →",
     "sending": "送信中...",
-    "page_title_fallback": "名刺詳細"
+    "page_title_fallback": "名刺詳細",
+    "connect_section": "今すぐ繋がる",
+    "connect_mark": "繋がった",
+    "connected_done": "繋がり済み",
+    "no_sns_match": "共通のSNSが見つかりませんでした",
+    "no_sns_match_hint": "名刺に記載のSNSが、あなたのプロフィールに登録されていません",
+    "email_connect": "メールを送る",
+    "email_history_open": "送信済みメールを見る",
+    "email_history_close": "閉じる",
+    "add_encounter": "記録を追加"
   },
   "team": {
     "page_title": "チーム管理 — 名刺メーラー",

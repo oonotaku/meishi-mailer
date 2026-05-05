@@ -159,7 +159,16 @@
     "body": "Body",
     "send": "Send email →",
     "sending": "Sending...",
-    "page_title_fallback": "Contact Detail"
+    "page_title_fallback": "Contact Detail",
+    "connect_section": "Connect Now",
+    "connect_mark": "Mark as Connected",
+    "connected_done": "Connected",
+    "no_sns_match": "No matching SNS found",
+    "no_sns_match_hint": "The SNS on this card is not in your profile, or the card has no SNS info",
+    "email_connect": "Send Email",
+    "email_history_open": "View Sent Email",
+    "email_history_close": "Close",
+    "add_encounter": "Add Record"
   },
   "team": {
     "page_title": "Team Management — Card Mailer",
