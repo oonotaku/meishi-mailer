@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
 import { sendEmail } from '../../lib/sendEmail'
+import { SNS_CONFIG, PRESET_CATEGORIES } from '../../lib/snsConfig'
 
 function escapeHtml(str) {
   if (!str) return ''
@@ -12,7 +13,7 @@ function escapeHtml(str) {
 }
 
 
-function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
+function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl, snsLinks) {
   const htmlBody = body
     .split('\n')
     .map(line => `<p style="margin:0 0 8px 0">${escapeHtml(line)}</p>`)
@@ -21,6 +22,12 @@ function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
   const nameHtml = senderName ? `<strong style="font-size:14px">${escapeHtml(senderName)}</strong>` : ''
   const companyHtml = company ? `<div style="color:#555;font-size:12px">${escapeHtml(company)}</div>` : ''
   const titleHtml = title ? `<div style="color:#777;font-size:12px">${escapeHtml(title)}</div>` : ''
+
+  const snsHtml = snsLinks && snsLinks.length > 0
+    ? `<div style="margin-top:10px;line-height:2">${snsLinks.map(s =>
+        `<a href="${s.url}" target="_blank" style="font-size:12px;color:${s.color};text-decoration:none;margin-right:12px">${escapeHtml(s.label)}</a>`
+      ).join('')}</div>`
+    : ''
 
   return `
 <div style="font-family:sans-serif;font-size:13px;line-height:1.7;color:#333;max-width:600px">
@@ -41,6 +48,7 @@ function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
         <div style="margin-top:6px;font-size:11px;color:#aaa">
           <a href="${profileUrl}" style="color:#aaa;text-decoration:none">${escapeHtml(profileUrl)}</a>
         </div>
+        ${snsHtml}
       </td>
     </tr>
   </table>
@@ -56,12 +64,16 @@ export default async function handler(req, res) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return res.status(401).json({ error: '認証が必要です' })
 
-  const { to, subject, body } = req.body
+  const { to, subject, body, selected_preset = 'business' } = req.body
   if (!to || !subject || !body) return res.status(400).json({ error: 'missing fields' })
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('name, sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email')
+    .select(`name, sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email,
+      sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
+      sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
+      sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
+      sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note`)
     .eq('id', user.id)
     .single()
 
@@ -76,12 +88,17 @@ export default async function handler(req, res) {
   const profileUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/p/${user.id}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(profileUrl)}&bgcolor=ffffff&color=000000&margin=2`
 
+  const allowedCategories = PRESET_CATEGORIES[selected_preset] || PRESET_CATEGORIES.business
+  const snsLinks = SNS_CONFIG
+    .filter(f => allowedCategories.includes(f.category) && profile?.[f.key])
+    .map(f => ({ label: f.label, url: profile[f.key], color: f.color }))
+
   try {
     await sendEmail(profile, {
       to,
       subject,
       text: body,
-      html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
+      html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl, snsLinks),
     })
     return res.json({ ok: true })
   } catch (e) {

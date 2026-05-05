@@ -5,6 +5,7 @@ import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
+import { SNS_CONFIG, PRESET_CATEGORIES } from '../lib/snsConfig'
 
 const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6, DUPLICATE: 7 }
 
@@ -45,6 +46,8 @@ export default function Home() {
   const [memo, setMemo] = useState('')
   const [duplicates, setDuplicates] = useState([])
   const [duplicateContactId, setDuplicateContactId] = useState(null)
+  const [matchedSns, setMatchedSns] = useState([])
+  const [selectedPreset, setSelectedPreset] = useState('business')
   const [speechSupported, setSpeechSupported] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [interimText, setInterimText] = useState('')
@@ -145,6 +148,8 @@ export default function Home() {
       setContact(data.contact)
       setSubject(data.subject)
       setBody(data.body)
+      setMatchedSns(data.matched_sns || [])
+      setSelectedPreset(data.recommended_preset || 'business')
       setStep(STEPS.CONFIRM)
     } catch (err) {
       setErrorMsg(err.message)
@@ -217,7 +222,7 @@ export default function Home() {
         const r = await fetch('/api/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ to: email, subject, body }),
+          body: JSON.stringify({ to: email, subject, body, selected_preset: selectedPreset }),
         })
         const data = await r.json()
         if (!r.ok) throw new Error(data.error)
@@ -250,7 +255,7 @@ export default function Home() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ to: email, subject, body })
+        body: JSON.stringify({ to: email, subject, body, selected_preset: selectedPreset })
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
@@ -367,6 +372,8 @@ export default function Home() {
     setMemo('')
     setDuplicates([])
     setDuplicateContactId(null)
+    setMatchedSns([])
+    setSelectedPreset('business')
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -921,6 +928,72 @@ export default function Home() {
                   onChange={e => setManualEmail(e.target.value)}
                   className="text-input"
                 />
+              </div>
+            )}
+
+            {/* SNS マッチングセクション */}
+            {matchedSns.length > 0 && (
+              <div className="sns-match-section">
+                <div className="sns-match-heading">
+                  🔗 {i18n.language === 'en' ? 'Connect on SNS' : 'この人と繋がれるSNS'}
+                </div>
+                <div className="sns-match-list">
+                  {matchedSns.map(s => (
+                    <button
+                      key={s.platform}
+                      className="sns-match-btn"
+                      style={{ '--c': s.color }}
+                      onClick={() => window.open(s.card_url, '_blank')}
+                    >
+                      <span className="sns-match-icon-wrap">
+                        {s.icon ? (
+                          <img
+                            src={`https://cdn.simpleicons.org/${s.icon}/${s.color.replace('#','')}`}
+                            width="16" height="16" alt={s.label}
+                            style={{ display: 'block' }}
+                            onError={e => { e.target.style.display = 'none' }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: s.color }}>{s.label[0]}</span>
+                        )}
+                      </span>
+                      <span className="sns-match-label">{s.label}</span>
+                      <span className="sns-match-sub">
+                        {i18n.language === 'en' ? '→ Follow' : '→ タップしてフォロー'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* プリセット選択 */}
+            {SNS_CONFIG.some(f => profile?.[f.key]) && (
+              <div className="preset-sel-section">
+                <div className="preset-sel-heading">
+                  📤 {i18n.language === 'en' ? 'SNS to include in email' : '相手に送るSNSを選ぶ'}
+                </div>
+                <div className="preset-sel-tabs">
+                  {[
+                    { key: 'business', label: i18n.language === 'en' ? 'Business' : 'ビジネス' },
+                    { key: 'personal', label: i18n.language === 'en' ? 'Personal' : '個人' },
+                    { key: 'all',      label: i18n.language === 'en' ? 'All' : 'すべて' },
+                  ].map(p => (
+                    <button
+                      key={p.key}
+                      type="button"
+                      className={`preset-sel-tab ${selectedPreset === p.key ? 'active' : ''}`}
+                      onClick={() => setSelectedPreset(p.key)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="preset-sel-hint">
+                  {i18n.language === 'en'
+                    ? 'Selected SNS links will be included in the email'
+                    : '選択したプリセットのSNSリンクがメールに含まれます'}
+                </p>
               </div>
             )}
 
@@ -1747,6 +1820,107 @@ export default function Home() {
           font-size: 11px;
           color: #2a2a3a;
           font-family: 'DM Mono', monospace;
+        }
+
+        /* ── SNS マッチング ── */
+        .sns-match-section {
+          background: #0d0f1a;
+          border: 1px solid #1e1e2a;
+          border-radius: 12px;
+          padding: 14px;
+          margin-bottom: 14px;
+        }
+        .sns-match-heading {
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          letter-spacing: .08em;
+          color: #5a5650;
+          text-transform: uppercase;
+          margin-bottom: 10px;
+        }
+        .sns-match-list {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .sns-match-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          height: 46px;
+          background: transparent;
+          border: 1.5px solid var(--c);
+          border-radius: 10px;
+          color: var(--c);
+          cursor: pointer;
+          padding: 0 12px;
+          transition: opacity .15s;
+        }
+        .sns-match-btn:active { opacity: .65; }
+        .sns-match-icon-wrap {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          flex-shrink: 0;
+        }
+        .sns-match-label {
+          flex: 1;
+          font-size: 13px;
+          font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          text-align: left;
+        }
+        .sns-match-sub {
+          font-size: 10px;
+          opacity: .55;
+          font-family: 'DM Mono', monospace;
+          flex-shrink: 0;
+        }
+
+        /* ── プリセット選択 ── */
+        .preset-sel-section {
+          background: #0d0f1a;
+          border: 1px solid #1e1e2a;
+          border-radius: 12px;
+          padding: 14px;
+          margin-bottom: 14px;
+        }
+        .preset-sel-heading {
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          letter-spacing: .08em;
+          color: #5a5650;
+          text-transform: uppercase;
+          margin-bottom: 10px;
+        }
+        .preset-sel-tabs {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 8px;
+        }
+        .preset-sel-tab {
+          flex: 1;
+          padding: 8px 4px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 8px;
+          color: #5a5650;
+          font-size: 12px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: all .15s;
+        }
+        .preset-sel-tab.active {
+          background: #1a2e22;
+          border-color: #7b9e87;
+          color: #7b9e87;
+        }
+        .preset-sel-hint {
+          font-size: 11px;
+          color: #3a3a4a;
+          line-height: 1.5;
         }
       `}</style>
     </>

@@ -1,9 +1,34 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
+import { SNS_CONFIG } from '../../lib/snsConfig'
 
 export const config = { api: { bodyParser: { sizeLimit: '10mb' } } }
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+function buildSnsUrl(platform, value, cfg) {
+  if (!value) return null
+  if (value.startsWith('http')) return value
+  const cleaned = value.replace(/^@/, '')
+  if (cfg.baseUrl && cfg.inputMode === 'username') return cfg.baseUrl + cleaned
+  const fallback = {
+    instagram: `https://instagram.com/${cleaned}`,
+    x: `https://x.com/${cleaned}`,
+    github: `https://github.com/${cleaned}`,
+    youtube: `https://youtube.com/@${cleaned}`,
+    linkedin: `https://linkedin.com/in/${cleaned}`,
+    note: `https://note.com/${cleaned}`,
+    telegram: `https://t.me/${cleaned}`,
+  }
+  return fallback[platform] || value
+}
+
+function determinePreset(title, cardSns) {
+  if (/CEO|CTO|CFO|COO|代表|社長|Director|President|Manager|マネージャー|取締役/i.test(title)) return 'business'
+  const personalHits = ['line', 'whatsapp', 'instagram', 'x', 'tiktok', 'threads'].filter(p => cardSns[p]).length
+  const bizHits = ['linkedin', 'github', 'wantedly', 'note', 'sansan', 'eight', 'mybridge'].filter(p => cardSns[p]).length
+  return personalHits > bizHits ? 'personal' : 'business'
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -24,7 +49,8 @@ export default async function handler(req, res) {
     .select(`plan, scan_count_month, scan_count_reset_at, name,
       sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
       sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
-      sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest`)
+      sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
+      sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note`)
     .eq('id', user.id)
     .single()
 
@@ -66,7 +92,7 @@ export default async function handler(req, res) {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-          { type: 'text', text: 'Extract information from this business card image and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"department or empty","title":"title or empty","email":"email or empty","phone":"phone or empty"}' }
+          { type: 'text', text: 'Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","sns":{"line":"URL or null","whatsapp":"phone or URL or null","instagram":"@user or URL or null","x":"@user or URL or null","facebook":"URL or null","linkedin":"URL or null","github":"user or URL or null","youtube":"URL or null","wantedly":"URL or null","note":"URL or null","sansan":"URL or null","eight":"URL or null","mybridge":"URL or null"}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.' }
         ]
       }]
     })
@@ -139,7 +165,30 @@ Rules:
       .update({ scan_count_month: currentCount + 1 })
       .eq('id', user.id)
 
-    res.json({ contact, subject, body, duplicates })
+    // SNSマッチング
+    const cardSns = contact.sns || {}
+    const snsConfigMap = {}
+    SNS_CONFIG.forEach(f => { snsConfigMap[f.key.replace('sns_', '')] = f })
+
+    const matched_sns = []
+    for (const [platform, cardValue] of Object.entries(cardSns)) {
+      if (!cardValue) continue
+      const profileKey = `sns_${platform}`
+      if (!profile?.[profileKey]) continue
+      const cfg = snsConfigMap[platform]
+      if (!cfg) continue
+      matched_sns.push({
+        platform,
+        label: cfg.label,
+        card_url: buildSnsUrl(platform, cardValue, cfg),
+        color: cfg.color,
+        icon: cfg.icon || null,
+      })
+    }
+
+    const recommended_preset = determinePreset(contact.title || '', cardSns)
+
+    res.json({ contact, subject, body, duplicates, matched_sns, recommended_preset })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: e.message })
