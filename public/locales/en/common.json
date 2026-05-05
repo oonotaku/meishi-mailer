@@ -168,7 +168,15 @@
     "email_connect": "Send Email",
     "email_history_open": "View Sent Email",
     "email_history_close": "Close",
-    "add_encounter": "Add Record"
+    "add_encounter": "Add Record",
+    "rescan_card": "Rescan Card",
+    "rescanning": "Scanning...",
+    "rescan_done": "Updated",
+    "add_sns": "Add SNS",
+    "select_platform": "Select platform",
+    "sns_url_placeholder": "Enter URL or username",
+    "manual_added": "added",
+    "remove_sns": "Remove"
   },
   "team": {
     "page_title": "Team Management — Card Mailer",

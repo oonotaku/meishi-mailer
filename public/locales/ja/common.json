@@ -168,7 +168,15 @@
     "email_connect": "メールを送る",
     "email_history_open": "送信済みメールを見る",
     "email_history_close": "閉じる",
-    "add_encounter": "記録を追加"
+    "add_encounter": "記録を追加",
+    "rescan_card": "名刺を再スキャン",
+    "rescanning": "スキャン中...",
+    "rescan_done": "更新しました",
+    "add_sns": "SNSを追加",
+    "select_platform": "プラットフォームを選択",
+    "sns_url_placeholder": "URLまたはユーザー名を入力",
+    "manual_added": "手動追加",
+    "remove_sns": "削除"
   },
   "team": {
     "page_title": "チーム管理 — 名刺メーラー",

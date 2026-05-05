@@ -34,17 +34,19 @@ function buildSnsUrl(platform, value) {
   return bases[platform] ? bases[platform] + cleaned : value
 }
 
-// Compute matched SNS: platforms that exist in contact's card AND in user's profile
-function computeMatches(extractedSns, profile) {
-  if (!extractedSns || !profile) return []
+// Merge extracted_sns and manual_sns into a unified list.
+// isMatch=true when user's own profile has the same platform (show "繋がった" button).
+// isManual=true for manually added entries (show delete button).
+function computeAllSns(extractedSns, manualSns, profile) {
+  const merged = { ...(extractedSns || {}), ...(manualSns || {}) }
+  if (Object.keys(merged).length === 0 || !profile) return []
+
   const results = []
   const snsMap = {}
   SNS_CONFIG.forEach(s => { snsMap[s.key.replace('sns_', '')] = s })
 
-  for (const [platform, cardValue] of Object.entries(extractedSns)) {
+  for (const [platform, cardValue] of Object.entries(merged)) {
     if (!cardValue) continue
-    const profileKey = `sns_${platform}`
-    if (!profile[profileKey]) continue
     const cfg = snsMap[platform]
     if (!cfg) continue
     results.push({
@@ -54,6 +56,8 @@ function computeMatches(extractedSns, profile) {
       icon: cfg.icon || null,
       card_url: buildSnsUrl(platform, cardValue),
       card_value: cardValue,
+      isMatch: !!profile[`sns_${platform}`],
+      isManual: !!(manualSns?.[platform]),
     })
   }
   return results
@@ -73,6 +77,17 @@ export default function ContactDetail() {
   // SNS connection state
   const [connectedSns, setConnectedSns] = useState({})
   const [connectingPlatform, setConnectingPlatform] = useState(null)
+  const [manualSns, setManualSns] = useState({})
+
+  // SNS manual add form
+  const [showAddSnsForm, setShowAddSnsForm] = useState(false)
+  const [addSnsPlatform, setAddSnsPlatform] = useState('')
+  const [addSnsValue, setAddSnsValue] = useState('')
+  const [addSnsSaving, setAddSnsSaving] = useState(false)
+
+  // Card rescan
+  const [rescanning, setRescanning] = useState(false)
+  const [rescanDone, setRescanDone] = useState(false)
 
   // Email section
   const [emailOpen, setEmailOpen] = useState(false)
@@ -122,6 +137,7 @@ export default function ContactDetail() {
           setSentAt(data.mail_sent_at || null)
           setVisibility(data.visibility || 'private')
           setConnectedSns(data.connected_sns || {})
+          setManualSns(data.manual_sns || {})
         }
       } catch (e) {
         console.error('[ContactDetail] load error:', e)
@@ -218,6 +234,74 @@ export default function ContactDetail() {
     finally { setEncSaving(false) }
   }
 
+  async function handleAddSns(e) {
+    e.preventDefault()
+    if (!addSnsPlatform || !addSnsValue.trim()) return
+    setAddSnsSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/update-manual-sns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contactId: id, platform: addSnsPlatform, value: addSnsValue.trim() }),
+      })
+      const json = await r.json()
+      if (r.ok) {
+        setManualSns(json.manual_sns || {})
+        setContact(prev => ({ ...prev, manual_sns: json.manual_sns }))
+        setShowAddSnsForm(false)
+        setAddSnsPlatform('')
+        setAddSnsValue('')
+      }
+    } catch (e) { console.error(e) }
+    finally { setAddSnsSaving(false) }
+  }
+
+  async function handleRemoveManualSns(platform) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/update-manual-sns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contactId: id, platform, remove: true }),
+      })
+      const json = await r.json()
+      if (r.ok) {
+        setManualSns(json.manual_sns || {})
+        setContact(prev => ({ ...prev, manual_sns: json.manual_sns }))
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  async function handleRescan(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setRescanning(true)
+    setRescanDone(false)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = ev => resolve(ev.target.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/rescan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contactId: id, image: base64, mediaType: file.type || 'image/jpeg' }),
+      })
+      const json = await r.json()
+      if (r.ok) {
+        // Update extracted_sns and basic fields; manual_sns is untouched
+        setContact(prev => ({ ...prev, ...json.updated }))
+        setRescanDone(true)
+        setTimeout(() => setRescanDone(false), 3000)
+      }
+    } catch (e) { console.error(e) }
+    finally { setRescanning(false) }
+  }
+
   async function onSend() {
     const toEmail = contact?.email
     if (!toEmail) { alert(t('contact.no_email_alert')); return }
@@ -252,7 +336,7 @@ export default function ContactDetail() {
   }
 
   const isOwner = user?.id === contact?.owner_id
-  const matchedSns = computeMatches(contact?.extracted_sns, profile)
+  const allContactSns = computeAllSns(contact?.extracted_sns, manualSns, profile)
 
   const formatDate = (iso) => {
     if (!iso) return ''
@@ -330,6 +414,23 @@ export default function ContactDetail() {
             <div className="no-img-bar">{t('contact.no_image')}</div>
           )}
 
+          {/* ── 名刺再スキャンボタン ── */}
+          {isOwner && (
+            <div className="rescan-row">
+              <label className="rescan-btn" style={{ opacity: rescanning ? 0.6 : 1 }}>
+                {rescanning ? t('contact.rescanning') : rescanDone ? `✓ ${t('contact.rescan_done')}` : `🔄 ${t('contact.rescan_card')}`}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={handleRescan}
+                  disabled={rescanning}
+                />
+              </label>
+            </div>
+          )}
+
           {/* ── CONTACT INFO ── */}
           <div className="info-block">
             <div className="info-name">{contact.name || t('contact.no_name')}</div>
@@ -357,39 +458,93 @@ export default function ContactDetail() {
           <div className="section">
             <div className="section-hd">
               <span className="section-label">{t('contact.connect_section')}</span>
+              {isOwner && !showAddSnsForm && (
+                <button className="add-sns-btn" onClick={() => setShowAddSnsForm(true)}>
+                  + {t('contact.add_sns')}
+                </button>
+              )}
             </div>
 
-            {matchedSns.length > 0 ? (
+            {/* SNS手動追加フォーム */}
+            {showAddSnsForm && (
+              <form onSubmit={handleAddSns} className="add-sns-form">
+                <select
+                  className="sns-select"
+                  value={addSnsPlatform}
+                  onChange={e => { setAddSnsPlatform(e.target.value); setAddSnsValue('') }}
+                  required
+                >
+                  <option value="">{t('contact.select_platform')}</option>
+                  {SNS_CONFIG.map(s => (
+                    <option key={s.key} value={s.key.replace('sns_', '')}>{s.label}</option>
+                  ))}
+                </select>
+                {addSnsPlatform && (
+                  <input
+                    type="text"
+                    className="text-input"
+                    style={{ marginTop: 8 }}
+                    placeholder={t('contact.sns_url_placeholder')}
+                    value={addSnsValue}
+                    onChange={e => setAddSnsValue(e.target.value)}
+                    required
+                  />
+                )}
+                <div className="form-actions" style={{ marginTop: 8 }}>
+                  <button type="submit" className="ctx-save-btn" disabled={addSnsSaving || !addSnsPlatform || !addSnsValue.trim()}>
+                    {addSnsSaving ? t('contact.saving') : t('contact.save')}
+                  </button>
+                  <button type="button" className="ghost-btn" style={{ marginTop: 0 }}
+                    onClick={() => { setShowAddSnsForm(false); setAddSnsPlatform(''); setAddSnsValue('') }}>
+                    {t('contact.cancel')}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {allContactSns.length > 0 ? (
               <div className="sns-list">
-                {matchedSns.map(s => {
+                {allContactSns.map(s => {
                   const isConnected = !!connectedSns[s.platform]
                   const isConnecting = connectingPlatform === s.platform
                   return (
                     <div key={s.platform} className="sns-row-item">
-                      <a
-                        href={s.card_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="sns-link-btn"
-                        style={{ borderColor: s.color, '--sns-color': s.color }}
-                      >
-                        {s.icon ? (
-                          <img
-                            src={`https://cdn.simpleicons.org/${s.icon}/ffffff`}
-                            alt={s.label}
-                            className="sns-icon-img"
-                            onError={e => { e.target.style.display = 'none' }}
-                          />
-                        ) : (
-                          <span className="sns-icon-letter" style={{ background: s.color }}>{s.label[0]}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <a
+                          href={s.card_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="sns-link-btn"
+                          style={{ borderColor: s.color, '--sns-color': s.color, flex: 1 }}
+                        >
+                          {s.icon ? (
+                            <img
+                              src={`https://cdn.simpleicons.org/${s.icon}/ffffff`}
+                              alt={s.label}
+                              className="sns-icon-img"
+                              onError={e => { e.target.style.display = 'none' }}
+                            />
+                          ) : (
+                            <span className="sns-icon-letter" style={{ background: s.color }}>{s.label[0]}</span>
+                          )}
+                          <div className="sns-link-text">
+                            <span className="sns-link-label">
+                              {s.label}
+                              {s.isManual && <span className="manual-badge">{t('contact.manual_added')}</span>}
+                            </span>
+                            <span className="sns-link-sub">{s.card_value?.replace(/^https?:\/\//, '').slice(0, 32)}</span>
+                          </div>
+                          <span className="sns-link-arrow">→</span>
+                        </a>
+                        {isOwner && s.isManual && (
+                          <button
+                            className="remove-sns-btn"
+                            onClick={() => handleRemoveManualSns(s.platform)}
+                            title={t('contact.remove_sns')}
+                          >×</button>
                         )}
-                        <div className="sns-link-text">
-                          <span className="sns-link-label">{s.label}</span>
-                          <span className="sns-link-sub">{s.card_value?.replace(/^https?:\/\//, '').slice(0, 32)}</span>
-                        </div>
-                        <span className="sns-link-arrow">→</span>
-                      </a>
-                      {isOwner && (
+                      </div>
+                      {isOwner && s.isMatch && (
                         <button
                           className={`connected-btn ${isConnected ? 'done' : ''}`}
                           onClick={() => toggleConnected(s.platform, isConnected)}
@@ -629,6 +784,27 @@ export default function ContactDetail() {
           font-size: 12px; color: #3a3a4a;
         }
 
+        /* 名刺再スキャン */
+        .rescan-row {
+          padding: 8px 14px;
+          background: #0d0d14;
+          border-bottom: 1px solid #1e1e2a;
+          display: flex;
+          justify-content: flex-end;
+        }
+        .rescan-btn {
+          font-size: 12px;
+          font-family: 'DM Mono', monospace;
+          color: #5a5650;
+          border: 1px solid #2a2a3a;
+          border-radius: 6px;
+          padding: 5px 12px;
+          cursor: pointer;
+          transition: color .15s, border-color .15s;
+          display: inline-block;
+        }
+        .rescan-btn:hover { color: #7b9e87; border-color: #7b9e87; }
+
         /* Image overlay */
         .img-overlay {
           position: fixed; inset: 0; z-index: 100;
@@ -660,7 +836,43 @@ export default function ContactDetail() {
           color: #5a5650; text-transform: uppercase;
         }
 
-        /* SNS match list */
+        /* SNS手動追加 */
+        .add-sns-btn {
+          background: none; border: 1px solid #2a2a3a; border-radius: 6px;
+          color: #5a5650; font-size: 11px; font-family: 'DM Mono', monospace;
+          padding: 4px 10px; cursor: pointer; transition: color .15s, border-color .15s;
+        }
+        .add-sns-btn:hover { color: #7b9e87; border-color: #7b9e87; }
+
+        .add-sns-form {
+          background: #0d0d14; border: 1px solid #1e1e2a;
+          border-radius: 10px; padding: 12px; margin-bottom: 12px;
+          display: flex; flex-direction: column;
+        }
+        .sns-select {
+          width: 100%; padding: 10px 12px; background: #12121a;
+          border: 1px solid #1e1e2a; border-radius: 8px;
+          color: #f0ede8; font-size: 14px; font-family: 'Noto Sans JP', sans-serif;
+          outline: none; appearance: none;
+        }
+        .sns-select:focus { border-color: #7b9e87; }
+
+        .manual-badge {
+          font-size: 9px; font-family: 'DM Mono', monospace;
+          background: #1a1408; border: 1px solid #2a2010;
+          color: #8a6a30; border-radius: 4px; padding: 1px 5px;
+          margin-left: 6px; vertical-align: middle;
+        }
+
+        .remove-sns-btn {
+          background: none; border: 1px solid #2a2a3a; border-radius: 6px;
+          color: #5a5650; font-size: 14px; width: 32px; height: 32px;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; flex-shrink: 0; transition: color .15s, border-color .15s;
+        }
+        .remove-sns-btn:hover { color: #c08080; border-color: #c08080; }
+
+        /* SNS list */
         .sns-list { display: flex; flex-direction: column; gap: 8px; }
         .sns-row-item { display: flex; flex-direction: column; gap: 6px; }
         .sns-link-btn {
