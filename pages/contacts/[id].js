@@ -371,7 +371,7 @@ export default function ContactDetail() {
                       >
                         {s.icon ? (
                           <img
-                            src={`https://cdn.simpleicons.org/${s.icon}`}
+                            src={`https://cdn.simpleicons.org/${s.icon}/ffffff`}
                             alt={s.label}
                             className="sns-icon-img"
                             onError={e => { e.target.style.display = 'none' }}
@@ -406,11 +406,18 @@ export default function ContactDetail() {
               </div>
             )}
 
-            {/* Email connect button */}
+            {/* Email buttons */}
             {contact.email && isOwner && (
-              <button className="email-connect-btn" onClick={() => setEmailOpen(o => !o)}>
-                ✉ {emailOpen ? t('contact.email_history_close') : (sent ? t('contact.email_history_open') : t('contact.email_connect'))}
-              </button>
+              <div className="email-btn-row">
+                <button className="email-new-btn" onClick={() => { setEmailOpen(true); setResendMode(true) }}>
+                  ✉ {t('contact.email_connect')}
+                </button>
+                {sent && (
+                  <button className="email-hist-btn" onClick={() => { setEmailOpen(o => !o); setResendMode(false) }}>
+                    {emailOpen && !resendMode ? t('contact.email_history_close') : t('contact.email_history_open')}
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -659,7 +666,7 @@ export default function ContactDetail() {
           background: #12121a; transition: opacity .15s; cursor: pointer;
         }
         .sns-link-btn:active { opacity: .75; }
-        .sns-icon-img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; filter: invert(1) brightness(0.9); }
+        .sns-icon-img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
         .sns-icon-letter {
           width: 22px; height: 22px; border-radius: 5px;
           display: flex; align-items: center; justify-content: center;
@@ -689,13 +696,23 @@ export default function ContactDetail() {
         .sns-empty-text { font-size: 13px; color: #5a5650; }
         .sns-empty-hint { font-size: 11px; color: #3a3a4a; line-height: 1.5; }
 
-        .email-connect-btn {
-          margin-top: 14px; width: 100%; padding: 13px;
-          background: transparent; border: 1px solid #2a2a3a; border-radius: 12px;
-          color: #8a8680; font-size: 14px; font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
-          transition: border-color .15s, color .15s;
+        .email-btn-row {
+          margin-top: 14px; display: flex; gap: 8px;
         }
-        .email-connect-btn:hover { border-color: #7b9e87; color: #7b9e87; }
+        .email-new-btn {
+          flex: 1; padding: 13px; background: #0d1f15;
+          border: 1px solid #1a3525; border-radius: 12px;
+          color: #7b9e87; font-size: 14px; font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
+          transition: opacity .15s;
+        }
+        .email-new-btn:active { opacity: .75; }
+        .email-hist-btn {
+          padding: 13px 16px; background: transparent;
+          border: 1px solid #2a2a3a; border-radius: 12px;
+          color: #5a5650; font-size: 13px; font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
+          white-space: nowrap; transition: border-color .15s, color .15s;
+        }
+        .email-hist-btn:hover { border-color: #3a3a4a; color: #8a8680; }
 
         /* Email section */
         .email-section { background: #0d0d14; }
