@@ -35,8 +35,8 @@ No test framework is configured.
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
-| `settings/profile.js` | Profile settings — tab UI (メール設定 / SNS / 所属). Display name + bio (一言コメント) inline edit, SendGrid/Gmail/SMTP config, SNS links (15 fields, 3 input modes: QR/username/url), affiliations (DnD sortable, max 5), email signature preview, billing plan + Stripe Checkout/Portal. 完全i18n対応。Gmail OAuth は `window.open()` ポップアップ方式で実行し、`postMessage` 受信後に `savedProvider` state を更新してUI即時反映。 |
-| `p/[userId].js` | Public profile page — name, bio, affiliations, SNS buttons with simpleicons icons, app invite banner. No auth. `getServerSideProps` + `supabaseAdmin`. |
+| `settings/profile.js` | Profile settings — 4タブ UI（プロフィール / SNS / メール設定 / サブスクリプション）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、SendGrid/Gmail/SMTP 設定、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）、SNS/所属タブで変更時に画面下部に固定保存ボタン表示。完全i18n対応。|
+| `p/[userId].js` | Public profile page (Linktreeライクなリデザイン済み) — 96px丸アバター（`avatar_url`あり→画像、なし→イニシャル）、name、bio、所属カード（枠線付き、会社名・肩書き・連絡先リンク）、SNS フル幅ボタン（56px、ブランドカラー枠線、simpleicons アイコン左）、アプリ招待バナー。No auth。`getServerSideProps` + `supabaseAdmin`。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -74,9 +74,12 @@ No test framework is configured.
 **Profile**
 - `POST /api/profile/update-name` — updates `profiles.name` and `profiles.bio` via supabaseAdmin
 - `POST /api/profile/update-email-settings` — updates `profiles.sender_email` and `profiles.sendgrid_api_key` via supabaseAdmin
-- `POST /api/profile/update-sns` — updates 15 SNS link fields on `profiles`; empty/whitespace strings saved as `null`
-- `GET /api/profile/affiliations` — returns `profile_affiliations` ordered by `order_index` ASC
-- `POST /api/profile/affiliations` — replaces all affiliations (delete-all + insert); max 5 rows, skips entries with empty `company_name`
+- `POST /api/profile/update-sns` — updates all SNS link fields on `profiles`; empty/whitespace strings saved as `null`
+- `POST /api/profile/update-avatar` — base64画像を受け取り、`avatars` Storageバケットに `{userId}/avatar.jpg` としてアップロード（upsert）、公開URLに `?t=timestamp` を付加してCDNキャッシュ回避、`profiles.avatar_url` に保存してURLを返す
+- `POST /api/profile/scan-card` — 名刺画像（base64）をClaude Vision OCRで解析し、name/company/title/phones/website/email/SNSを抽出して返す。プロフィール設定画面の「名刺からプロフィールを入力」機能で使用
+- `GET /api/profile/affiliations` — returns `profile_affiliations` (including phone/website/contact_email/show_* fields) ordered by `order_index` ASC
+- `POST /api/profile/affiliations` — replaces all affiliations (delete-all + insert); max 5 rows, skips entries with empty `company_name`. phone/website/contact_email/show_* を含む
+- `POST /api/profile/update-contact` — 旧: profiles テーブルの連絡先を更新。現在は affiliations 経由のため実質未使用
 
 ### AI model usage
 
@@ -90,13 +93,15 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 
 **`organizations`** — `id, name, created_at`
 
-**`profiles`** — `id, email, name, bio, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
+**`profiles`** — `id, email, name, bio, avatar_url, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
 - `current_organization_id` always points to the org where the user is `owner`
 - `sender_email` + `sendgrid_api_key` are set by the user via `/settings/profile`; `sendgrid_api_key` is never returned to the client
 - `smtp_provider`: `'sendgrid'` (default) | `'gmail'` | `'smtp'`
 - `gmail_refresh_token` / `gmail_email`: set via Gmail OAuth callback; used by `send.js` with googleapis REST API
 - `bio`: 一言コメント（最大100文字）; `null` when not set
-- `sns_*` (15 fields): SNS link URLs; `null` when not set. LINE/WhatsApp はQRスキャンで設定、X/Instagram等はユーザー名入力→保存時にベースURL補完、Facebook/Discord/WeChatはフルURL入力
+- `avatar_url`: Supabase Storage `avatars` バケットの公開URL（`?t=timestamp` 付き）; `null` when not set
+- `sns_*` (21 fields): SNS link URLs; `null` when not set。`lib/snsConfig.js` の `SNS_CONFIG` 配列で一元管理。LINE/WhatsApp はQRスキャン、X/Instagram等はユーザー名入力→保存時にベースURL補完、Facebook/Discord/WeChatはフルURL入力
+- `phone`, `website`, `contact_email`, `show_phone`, `show_website`, `show_email`: 旧トップレベル連絡先フィールド。現在は `profile_affiliations` に移行済みのため実質未使用
 - `plan`: `'free'` (default) or `'pro'`; updated by Stripe webhook
 - `scan_count_month`: resets when `scan_count_reset_at < startOfMonth`; Free limit=10, Pro limit=100
 - `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
@@ -117,13 +122,16 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - 重複名刺撮影時にDUPLICATE画面から「この出会いを記録する」で追記可能
 - `contacts/[id].js` の出会い履歴セクションで `met_at` 降順表示
 
-**`profile_affiliations`** — `id, user_id (FK → profiles.id), company_name, title, order_index, created_at`
+**`profile_affiliations`** — `id, user_id (FK → profiles.id), company_name, title, order_index, phone, website, contact_email, show_phone (DEFAULT false), show_website (DEFAULT true), show_email (DEFAULT false), created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
 - `order_index` で表示順管理（最大5件）
 - `/api/profile/affiliations` POST は delete-all + insert のバッチ更新
 - `send.js` と `p/[userId].js` が `order_index ASC` の先頭1件または全件を参照
+- `show_*` フラグが `true` の連絡先のみ公開プロフィール（`p/[userId].js`）に表示
 
-Supabase Storage bucket `cards` holds public card images.
+Supabase Storage:
+- `cards` バケット — 公開バケット。名刺画像を保存
+- `avatars` バケット — 公開バケット。顔写真を `{userId}/avatar.jpg` パスで保存（upsert）
 
 #### Key invariants
 - `contacts.owner_id` is always the auth user's UUID — never `user_id`
@@ -143,6 +151,9 @@ Calls `/api/auth/ensure-profile` on session init. Returns `{ user, profile, load
 - `sender_email` — configured sender address (or null if not set)
 - `plan` — `'free'` or `'pro'`
 - `scan_count_month` — scans used this month
+- `avatar_url` — Supabase Storage 公開URL（or null）
+- `sns_*` (21 fields) — SNS link URLs
+- `gmail_email`, `smtp_provider`, etc. — email config fields
 
 ## Environment Variables
 
@@ -177,10 +188,18 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - Customer Portal business name: "node-bee"
 - To manually grant Pro to a beta user: `UPDATE profiles SET plan = 'pro' WHERE email = 'xxx';` in Supabase SQL Editor
 
+## Shared Library
+
+- `lib/snsConfig.js` — 全SNSの設定を一元管理。`SNS_CONFIG` 配列（各エントリに `key`, `label`, `category`, `inputMode`, `baseUrl`, `icon`, `color`, `prefix`, `placeholder`, `helpUrl` を定義）と `PRESET_CATEGORIES` オブジェクト（`business`/`personal`/`all` のカテゴリ分類）をエクスポート。
+  - `personal` カテゴリ: LINE, WhatsApp, Instagram, X, Facebook, TikTok, Threads, Telegram, WeChat
+  - `business` カテゴリ: LinkedIn, GitHub, Vercel, note, Wantedly, YouTube, Discord, Bluesky, Pinterest
+  - `cardapp` カテゴリ: Sansan, Eight, myBridge
+  - `inputMode`: `'qr'`（LINE/WhatsApp）、`'username'`（X/Instagram等）、`'url'`（Facebook/Discord/WeChat等）
+
 ## Dependencies (notable)
 
 - `jsqr` — QRコード解析（クライアントサイド動的import）。LINE/WhatsAppのQRスクショ読み取りに使用。
 
 ## Current status
 
-Phase 1, 2, and Phase 3 (partial) are complete. Stripe billing is live in production (¥980/mo Pro plan). See `MEISHI_AI_SPEC.md` for roadmap.
+フェーズ1完了。公開プロフィールページがLinktreeライクなデザインに刷新済み（顔写真、bio、所属カード、SNSフル幅ボタン）。Stripe課金はlive本番稼働中（¥980/mo Proプラン）。次の候補: SNS並び替え機能、フェーズ2（スキャン後SNSマッチング）。See `MEISHI_AI_SPEC.md` for roadmap.
