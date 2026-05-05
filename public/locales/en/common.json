@@ -241,7 +241,9 @@
     "scan_card_btn": "Import from Business Card",
     "scan_camera_btn": "Take Photo",
     "scan_library_btn": "Choose from Library",
-    "tab_subscription": "Plan"
+    "tab_subscription": "Plan",
+    "bio_label": "Short Bio",
+    "bio_placeholder": "e.g. Building products at node-bee."
   },
   "sns": {
     "qr_scan": "📷 Scan from QR code screenshot",

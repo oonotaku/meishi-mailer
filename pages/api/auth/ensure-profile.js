@@ -106,7 +106,8 @@ export default async function handler(req, res) {
       sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
       sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
       sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note,
-      phone, website, contact_email, show_phone, show_website, show_email`)
+      phone, website, contact_email, show_phone, show_website, show_email,
+      avatar_url`)
     .eq('id', user.id)
     .single()
 
@@ -153,6 +154,7 @@ export default async function handler(req, res) {
       show_phone: billingData?.show_phone ?? false,
       show_website: billingData?.show_website ?? true,
       show_email: billingData?.show_email ?? false,
+      avatar_url: billingData?.avatar_url ?? null,
       organization_id: ownerOrgId,
       role: 'owner',
       organizations,

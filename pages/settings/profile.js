@@ -155,6 +155,9 @@ export default function ProfileSettings() {
   const [affilMsg, setAffilMsg] = useState(null)
   const [snsDirty, setSnsDirty] = useState(false)
   const [affilDirty, setAffilDirty] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const avatarFileRef = useRef(null)
   const router = useRouter()
 
   const isDirtyAny = snsDirty || affilDirty
@@ -164,6 +167,7 @@ export default function ProfileSettings() {
     if (profile !== null && localName === null) {
       setLocalName(profile?.name || '')
       setBio(profile?.bio || '')
+      if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
@@ -704,6 +708,29 @@ export default function ProfileSettings() {
     }
   }
 
+  async function handleAvatarFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setAvatarUploading(true)
+    try {
+      const dataUrl = await compressImage(file)
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/update-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ imageBase64: dataUrl.split(',')[1] }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setAvatarUrl(data.avatar_url)
+    } catch {
+      // silent fail
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
   return (
     <>
       <Head>
@@ -722,9 +749,19 @@ export default function ProfileSettings() {
         <div className="page">
 
           <div className="profile-hero">
-            <div className="hero-avatar">
-              {initials(nameEdit ? nameValue : (localName ?? profile?.name))}
+            <div className="hero-avatar-wrap" onClick={() => avatarFileRef.current?.click()}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="avatar" className="hero-avatar-img" />
+              ) : (
+                <div className="hero-avatar">
+                  {initials(nameEdit ? nameValue : (localName ?? profile?.name))}
+                </div>
+              )}
+              <div className="hero-avatar-overlay">
+                {avatarUploading ? <span className="avatar-spinner" /> : '📷'}
+              </div>
             </div>
+            <input ref={avatarFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarFile} />
 
             {nameEdit ? (
               <form onSubmit={handleNameSave} className="name-edit-form">
@@ -738,11 +775,11 @@ export default function ProfileSettings() {
                   className="name-input"
                 />
                 <div className="field-group" style={{ marginTop: 16 }}>
-                  <div className="field-label">一言コメント</div>
+                  <div className="field-label">{t('profile.bio_label')}</div>
                   <textarea
                     value={bio}
                     onChange={e => setBio(e.target.value)}
-                    placeholder="例：営業歴10年。出会いを大切にしています。"
+                    placeholder={t('profile.bio_placeholder')}
                     maxLength={100}
                     rows={2}
                     className="text-input bio-textarea"
@@ -1664,6 +1701,45 @@ export default function ProfileSettings() {
           padding: 2rem 1.5rem 1.5rem;
           gap: 8px;
         }
+        .hero-avatar-wrap {
+          position: relative;
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          cursor: pointer;
+          flex-shrink: 0;
+          margin-bottom: 4px;
+        }
+        .hero-avatar-img {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+        .hero-avatar-overlay {
+          position: absolute;
+          bottom: -2px;
+          right: -2px;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #7b9e87;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          border: 2px solid #0a0a0f;
+          pointer-events: none;
+        }
+        .avatar-spinner {
+          width: 12px;
+          height: 12px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin .7s linear infinite;
+          display: block;
+        }
         .hero-avatar {
           width: 64px;
           height: 64px;
@@ -1676,7 +1752,6 @@ export default function ProfileSettings() {
           font-size: 22px;
           font-weight: 700;
           font-family: 'DM Mono', monospace;
-          margin-bottom: 4px;
         }
         .hero-name-row {
           display: flex;
