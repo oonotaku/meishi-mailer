@@ -44,13 +44,14 @@
     "next": "Next: Add context →"
   },
   "context": {
+    "step_title": "Record This Meeting",
     "event_label": "Event / Location",
-    "event_placeholder": "e.g. Networking event, Tokyo office",
+    "event_placeholder": "e.g. Tech Conference, Networking Event",
     "met_label": "Date met",
     "temp_label": "Interest level",
-    "memo_label": "Quick note",
-    "memo_placeholder": "Topics discussed, impressions, next steps...",
-    "analyze_generate": "Analyze & Generate Email →",
+    "memo_label": "Conversation Notes",
+    "memo_placeholder": "Topics, impressions, next steps...",
+    "analyze_generate": "Generate Email with AI →",
     "mic_start": "Start voice input",
     "mic_stop": "Stop voice input",
     "send_now": "Send now →",

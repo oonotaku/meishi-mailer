@@ -44,13 +44,14 @@
     "next": "次へ: 文脈を入力 →"
   },
   "context": {
+    "step_title": "この出会いを記録する",
     "event_label": "場所・イベント名",
-    "event_placeholder": "例：〇〇交流会、渋谷オフィス",
+    "event_placeholder": "例: ○○展示会、テック勉強会",
     "met_label": "出会った日",
     "temp_label": "温度感",
-    "memo_label": "一言メモ",
-    "memo_placeholder": "話した内容、印象、次のアクションなど",
-    "analyze_generate": "解析してメール生成 →",
+    "memo_label": "会話メモ",
+    "memo_placeholder": "話したこと・印象・次のアクション",
+    "analyze_generate": "AIでメール文を生成する →",
     "mic_start": "音声入力を開始",
     "mic_stop": "音声入力を停止",
     "send_now": "今すぐ送信 →",

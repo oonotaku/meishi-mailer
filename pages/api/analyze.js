@@ -33,8 +33,12 @@ function determinePreset(title, cardSns) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { image, mediaType = 'image/jpeg', capturedAt, locale = 'ja', memo } = req.body
-  if (!image) return res.status(400).json({ error: 'image required' })
+  const { images: rawImages, image, mediaType = 'image/jpeg', capturedAt, locale = 'ja', memo } = req.body
+  // 複数画像（新形式）or 単一画像（旧形式）を正規化
+  const imageList = rawImages?.length > 0
+    ? rawImages
+    : image ? [{ data: image, media_type: mediaType }] : null
+  if (!imageList) return res.status(400).json({ error: 'image required' })
 
   // Auth
   const token = req.headers.authorization?.replace('Bearer ', '')
@@ -85,14 +89,18 @@ export default async function handler(req, res) {
 
   try {
     // Step 1: OCR
+    const ocrPrompt = 'Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","sns":{"line":"URL or null","whatsapp":"phone or URL or null","instagram":"@user or URL or null","x":"@user or URL or null","facebook":"URL or null","linkedin":"URL or null","github":"user or URL or null","youtube":"URL or null","wantedly":"URL or null","note":"URL or null","sansan":"URL or null","eight":"URL or null","mybridge":"URL or null"}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.'
     const ocrRes = await client.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 512,
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-          { type: 'text', text: 'Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","sns":{"line":"URL or null","whatsapp":"phone or URL or null","instagram":"@user or URL or null","x":"@user or URL or null","facebook":"URL or null","linkedin":"URL or null","github":"user or URL or null","youtube":"URL or null","wantedly":"URL or null","note":"URL or null","sansan":"URL or null","eight":"URL or null","mybridge":"URL or null"}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.' }
+          ...imageList.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.media_type, data: img.data } })),
+          { type: 'text', text: imageList.length > 1
+            ? `${imageList.length}枚の名刺画像（表面・裏面）から情報を抽出してください。全画像を参照して情報を統合してください。\n${ocrPrompt}`
+            : ocrPrompt
+          }
         ]
       }]
     })

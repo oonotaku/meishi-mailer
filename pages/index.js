@@ -130,8 +130,7 @@ export default function Home() {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          image: images[0].base64,
-          mediaType: 'image/jpeg',
+          images: images.map(img => ({ data: img.base64, media_type: 'image/jpeg' })),
           capturedAt: new Date().toISOString(),
           locale: i18n.language,
           ...(memo && { memo }),
@@ -942,7 +941,7 @@ export default function Home() {
                     <button
                       key={s.platform}
                       className="sns-match-btn"
-                      style={{ '--c': s.color }}
+                      style={{ borderColor: s.color, color: s.color }}
                       onClick={() => window.open(s.card_url, '_blank')}
                     >
                       <span className="sns-match-icon-wrap">
@@ -1017,6 +1016,7 @@ export default function Home() {
           <div className="page">
             <div className="prog-bar"><div className="prog-fill" style={{ width: duplicateContactId ? '80%' : '40%' }} /></div>
             <div className="step-label">{t('step.context')}</div>
+            <h2 className="ctx-title">{t('context.step_title')}</h2>
 
             {duplicateContactId && (
               <div className="ctx-name">
@@ -1025,7 +1025,7 @@ export default function Home() {
               </div>
             )}
 
-            <label className="field-label" style={{ marginTop: duplicateContactId ? 4 : 0 }}>{t('context.event_label')}</label>
+            <label className="field-label" style={{ marginTop: duplicateContactId ? 4 : 16 }}>{t('context.event_label')}</label>
             <input
               type="text"
               placeholder={t('context.event_placeholder')}
@@ -1034,7 +1034,7 @@ export default function Home() {
               className="text-input"
             />
 
-            <label className="field-label" style={{ marginTop: 14 }}>{t('context.met_label')}</label>
+            <label className="field-label" style={{ marginTop: 20 }}>{t('context.met_label')}</label>
             <input
               type="date"
               value={location || new Date().toISOString().slice(0, 10)}
@@ -1042,7 +1042,7 @@ export default function Home() {
               className="text-input date-input"
             />
 
-            <label className="field-label" style={{ marginTop: 14 }}>{t('context.temp_label')}</label>
+            <label className="field-label" style={{ marginTop: 20 }}>{t('context.temp_label')}</label>
             <div className="temp-row">
               {TEMP_OPTIONS.map(opt => (
                 <button
@@ -1366,8 +1366,15 @@ export default function Home() {
           border: 1px solid #1e1e2a;
         }
 
+        .ctx-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #f0ede8;
+          line-height: 1.3;
+          margin-bottom: 4px;
+        }
         .ctx-name {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 700;
           color: #f0ede8;
           margin-bottom: 1.25rem;
@@ -1389,7 +1396,8 @@ export default function Home() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 5px;
+          min-height: 64px;
           padding: 12px 8px;
           background: #12121a;
           border: 1px solid #1e1e2a;
@@ -1850,9 +1858,9 @@ export default function Home() {
           width: 100%;
           height: 46px;
           background: transparent;
-          border: 1.5px solid var(--c);
+          border: 1.5px solid #5a5650;
           border-radius: 10px;
-          color: var(--c);
+          color: #5a5650;
           cursor: pointer;
           padding: 0 12px;
           transition: opacity .15s;
