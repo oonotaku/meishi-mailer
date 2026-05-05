@@ -6,6 +6,7 @@ import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslation
 import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 import { SNS_CONFIG } from '../../lib/snsConfig'
+import i18nConfig from '../../next-i18next.config'
 
 // Build a clickable URL from an extracted SNS value
 function buildSnsUrl(platform, value) {
@@ -801,6 +802,6 @@ export default function ContactDetail() {
 
 export const getServerSideProps = async ({ locale }) => ({
   props: {
-    ...(await serverSideTranslations(locale, ['common'])),
+    ...(await serverSideTranslations(locale, ['common'], i18nConfig)),
   },
 })
