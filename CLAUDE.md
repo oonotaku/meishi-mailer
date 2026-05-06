@@ -30,7 +30,7 @@ No test framework is configured.
 |------|---------|
 | `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。DUPLICATE画面から「この出会いを記録する」でCONTEXTへ進み `encounters/save` を呼ぶ。 |
 | `contacts.js` | Saved contacts list (own + team-shared). Shows team name badge for contacts from other orgs. |
-| `contacts/[id].js` | Contact detail — view, resend email, edit context, toggle visibility. Send/resend buttons shown only to `owner_id === user.id`. 出会い履歴セクション（encounters）を表示。`/api/encounters/list` から取得し新しい順で一覧表示。 |
+| `contacts/[id].js` | Contact detail — 繋がりハブ。名刺サムネイル → 連絡先情報 → 今すぐ繋がる（SNSマッチング） → 出会いの記録 → メール（折りたたみ）。**複数名刺対応**: チップバーで名刺切替（`activeCardIdx` state）、`displayCompany`/`displayEmail`等は `activeCardIdx` から導出。「🔄 再スキャン」は複数枚時にカード選択シートを経由。「＋ 名刺を追加」はOCR（preview_only）→確認シート→`add-card` API追記。メールボタンは選択中カードのアドレスを表示して送信。出会い履歴は `/api/encounters/list` から取得し `met_at` 降順表示。Send/rescan/add-card buttons shown only to `owner_id === user.id`。i18nはrequire()でJSONをバンドル（Vercel serverless cwd対応）。 |
 | `login.js` | Email/password login + signup + password reset (forgot mode). signUp に `emailRedirectTo` を指定して現在のロケールURLへリダイレクト。 |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
@@ -49,6 +49,9 @@ No test framework is configured.
 - `POST /api/contacts/save` — saves contact; looks up `profiles.current_organization_id` server-side to set `organization_id`. insert成功後、`encounters` テーブルに初回出会いを自動挿入。
 - `GET /api/contacts/list` — returns own contacts (all visibility) + team-shared contacts from all orgs the user belongs to. Includes `organization_name` field on each contact.
 - `POST /api/contacts/update-visibility` — toggles `private`/`team` on a contact (owner only)
+- `POST /api/contacts/rescan` — 名刺画像（base64）をOCRして既存contactを更新。`card_index`（更新対象カード番号、default 0）、`image_url`（Storage URL、card_image_urlsに追記）、`preview_only`（OCRのみ・DB更新なし、add-card確認フローで使用）をサポート。`card_index=0` 時のみ主フィールド（name/company/email等）を更新。`extracted_sns` はマージ（既存SNSを消さない）。
+- `POST /api/contacts/add-card` — 新しい名刺データを `contacts.cards` 配列に追記し、`image_url` を `card_image_urls` に追記する。既存Contactに複数社の名刺を紐付けるためのAPI。
+- `POST /api/contacts/update-connected-sns` — `contacts.connected_sns` JSONB を PATCH 更新。「✓ 繋がった」ボタンから呼び出し。
 
 **Encounters**
 - `POST /api/encounters/save` — encounter 1件保存。`contact_id` の `owner_id === user.id` を確認してからinsert。
@@ -111,15 +114,19 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - Every user has exactly one `role='owner'` row (their own org) plus zero or more `role='member'` rows
 - RLS has recursion issues — always query via supabaseAdmin in API routes
 
-**`contacts`** — `id, owner_id, organization_id, name, company, department, title, email, phone, card_image_urls (array), subject, body, mail_sent_at, location, event_name, met_at, temperature (hot|normal|watch), memo, visibility (private|team), created_at`
+**`contacts`** — `id, owner_id, organization_id, name, company, department, title, email, phone, card_image_urls (text[]), cards (jsonb[]), extracted_sns (jsonb), connected_sns (jsonb DEFAULT '{}'), subject, body, mail_sent_at, location, event_name, met_at, temperature (hot|normal|watch), memo, visibility (private|team), created_at`
 - `owner_id` = auth user UUID (not `user_id`)
 - `organization_id` = copied from owner's `profiles.current_organization_id` at save time
 - `visibility` defaults to `'private'`
+- `cards`: OCR結果を1枚ずつ格納した配列。`cards[0]` が主カード（name/company/email等のトップレベルフィールドと同期）。複数社の名刺を1 Contactに紐付けるために使用。
+- `extracted_sns`: 名刺から抽出したSNS情報（プラットフォーム→値のmap）。rescan時にマージ（既存を上書きしない）。
+- `connected_sns`: 「✓ 繋がった」済みのSNS（プラットフォーム→値のmap）。
 
-**`encounters`** — `id, contact_id (FK → contacts.id, CASCADE DELETE), met_at, event_name, location, memo, temperature (hot|normal|watch), created_at`
+**`encounters`** — `id, contact_id (FK → contacts.id, CASCADE DELETE), met_at, event_name, location, memo, temperature (hot|normal|watch), photo_urls (text[]), created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
 - `contacts/save` 実行時に初回出会いとして自動挿入される
 - 重複名刺撮影時にDUPLICATE画面から「この出会いを記録する」で追記可能
+- `photo_urls`: 出会い時の写真URLの配列（Supabase Storage `encounters` バケット）
 - `contacts/[id].js` の出会い履歴セクションで `met_at` 降順表示
 
 **`profile_affiliations`** — `id, user_id (FK → profiles.id), company_name, title, order_index, phone, website, contact_email, show_phone (DEFAULT false), show_website (DEFAULT true), show_email (DEFAULT false), created_at`
@@ -132,6 +139,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 Supabase Storage:
 - `cards` バケット — 公開バケット。名刺画像を保存
 - `avatars` バケット — 公開バケット。顔写真を `{userId}/avatar.jpg` パスで保存（upsert）
+- `encounters` バケット — 公開バケット。出会い写真を保存。RLSポリシー: authenticated INSERT + public SELECT
 
 #### Key invariants
 - `contacts.owner_id` is always the auth user's UUID — never `user_id`

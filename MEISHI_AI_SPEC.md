@@ -255,7 +255,10 @@ contacts (
   owner_id,              -- auth.uid() (≠ user_id)
   organization_id,       -- profiles.current_organization_id at save time
   name, company, department, title, email, phone,
-  card_image_urls text[],   -- max 3
+  card_image_urls text[],   -- 全名刺画像URLの配列
+  cards jsonb[],            -- OCR結果の配列（cards[0]が主カード、複数社対応）
+  extracted_sns jsonb,      -- 名刺から抽出したSNS情報（マージ方式で蓄積）
+  connected_sns jsonb,      -- 「✓ 繋がった」済みのSNS  DEFAULT '{}'
   subject, body,
   mail_sent_at,
   location, event_name, met_at date,
@@ -272,6 +275,7 @@ encounters (
   met_at date,
   event_name, location, memo,
   temperature text,        -- 'hot' | 'normal' | 'watch'
+  photo_urls text[],       -- 出会い時の写真URL（encountersバケット）
   created_at
 )
 -- RLS無効。supabaseAdmin経由のAPI routeのみアクセス
@@ -339,6 +343,18 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] メール本文末尾の署名行バグ修正（EN/JAプロンプトに「署名は自動付与されるので本文に含めない」指示を追加）（2026-05-04）
 - [x] パスワードリセット機能追加（`login.js` に forgot モード、`resetPasswordForEmail` + `/auth/confirm` 再利用）（2026-05-04）
 - [x] サインアップ後の言語維持（`signUp` に `emailRedirectTo` でロケール付きURLを渡す、Supabase Redirect URLs に `/en/` 追加）（2026-05-04）
+- [x] SNSカテゴリ再編（personal/business/cardapp）・新SNS追加（Sansan, Eight, myBridge, Vercel, note, Wantedly）・`lib/snsConfig.js` 新設（2026-05-05）
+- [x] プロフィール画面全面リデザイン（3セクションスクロール、プリセットプレビューパネル、顔写真アップロード）（2026-05-05）
+- [x] 名刺スキャンからプロフィール自動入力（「📷 名刺からプロフィールを入力」、OCR→CONFIRM画面→保存）（2026-05-05）
+- [x] 公開プロフィールページ全面リデザイン（Linktreeライク、96px丸アバター、bio、所属カード、SNSフル幅ボタン）（2026-05-05）
+- [x] profile_affiliations に phone/website/contact_email/show_* 追加（所属+連絡先一体化）（2026-05-05）
+- [x] contacts/[id].js 繋がりハブ化（extracted_sns × プロフィールSNSマッチング、「✓ 繋がった」ボタン、connected_sns記録）（2026-05-06）
+- [x] contacts/[id].js i18n完全修正（require()でJSONをwebpackバンドル、_nextI18Next手動構築でVercel対応）（2026-05-06）
+- [x] 複数名刺対応（contacts.cardsにOCR結果を配列保存、チップバーで名刺切替、activeCardIdxによる表示制御）（2026-05-06）
+- [x] 「🔄 再スキャン」複数枚対応（カード選択シート、card_index指定でrescan API呼び出し）（2026-05-06）
+- [x] 「＋ 名刺を追加」機能（preview_onlyでOCR→確認シート→add-card APIで追記、addingCardスピナー表示）（2026-05-06）
+- [x] メールボタンに送信先アドレス表示（選択中カードの email を displayEmail として使用）（2026-05-06）
+- [x] encountersバケットRLSポリシー追加（authenticated INSERT + public SELECT）（2026-05-06）
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）
