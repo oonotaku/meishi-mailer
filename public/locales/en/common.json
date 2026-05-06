@@ -30,7 +30,11 @@
     "analyze": "Analyze →",
     "redo": "Start over",
     "analyzing_status": "Analyzing card...",
-    "analyzing_hint": "AI is reading the card..."
+    "analyzing_hint": "AI is reading the card...",
+    "card_zone_label": "📇 Business Cards",
+    "context_zone_label": "📸 Context Photos",
+    "context_zone_hint": "optional",
+    "context_add": "Add venue, group photo, etc."
   },
   "step": {
     "confirm": "STEP 2 / 2 — REVIEW & SEND",

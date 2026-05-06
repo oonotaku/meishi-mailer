@@ -32,7 +32,9 @@ export default function Home() {
   const { t, i18n } = useTranslation('common')
   const { user, profile, loading: authLoading } = useAuth()
   const [step, setStep] = useState(STEPS.UPLOAD)
-  const [images, setImages] = useState([])
+  const [cardImages, setCardImages] = useState([])
+  const [contextImages, setContextImages] = useState([])
+  const [qrResults, setQrResults] = useState([])
   const [contact, setContact] = useState(null)
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
@@ -52,6 +54,7 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false)
   const [interimText, setInterimText] = useState('')
   const fileRef = useRef()
+  const contextFileRef = useRef()
   const recognitionRef = useRef(null)
   const memoBaseRef = useRef('')
   const router = useRouter()
@@ -93,16 +96,48 @@ export default function Home() {
     router.replace('/login')
   }
 
-  async function onFile(e) {
+  async function onCardFile(e) {
     const file = e.target.files[0]
     if (!file) return
     if (fileRef.current) fileRef.current.value = ''
     const dataUrl = await compressImage(file)
-    setImages(prev => [...prev, { preview: dataUrl, base64: dataUrl.split(',')[1] }])
+    const base64 = dataUrl.split(',')[1]
+    setCardImages(prev => [...prev, { preview: dataUrl, base64 }])
+
+    try {
+      const jsQR = (await import('jsqr')).default
+      const img = new Image()
+      img.src = dataUrl
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width
+        canvas.height = img.height
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)
+        const code = jsQR(imageData.data, imageData.width, imageData.height)
+        if (code?.data) {
+          setQrResults(prev => [...prev, code.data])
+        }
+      }
+    } catch (e) {
+      console.error('[jsQR]', e)
+    }
   }
 
-  function removeImage(index) {
-    setImages(prev => prev.filter((_, i) => i !== index))
+  async function onContextFile(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    if (contextFileRef.current) contextFileRef.current.value = ''
+    const dataUrl = await compressImage(file)
+    setContextImages(prev => [...prev, { preview: dataUrl, base64: dataUrl.split(',')[1] }])
+  }
+
+  function removeCardImage(index) {
+    setCardImages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function removeContextImage(index) {
+    setContextImages(prev => prev.filter((_, i) => i !== index))
   }
 
   async function onAnalyze() {
@@ -130,7 +165,8 @@ export default function Home() {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          images: images.map(img => ({ data: img.base64, media_type: 'image/jpeg' })),
+          images: cardImages.map(img => ({ data: img.base64, media_type: 'image/jpeg' })),
+          qr_results: qrResults,
           capturedAt: new Date().toISOString(),
           locale: i18n.language,
           ...(memo && { memo }),
@@ -156,9 +192,9 @@ export default function Home() {
     }
   }
 
-  async function uploadAllImages() {
+  async function uploadImages(imageList, bucket) {
     const urls = []
-    for (const img of images) {
+    for (const img of imageList) {
       try {
         const byteString = atob(img.base64)
         const ab = new ArrayBuffer(byteString.length)
@@ -167,10 +203,10 @@ export default function Home() {
         const blob = new Blob([ab], { type: 'image/jpeg' })
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
         const { error } = await supabase.storage
-          .from('cards')
+          .from(bucket)
           .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true })
         if (!error) {
-          const { data: urlData } = supabase.storage.from('cards').getPublicUrl(fileName)
+          const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName)
           if (urlData?.publicUrl) urls.push(urlData.publicUrl)
         }
       } catch (e) {
@@ -192,6 +228,7 @@ export default function Home() {
         title: contact?.title || null,
         email: contact?.email || null,
         phone: contact?.phone || null,
+        website: contact?.website || null,
         card_image_urls,
         subject,
         body,
@@ -247,7 +284,8 @@ export default function Home() {
     }
 
     try {
-      const card_image_urls = await uploadAllImages()
+      const card_image_urls = await uploadImages(cardImages, 'cards')
+      const encounter_photo_urls = await uploadImages(contextImages, 'encounters')
       const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/send', {
         method: 'POST',
@@ -259,7 +297,14 @@ export default function Home() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      await saveContact(card_image_urls, new Date().toISOString())
+      const saved = await saveContact(card_image_urls, new Date().toISOString())
+      if (saved?.encounter_id && encounter_photo_urls.length > 0) {
+        await fetch('/api/encounters/update-photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ encounter_id: saved.encounter_id, photo_urls: encounter_photo_urls }),
+        })
+      }
       setStep(STEPS.DONE)
     } catch (err) {
       setErrorMsg(err.message)
@@ -297,8 +342,17 @@ export default function Home() {
     }
 
     try {
-      const card_image_urls = await uploadAllImages()
-      await saveContact(card_image_urls, null)
+      const card_image_urls = await uploadImages(cardImages, 'cards')
+      const encounter_photo_urls = await uploadImages(contextImages, 'encounters')
+      const { data: { session } } = await supabase.auth.getSession()
+      const saved = await saveContact(card_image_urls, null)
+      if (saved?.encounter_id && encounter_photo_urls.length > 0) {
+        await fetch('/api/encounters/update-photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ encounter_id: saved.encounter_id, photo_urls: encounter_photo_urls }),
+        })
+      }
       setStep(STEPS.DONE)
     } catch (err) {
       setErrorMsg(err.message)
@@ -359,7 +413,9 @@ export default function Home() {
     setIsListening(false)
     setInterimText('')
     setStep(STEPS.UPLOAD)
-    setImages([])
+    setCardImages([])
+    setContextImages([])
+    setQrResults([])
     setContact(null)
     setSubject('')
     setBody('')
@@ -375,6 +431,7 @@ export default function Home() {
     setMatchedSns([])
     setSelectedPreset('business')
     if (fileRef.current) fileRef.current.value = ''
+    if (contextFileRef.current) contextFileRef.current.value = ''
   }
 
   if (authLoading) return (
@@ -771,9 +828,11 @@ export default function Home() {
               type="file"
               accept="image/*"
               capture="environment"
-              onChange={onFile}
+              onChange={onCardFile}
               style={{ display: 'none' }}
             />
+            <input ref={contextFileRef} type="file" accept="image/*"
+              onChange={onContextFile} style={{ display: 'none' }} />
 
             <div className="top-bar">
               <div className="eyebrow">{t('app.tagline')}</div>
@@ -784,7 +843,7 @@ export default function Home() {
               </div>
             </div>
 
-            {images.length === 0 ? (
+            {cardImages.length === 0 ? (
               <>
                 <h1 className="title">{t('home.title_line1')}<br/>{t('home.title_line2')}</h1>
                 <p className="sub">{t('home.sub_line1')}<br/>{t('home.sub_line2')}</p>
@@ -799,24 +858,49 @@ export default function Home() {
               </>
             ) : (
               <>
-                <div className="thumb-row">
-                  {images.map((img, i) => (
-                    <div key={i} className="thumb-wrap">
-                      <img src={img.preview} className="thumb" alt="" />
-                      <button className="thumb-remove" onClick={() => removeImage(i)}>×</button>
-                    </div>
-                  ))}
-                  {images.length < 3 && (
-                    <button className="thumb-add" onClick={() => fileRef.current.click()}>
-                      <span>+</span>
-                      <span className="thumb-add-label">{t('home.add')}</span>
-                    </button>
-                  )}
+                <div className="photo-zone">
+                  <div className="zone-header">
+                    <span className="zone-label">{t('home.card_zone_label')}</span>
+                    <span className="zone-count">{cardImages.length}/6</span>
+                  </div>
+                  <div className="thumb-row">
+                    {cardImages.map((img, i) => (
+                      <div key={i} className="thumb-wrap">
+                        <img src={img.preview} className="thumb" alt="" />
+                        <button className="thumb-remove" onClick={() => removeCardImage(i)}>×</button>
+                      </div>
+                    ))}
+                    {cardImages.length < 6 && (
+                      <button className="thumb-add" onClick={() => fileRef.current.click()}>
+                        <span className="thumb-add-label">{t('home.add')}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className="hint" style={{ textAlign: 'left', marginBottom: 20 }}>
-                  {t('home.photo_count', { count: images.length })}
-                </p>
-                <button className="upload-btn" onClick={() => setStep(STEPS.CONTEXT)}>{t('home.analyze')}</button>
+
+                <div className="photo-zone context-zone">
+                  <div className="zone-header">
+                    <span className="zone-label">{t('home.context_zone_label')}</span>
+                    <span className="zone-hint">{t('home.context_zone_hint')}</span>
+                  </div>
+                  {contextImages.length > 0 && (
+                    <div className="thumb-row">
+                      {contextImages.map((img, i) => (
+                        <div key={i} className="thumb-wrap">
+                          <img src={img.preview} className="thumb" alt="" />
+                          <button className="thumb-remove" onClick={() => removeContextImage(i)}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button className="context-add-btn" onClick={() => contextFileRef.current.click()}>
+                    + {t('home.context_add')}
+                  </button>
+                </div>
+
+                <button className="upload-btn" onClick={onAnalyze}>
+                  {t('home.analyze')}
+                </button>
                 <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
               </>
             )}
@@ -841,7 +925,7 @@ export default function Home() {
               <div className="spinner" />
               <span className="status-text">{statusMsg}</span>
             </div>
-            {images[0] && <img src={images[0].preview} className="preview-img" alt="" />}
+            {cardImages[0] && <img src={cardImages[0].preview} className="preview-img" alt="" />}
             <p className="hint" style={{ marginTop: 16 }}>{t('home.analyzing_hint')}</p>
           </div>
         )}
@@ -908,9 +992,9 @@ export default function Home() {
               </div>
             </div>
 
-            {images.length > 0 && (
+            {cardImages.length > 0 && (
               <div className="confirm-thumbs">
-                {images.map((img, i) => (
+                {cardImages.map((img, i) => (
                   <img key={i} src={img.preview} className="confirm-thumb" alt="" />
                 ))}
               </div>
@@ -1931,6 +2015,49 @@ export default function Home() {
           color: #3a3a4a;
           line-height: 1.5;
         }
+
+        .photo-zone {
+          width: 100%;
+          background: #0d0d14;
+          border: 1px solid #1e1e2a;
+          border-radius: 12px;
+          padding: 12px 14px;
+          margin-bottom: 10px;
+        }
+        .context-zone { border-style: dashed; }
+        .zone-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+        .zone-label {
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          color: #7b9e87;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+        .zone-count {
+          font-size: 10px;
+          font-family: 'DM Mono', monospace;
+          color: #3a3a4a;
+        }
+        .zone-hint { font-size: 10px; color: #3a3a4a; }
+        .context-add-btn {
+          width: 100%;
+          padding: 10px;
+          background: none;
+          border: 1px dashed #2a2a3a;
+          border-radius: 8px;
+          color: #5a5650;
+          font-size: 13px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          margin-top: 8px;
+          transition: color .15s, border-color .15s;
+        }
+        .context-add-btn:hover { color: #7b9e87; border-color: #7b9e87; }
       `}</style>
     </>
   )

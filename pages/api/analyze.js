@@ -33,7 +33,7 @@ function determinePreset(title, cardSns) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { images: rawImages, image, mediaType = 'image/jpeg', capturedAt, locale = 'ja', memo } = req.body
+  const { images: rawImages, image, mediaType = 'image/jpeg', capturedAt, locale = 'ja', memo, qr_results = [] } = req.body
   // 複数画像（新形式）or 単一画像（旧形式）を正規化
   const imageList = rawImages?.length > 0
     ? rawImages
@@ -89,7 +89,10 @@ export default async function handler(req, res) {
 
   try {
     // Step 1: OCR
-    const ocrPrompt = 'Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","sns":{"line":"URL or null","whatsapp":"phone or URL or null","instagram":"@user or URL or null","x":"@user or URL or null","facebook":"URL or null","linkedin":"URL or null","github":"user or URL or null","youtube":"URL or null","wantedly":"URL or null","note":"URL or null","sansan":"URL or null","eight":"URL or null","mybridge":"URL or null"}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.'
+    const qrContext = qr_results.length > 0
+      ? `\nDetected QR codes on the card: ${qr_results.join(', ')}`
+      : ''
+    const ocrPrompt = `Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","website":"company or personal website URL or empty","sns":{"line":"URL or null","whatsapp":"phone or URL or null","instagram":"@user or URL or null","x":"@user or URL or null","facebook":"URL or null","linkedin":"URL or null","github":"user or URL or null","youtube":"URL or null","wantedly":"URL or null","note":"URL or null","sansan":"URL or null","eight":"URL or null","mybridge":"URL or null"}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.${qrContext}`
     const ocrRes = await client.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 512,

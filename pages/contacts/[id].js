@@ -643,6 +643,13 @@ export default function ContactDetail() {
                   <span className="info-val mono">{contact.phone}</span>
                 </a>
               )}
+              {contact.website && (
+                <a href={contact.website.startsWith('http') ? contact.website : `https://${contact.website}`}
+                  target="_blank" rel="noopener noreferrer" className="info-row">
+                  <span className="info-icon">🌐</span>
+                  <span className="info-val mono">{contact.website.replace(/^https?:\/\//, '')}</span>
+                </a>
+              )}
             </div>
           </div>
 
@@ -943,6 +950,14 @@ export default function ContactDetail() {
                       </span>
                     )}
                     {enc.memo && <div className="enc-memo">{enc.memo}</div>}
+                    {enc.photo_urls?.length > 0 && (
+                      <div className="enc-photos">
+                        {enc.photo_urls.map((url, pi) => (
+                          <img key={pi} src={url} className="enc-photo" alt=""
+                            onClick={() => setExpandedImg(url)} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1292,6 +1307,8 @@ export default function ContactDetail() {
         .enc-meta { font-size: 12px; color: #5a5650; margin-bottom: 4px; }
         .enc-temp { font-size: 14px; }
         .enc-memo { font-size: 13px; color: #8a8680; line-height: 1.5; margin-top: 6px; }
+        .enc-photos { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .enc-photo { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid #1e1e2a; cursor: pointer; }
         .ctx-empty { font-size: 12px; color: #3a3a4a; font-family: 'DM Mono', monospace; }
 
         /* Shared form elements */

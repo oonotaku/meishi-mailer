@@ -30,7 +30,11 @@
     "analyze": "解析する →",
     "redo": "やり直す",
     "analyzing_status": "名刺を解析中...",
-    "analyzing_hint": "AIが名刺を読み取っています..."
+    "analyzing_hint": "AIが名刺を読み取っています...",
+    "card_zone_label": "📇 名刺",
+    "context_zone_label": "📸 出会いの写真",
+    "context_zone_hint": "任意",
+    "context_add": "お店・集合写真などを追加"
   },
   "step": {
     "confirm": "STEP 2 / 2 — 内容確認・送信",

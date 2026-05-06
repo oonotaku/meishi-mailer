@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   const orgId = profile?.current_organization_id || null
 
   const {
-    name, company, department, title, email, phone,
+    name, company, department, title, email, phone, website,
     card_image_urls, subject, body, mail_sent_at,
     location, event_name, met_at, temperature, memo,
     extracted_sns,
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
       title: title || null,
       email: email || null,
       phone: phone || null,
+      website: website || null,
       card_image_urls: card_image_urls || [],
       subject: subject || null,
       body: body || null,
@@ -53,16 +54,18 @@ export default async function handler(req, res) {
   if (error) return res.status(500).json({ error: error.message })
 
   // 初回出会いをencountersにも記録
+  let encounterData = null
   if (data?.id) {
-    await supabaseAdmin.from('encounters').insert({
+    const { data: encData } = await supabaseAdmin.from('encounters').insert({
       contact_id: data.id,
       met_at: met_at || null,
       event_name: event_name || null,
       location: location || null,
       memo: memo || null,
       temperature: temperature || 'normal',
-    })
+    }).select().single()
+    encounterData = encData
   }
 
-  res.json({ data })
+  res.json({ data: { ...data, encounter_id: encounterData?.id || null } })
 }
