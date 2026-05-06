@@ -34,6 +34,55 @@ function buildSnsUrl(platform, value) {
   return bases[platform] ? bases[platform] + cleaned : value
 }
 
+const SNS_HINTS = {
+  ja: {
+    line:      'LINEアプリ → プロフィール → QRコードを表示 → 📸ボタンで読み取れます',
+    whatsapp:  'WhatsAppアプリ → 設定 → QRコード、またはwa.me/電話番号の形式で入力',
+    instagram: 'プロフィール右上の ⋮ →「リンクをコピー」',
+    x:         'プロフィールページのURLバー（x.com/ユーザー名）をコピー',
+    facebook:  'プロフィールページのURLバー（facebook.com/ユーザー名）をコピー',
+    tiktok:    'プロフィールページのURLバー（tiktok.com/@ユーザー名）をコピー',
+    threads:   'プロフィールページのURLバー（threads.net/@ユーザー名）をコピー',
+    telegram:  'プロフィールのユーザー名（@名前）またはt.me/ユーザー名をコピー',
+    wechat:    'WeChatアプリ → プロフィール → QRコード → 画像保存 → 📸で読み取れます',
+    linkedin:  'プロフィールページのURLバー（linkedin.com/in/ユーザー名）をコピー',
+    github:    'プロフィールページのURLバー（github.com/ユーザー名）をコピー',
+    vercel:    'プロフィールページのURLバー（vercel.com/ユーザー名）をコピー',
+    note:      'プロフィールページのURLバー（note.com/ユーザー名）をコピー',
+    wantedly:  'プロフィールページのURLバー（wantedly.com/id/ユーザー名）をコピー',
+    youtube:   'チャンネルページのURLバー（youtube.com/@チャンネル名）をコピー',
+    discord:   'プロフィール右クリック →「ユーザー名をコピー」またはdiscord.com/users/IDをコピー',
+    bluesky:   'プロフィールページのURLバー（bsky.app/profile/ユーザー名）をコピー',
+    pinterest: 'プロフィールページのURLバー（pinterest.com/ユーザー名）をコピー',
+    sansan:    'Sansanアプリ → プロフィール → 共有 → リンクをコピー',
+    eight:     'Eightアプリ → プロフィール → 共有 → リンクをコピー',
+    mybridge:  'myBridgeアプリ → プロフィール → リンクをコピー',
+  },
+  en: {
+    line:      'LINE app → Profile → Show QR code → scan with 📸 button',
+    whatsapp:  'WhatsApp → Settings → QR code, or enter wa.me/phonenumber',
+    instagram: 'Profile page → ⋮ → "Copy link"',
+    x:         'Copy the URL from the browser bar (x.com/username)',
+    facebook:  'Copy the URL from the browser bar (facebook.com/username)',
+    tiktok:    'Copy the URL from the browser bar (tiktok.com/@username)',
+    threads:   'Copy the URL from the browser bar (threads.net/@username)',
+    telegram:  'Copy the username (@name) or t.me/username',
+    wechat:    'WeChat app → Profile → QR code → Save image → scan with 📸',
+    linkedin:  'Copy the URL from the browser bar (linkedin.com/in/username)',
+    github:    'Copy the URL from the browser bar (github.com/username)',
+    vercel:    'Copy the URL from the browser bar (vercel.com/username)',
+    note:      'Copy the URL from the browser bar (note.com/username)',
+    wantedly:  'Copy the URL from the browser bar (wantedly.com/id/username)',
+    youtube:   'Copy the URL from the browser bar (youtube.com/@channelname)',
+    discord:   'Right-click profile → "Copy Username" or copy discord.com/users/ID',
+    bluesky:   'Copy the URL from the browser bar (bsky.app/profile/username)',
+    pinterest: 'Copy the URL from the browser bar (pinterest.com/username)',
+    sansan:    'Sansan app → Profile → Share → Copy link',
+    eight:     'Eight app → Profile → Share → Copy link',
+    mybridge:  'myBridge app → Profile → Copy link',
+  }
+}
+
 // Map QR code URL to SNS platform
 function parseQrUrl(url) {
   if (!url) return null
@@ -669,6 +718,11 @@ export default function ContactDetail() {
                     <option key={s.key} value={s.key.replace('sns_', '')}>{s.label}</option>
                   ))}
                 </select>
+                {addSnsPlatform && SNS_HINTS[i18n.language]?.[addSnsPlatform] && (
+                  <div className="sns-hint">
+                    💡 {SNS_HINTS[i18n.language][addSnsPlatform]}
+                  </div>
+                )}
                 {addSnsPlatform && (
                   <input
                     type="url"
@@ -1101,6 +1155,17 @@ export default function ContactDetail() {
           outline: none; appearance: none;
         }
         .sns-select:focus { border-color: #7b9e87; }
+
+        .sns-hint {
+          font-size: 12px;
+          color: #8a8680;
+          background: #0d0d14;
+          border: 1px solid #1e1e2a;
+          border-radius: 8px;
+          padding: 8px 10px;
+          margin-top: 8px;
+          line-height: 1.6;
+        }
 
         .manual-badge {
           font-size: 9px; font-family: 'DM Mono', monospace;
