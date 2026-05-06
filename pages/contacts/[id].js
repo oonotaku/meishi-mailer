@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
@@ -163,6 +163,16 @@ export default function ContactDetail() {
   // Card rescan
   const [rescanning, setRescanning] = useState(false)
   const [rescanDone, setRescanDone] = useState(false)
+  const [showCardSelector, setShowCardSelector] = useState(false)
+  const [selectedRescanIdx, setSelectedRescanIdx] = useState(0)
+  const rescanInputRef = useRef(null)
+
+  // Add card
+  const [addingCard, setAddingCard] = useState(false)
+  const [pendingAddCard, setPendingAddCard] = useState(null) // { card, imageUrl }
+
+  // 複数名刺の表示切替
+  const [activeCardIdx, setActiveCardIdx] = useState(0)
 
   // Screenshot SNS detection
   const [detecting, setDetecting] = useState(false)
@@ -456,11 +466,23 @@ export default function ContactDetail() {
     finally { setAddSnsSaving(false) }
   }
 
+  function handleCardSelectorOpen() {
+    const cards = contact?.cards || []
+    if (cards.length <= 1) {
+      rescanInputRef.current?.click()
+    } else {
+      setSelectedRescanIdx(0)
+      setShowCardSelector(true)
+    }
+  }
+
   async function handleRescan(e) {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
     setRescanning(true)
     setRescanDone(false)
+    setShowCardSelector(false)
     try {
       const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader()
@@ -468,15 +490,37 @@ export default function ContactDetail() {
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
+
+      // Upload new image to cards bucket
+      let newImageUrl = null
+      try {
+        const byteString = atob(base64)
+        const ab = new ArrayBuffer(byteString.length)
+        const ia = new Uint8Array(ab)
+        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i)
+        const blob = new Blob([ab], { type: 'image/jpeg' })
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+        const { error: upErr } = await supabase.storage.from('cards').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true })
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('cards').getPublicUrl(fileName)
+          newImageUrl = urlData?.publicUrl || null
+        }
+      } catch (uploadErr) { console.error('[rescan upload]', uploadErr) }
+
       const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/contacts/rescan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ contactId: id, image: base64, mediaType: file.type || 'image/jpeg' }),
+        body: JSON.stringify({
+          contactId: id,
+          image: base64,
+          mediaType: file.type || 'image/jpeg',
+          card_index: selectedRescanIdx,
+          image_url: newImageUrl,
+        }),
       })
       const json = await r.json()
       if (r.ok) {
-        // Update extracted_sns and basic fields; manual_sns is untouched
         setContact(prev => ({ ...prev, ...json.updated }))
         setRescanDone(true)
         setTimeout(() => setRescanDone(false), 3000)
@@ -485,8 +529,79 @@ export default function ContactDetail() {
     finally { setRescanning(false) }
   }
 
+  async function handleAddCard(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setAddingCard(true)
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = ev => resolve(ev.target.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // Upload image to cards bucket
+      let imageUrl = null
+      try {
+        const byteString = atob(base64)
+        const ab = new ArrayBuffer(byteString.length)
+        const ia = new Uint8Array(ab)
+        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i)
+        const blob = new Blob([ab], { type: 'image/jpeg' })
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+        const { error: upErr } = await supabase.storage.from('cards').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true })
+        if (!upErr) {
+          const { data: urlData } = supabase.storage.from('cards').getPublicUrl(fileName)
+          imageUrl = urlData?.publicUrl || null
+        }
+      } catch (uploadErr) { console.error('[add-card upload]', uploadErr) }
+
+      // OCR (preview_only — DBは更新しない)
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/rescan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ image: base64, mediaType: file.type || 'image/jpeg', preview_only: true }),
+      })
+      const json = await r.json()
+      if (r.ok && json.card) {
+        setPendingAddCard({ card: json.card, imageUrl })
+      } else {
+        alert('OCRに失敗しました。もう一度お試しください。')
+      }
+    } catch (e) { console.error(e) }
+    finally { setAddingCard(false) }
+  }
+
+  async function confirmAddCard() {
+    if (!pendingAddCard) return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/add-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          contact_id: id,
+          card: pendingAddCard.card,
+          image_url: pendingAddCard.imageUrl,
+        }),
+      })
+      const json = await r.json()
+      if (r.ok) {
+        setContact(prev => ({
+          ...prev,
+          cards: json.cards,
+          card_image_urls: json.card_image_urls,
+        }))
+        setPendingAddCard(null)
+      }
+    } catch (e) { console.error(e) }
+  }
+
   async function onSend() {
-    const toEmail = contact?.email
+    const toEmail = displayEmail
     if (!toEmail) { alert(t('contact.no_email_alert')); return }
     setSending(true)
     setSendError('')
@@ -520,6 +635,16 @@ export default function ContactDetail() {
 
   const isOwner = user?.id === contact?.owner_id
   const allContactSns = computeAllSns(contact?.extracted_sns, manualSns, profile)
+
+  // 表示中のカードデータ（複数名刺の場合は選択されたカードの情報を表示）
+  const cards = contact?.cards || []
+  const activeCard = cards.length > 1 && activeCardIdx > 0 ? cards[activeCardIdx] : null
+  const displayCompany = activeCard?.company || contact?.company
+  const displayTitle = activeCard?.title || contact?.title
+  const displayDept = activeCard?.department || contact?.department
+  const displayEmail = activeCard?.email || contact?.email
+  const displayPhone = activeCard?.phone || contact?.phone
+  const displayWebsite = activeCard?.website || contact?.website
 
   const formatDate = (iso) => {
     if (!iso) return ''
@@ -564,11 +689,67 @@ export default function ContactDetail() {
       )}
 
       <div className="shell">
-        {detecting && (
+        {(detecting || addingCard) && (
           <div className="detecting-overlay">
             <div className="detecting-box">
               <div className="detecting-spinner" />
-              <div className="detecting-text">{t('contact.detecting')}</div>
+              <div className="detecting-text">
+                {addingCard
+                  ? (i18n.language === 'ja' ? '名刺を解析中…' : 'Scanning card…')
+                  : t('contact.detecting')}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── カード選択シート（再スキャン用）── */}
+        {showCardSelector && (
+          <div className="sheet-overlay" onClick={() => setShowCardSelector(false)}>
+            <div className="sheet-box" onClick={e => e.stopPropagation()}>
+              <div className="sheet-title">{i18n.language === 'ja' ? 'どの名刺を更新しますか？' : 'Which card do you want to update?'}</div>
+              {(contact.cards || []).map((c, i) => (
+                <button
+                  key={i}
+                  className={`sheet-card-btn ${selectedRescanIdx === i ? 'selected' : ''}`}
+                  onClick={() => setSelectedRescanIdx(i)}
+                >
+                  <div className="sheet-card-company">{c.company || `Card ${i + 1}`}</div>
+                  {c.title && <div className="sheet-card-title">{c.title}</div>}
+                </button>
+              ))}
+              <button
+                className="ctx-save-btn"
+                style={{ marginTop: 12 }}
+                onClick={() => { setShowCardSelector(false); rescanInputRef.current?.click() }}
+              >
+                {i18n.language === 'ja' ? 'この名刺を再スキャン →' : 'Rescan this card →'}
+              </button>
+              <button className="ghost-btn" style={{ marginTop: 0 }} onClick={() => setShowCardSelector(false)}>
+                {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── 名刺追加 確認オーバーレイ ── */}
+        {pendingAddCard && (
+          <div className="sheet-overlay" onClick={() => setPendingAddCard(null)}>
+            <div className="sheet-box" onClick={e => e.stopPropagation()}>
+              <div className="sheet-title">{i18n.language === 'ja' ? 'この名刺を追加しますか？' : 'Add this card?'}</div>
+              {pendingAddCard.imageUrl && (
+                <img src={pendingAddCard.imageUrl} style={{ width: '100%', borderRadius: 8, marginBottom: 12, border: '1px solid #1e1e2a' }} alt="" />
+              )}
+              <div className="sheet-card-btn selected" style={{ cursor: 'default', marginBottom: 12 }}>
+                <div className="sheet-card-company">{pendingAddCard.card.company || '—'}</div>
+                {pendingAddCard.card.title && <div className="sheet-card-title">{pendingAddCard.card.title}</div>}
+                {pendingAddCard.card.email && <div className="sheet-card-title" style={{ fontFamily: 'DM Mono, monospace', fontSize: 11 }}>{pendingAddCard.card.email}</div>}
+              </div>
+              <button className="ctx-save-btn" onClick={confirmAddCard}>
+                {i18n.language === 'ja' ? '追加する' : 'Add'}
+              </button>
+              <button className="ghost-btn" style={{ marginTop: 0 }} onClick={() => setPendingAddCard(null)}>
+                {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
+              </button>
             </div>
           </div>
         )}
@@ -606,18 +787,38 @@ export default function ContactDetail() {
             <div className="no-img-bar">{t('contact.no_image')}</div>
           )}
 
-          {/* ── 名刺再スキャンボタン ── */}
+          {/* ── 名刺操作ボタン ── */}
           {isOwner && (
             <div className="rescan-row">
-              <label className="rescan-btn" style={{ opacity: rescanning ? 0.6 : 1 }}>
+              {/* 再スキャン — 複数カードがある場合はカード選択シートを経由 */}
+              <button
+                className="rescan-btn"
+                style={{ opacity: rescanning ? 0.6 : 1 }}
+                onClick={handleCardSelectorOpen}
+                disabled={rescanning}
+              >
                 {rescanning ? t('contact.rescanning') : rescanDone ? `✓ ${t('contact.rescan_done')}` : `🔄 ${t('contact.rescan_card')}`}
+              </button>
+              {/* hidden input — プログラムからトリガー */}
+              <input
+                ref={rescanInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={handleRescan}
+              />
+
+              {/* 名刺を追加 */}
+              <label className="add-card-btn" style={{ opacity: addingCard ? 0.6 : 1 }}>
+                {addingCard ? '…' : `＋ ${i18n.language === 'ja' ? '名刺を追加' : 'Add Card'}`}
                 <input
                   type="file"
                   accept="image/*"
                   capture="environment"
                   style={{ display: 'none' }}
-                  onChange={handleRescan}
-                  disabled={rescanning}
+                  onChange={handleAddCard}
+                  disabled={addingCard}
                 />
               </label>
             </div>
@@ -626,32 +827,53 @@ export default function ContactDetail() {
           {/* ── CONTACT INFO ── */}
           <div className="info-block">
             <div className="info-name">{contact.name || t('contact.no_name')}</div>
-            {contact.company && <div className="info-company">{contact.company}</div>}
-            {(contact.department || contact.title) && (
-              <div className="info-sub">{[contact.department, contact.title].filter(Boolean).join(' · ')}</div>
+            {displayCompany && <div className="info-company">{displayCompany}</div>}
+            {(displayDept || displayTitle) && (
+              <div className="info-sub">{[displayDept, displayTitle].filter(Boolean).join(' · ')}</div>
             )}
             <div className="info-contacts">
-              {contact.email && (
-                <a href={`mailto:${contact.email}`} className="info-row">
+              {displayEmail && (
+                <a href={`mailto:${displayEmail}`} className="info-row">
                   <span className="info-icon">✉</span>
-                  <span className="info-val mono">{contact.email}</span>
+                  <span className="info-val mono">{displayEmail}</span>
                 </a>
               )}
-              {contact.phone && (
-                <a href={`tel:${contact.phone}`} className="info-row">
+              {displayPhone && (
+                <a href={`tel:${displayPhone}`} className="info-row">
                   <span className="info-icon">☎</span>
-                  <span className="info-val mono">{contact.phone}</span>
+                  <span className="info-val mono">{displayPhone}</span>
                 </a>
               )}
-              {contact.website && (
-                <a href={contact.website.startsWith('http') ? contact.website : `https://${contact.website}`}
+              {displayWebsite && (
+                <a href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
                   target="_blank" rel="noopener noreferrer" className="info-row">
                   <span className="info-icon">🌐</span>
-                  <span className="info-val mono">{contact.website.replace(/^https?:\/\//, '')}</span>
+                  <span className="info-val mono">{displayWebsite.replace(/^https?:\/\//, '')}</span>
                 </a>
               )}
             </div>
           </div>
+
+          {/* ── 複数名刺バッジ（タップで切替）── */}
+          {cards.length > 1 && (
+            <div className="multi-cards-bar">
+              <span className="multi-cards-label">
+                {i18n.language === 'ja' ? '名刺' : 'Cards'}
+              </span>
+              <div className="multi-cards-list">
+                {cards.map((c, i) => (
+                  <button
+                    key={i}
+                    className={`multi-card-chip ${activeCardIdx === i ? 'active' : ''}`}
+                    onClick={() => setActiveCardIdx(i)}
+                  >
+                    <span className="multi-card-company">{c.company || `Card ${i + 1}`}</span>
+                    {c.title && <span className="multi-card-title">{c.title}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── 今すぐ繋がる ── */}
           <div className="section">
@@ -817,10 +1039,10 @@ export default function ContactDetail() {
             )}
 
             {/* Email buttons */}
-            {contact.email && isOwner && (
+            {displayEmail && isOwner && (
               <div className="email-btn-row">
                 <button className="email-new-btn" onClick={() => { setEmailOpen(true); setResendMode(true) }}>
-                  ✉ {t('contact.email_connect')}
+                  ✉ {displayEmail}
                 </button>
                 {sent && (
                   <button className="email-hist-btn" onClick={() => { setEmailOpen(o => !o); setResendMode(false) }}>
@@ -1043,26 +1265,85 @@ export default function ContactDetail() {
           font-size: 12px; color: #3a3a4a;
         }
 
-        /* 名刺再スキャン */
+        /* 名刺操作ボタン行 */
         .rescan-row {
           padding: 8px 14px;
           background: #0d0d14;
           border-bottom: 1px solid #1e1e2a;
-          display: flex;
-          justify-content: flex-end;
+          display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;
         }
         .rescan-btn {
-          font-size: 12px;
-          font-family: 'DM Mono', monospace;
-          color: #5a5650;
-          border: 1px solid #2a2a3a;
-          border-radius: 6px;
-          padding: 5px 12px;
-          cursor: pointer;
+          font-size: 12px; font-family: 'DM Mono', monospace; color: #5a5650;
+          background: none; border: 1px solid #2a2a3a; border-radius: 6px;
+          padding: 5px 12px; cursor: pointer;
           transition: color .15s, border-color .15s;
-          display: inline-block;
         }
         .rescan-btn:hover { color: #7b9e87; border-color: #7b9e87; }
+        .add-card-btn {
+          font-size: 12px; font-family: 'DM Mono', monospace; color: #7b9e87;
+          border: 1px solid #1a3525; background: #0d1f15; border-radius: 6px;
+          padding: 5px 12px; cursor: pointer;
+          transition: opacity .15s; display: inline-block;
+        }
+        .add-card-btn:hover { opacity: .8; }
+
+        /* カード選択 / 追加確認シート */
+        .sheet-overlay {
+          position: fixed; inset: 0; z-index: 300;
+          background: rgba(0,0,0,.7);
+          display: flex; align-items: flex-end; justify-content: center;
+        }
+        .sheet-box {
+          width: 100%; max-width: 430px;
+          background: #12121a; border-top: 1px solid #2a2a3a;
+          border-radius: 16px 16px 0 0;
+          padding: 20px 20px 32px;
+          display: flex; flex-direction: column; gap: 8px;
+        }
+        .sheet-title {
+          font-size: 13px; font-family: 'DM Mono', monospace;
+          color: #5a5650; letter-spacing: .06em; text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+        .sheet-card-btn {
+          background: #0d0d14; border: 1px solid #1e1e2a;
+          border-radius: 10px; padding: 12px 14px;
+          text-align: left; cursor: pointer;
+          transition: border-color .15s;
+        }
+        .sheet-card-btn:hover, .sheet-card-btn.selected {
+          border-color: #7b9e87;
+        }
+        .sheet-card-company { font-size: 14px; font-weight: 500; color: #f0ede8; }
+        .sheet-card-title { font-size: 12px; color: #5a5650; margin-top: 2px; }
+
+        /* 複数名刺バッジ */
+        .multi-cards-bar {
+          padding: 8px 14px 10px;
+          background: #0d0d14;
+          border-bottom: 1px solid #1e1e2a;
+          display: flex; align-items: flex-start; gap: 10px;
+        }
+        .multi-cards-label {
+          font-size: 10px; font-family: 'DM Mono', monospace;
+          color: #3a3a4a; text-transform: uppercase; letter-spacing: .08em;
+          padding-top: 3px; white-space: nowrap;
+        }
+        .multi-cards-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .multi-card-chip {
+          background: #12121a; border: 1px solid #1e1e2a;
+          border-radius: 8px; padding: 4px 10px;
+          display: flex; flex-direction: column; gap: 1px;
+          cursor: pointer; text-align: left;
+          transition: border-color .15s, background .15s;
+        }
+        .multi-card-chip:hover { border-color: #3a3a4a; }
+        .multi-card-chip.active {
+          border-color: #7b9e87; background: #0d1f15;
+        }
+        .multi-card-company { font-size: 12px; color: #8a8680; }
+        .multi-card-chip.active .multi-card-company { color: #7b9e87; }
+        .multi-card-title { font-size: 10px; color: #3a3a4a; }
 
         /* Image overlay */
         .img-overlay {
