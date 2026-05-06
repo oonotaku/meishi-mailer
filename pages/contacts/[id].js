@@ -34,6 +34,32 @@ function buildSnsUrl(platform, value) {
   return bases[platform] ? bases[platform] + cleaned : value
 }
 
+// Map QR code URL to SNS platform
+function parseQrUrl(url) {
+  if (!url) return null
+  const u = url.toLowerCase()
+  if (u.includes('line.me')) return { platform: 'line', value: url }
+  if (u.includes('wa.me') || u.includes('whatsapp.com')) return { platform: 'whatsapp', value: url }
+  if (u.includes('instagram.com')) return { platform: 'instagram', value: url }
+  if (u.includes('facebook.com') || u.includes('fb.com')) return { platform: 'facebook', value: url }
+  if (u.includes('linkedin.com')) return { platform: 'linkedin', value: url }
+  if (u.includes('github.com')) return { platform: 'github', value: url }
+  if (u.includes('x.com') || u.includes('twitter.com')) return { platform: 'x', value: url }
+  if (u.includes('youtube.com') || u.includes('youtu.be')) return { platform: 'youtube', value: url }
+  if (u.includes('tiktok.com')) return { platform: 'tiktok', value: url }
+  if (u.includes('threads.net')) return { platform: 'threads', value: url }
+  if (u.includes('t.me')) return { platform: 'telegram', value: url }
+  if (u.includes('bsky.app')) return { platform: 'bluesky', value: url }
+  if (u.includes('discord.gg') || u.includes('discord.com')) return { platform: 'discord', value: url }
+  if (u.includes('wantedly.com')) return { platform: 'wantedly', value: url }
+  if (u.includes('note.com')) return { platform: 'note', value: url }
+  if (u.includes('pinterest.com')) return { platform: 'pinterest', value: url }
+  if (u.includes('8card.net')) return { platform: 'eight', value: url }
+  if (u.includes('sansan.com')) return { platform: 'sansan', value: url }
+  if (u.includes('vercel.com')) return { platform: 'vercel', value: url }
+  return null
+}
+
 // Merge extracted_sns and manual_sns into a unified list.
 // isMatch=true when user's own profile has the same platform (show "繋がった" button).
 // isManual=true for manually added entries (show delete button).
@@ -88,6 +114,10 @@ export default function ContactDetail() {
   // Card rescan
   const [rescanning, setRescanning] = useState(false)
   const [rescanDone, setRescanDone] = useState(false)
+
+  // Screenshot SNS detection
+  const [detecting, setDetecting] = useState(false)
+  const [detectedSns, setDetectedSns] = useState(null)
 
   // Email section
   const [emailOpen, setEmailOpen] = useState(false)
@@ -271,6 +301,101 @@ export default function ContactDetail() {
         setContact(prev => ({ ...prev, manual_sns: json.manual_sns }))
       }
     } catch (e) { console.error(e) }
+  }
+
+  async function handleScreenshotDetect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setDetecting(true)
+    setDetectedSns(null)
+
+    const snsMap = {}
+    SNS_CONFIG.forEach(s => { snsMap[s.key.replace('sns_', '')] = s })
+
+    try {
+      // Step 1: Try jsQR client-side
+      const jsQR = (await import('jsqr')).default
+      const img = new Image()
+      img.src = URL.createObjectURL(file)
+
+      const qrResult = await new Promise((resolve) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0)
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const code = jsQR(imageData.data, imageData.width, imageData.height)
+          URL.revokeObjectURL(img.src)
+          resolve(code?.data || null)
+        }
+        img.onerror = () => { URL.revokeObjectURL(img.src); resolve(null) }
+      })
+
+      if (qrResult) {
+        const parsed = parseQrUrl(qrResult)
+        if (parsed && snsMap[parsed.platform]) {
+          const cfg = snsMap[parsed.platform]
+          setDetectedSns({ platform: parsed.platform, value: parsed.value, label: cfg.label, color: cfg.color, icon: cfg.icon || null })
+          setDetecting(false)
+          return
+        }
+      }
+
+      // Step 2: Claude Vision fallback
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = ev => resolve(ev.target.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/detect-sns-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ image: base64, mediaType: file.type || 'image/jpeg' }),
+      })
+      const json = await r.json()
+
+      if (r.ok && json.platform && json.value) {
+        const cfg = snsMap[json.platform]
+        if (cfg) {
+          setDetectedSns({ platform: json.platform, value: json.value, label: cfg.label, color: cfg.color, icon: cfg.icon || null })
+        } else {
+          alert(t('contact.detect_failed'))
+        }
+      } else {
+        alert(t('contact.detect_failed'))
+      }
+    } catch (err) {
+      console.error('[detect]', err)
+      alert(t('contact.detect_failed'))
+    } finally {
+      setDetecting(false)
+    }
+  }
+
+  async function confirmDetectedSns() {
+    if (!detectedSns) return
+    setAddSnsSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/update-manual-sns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contactId: id, platform: detectedSns.platform, value: detectedSns.value }),
+      })
+      const json = await r.json()
+      if (r.ok) {
+        setManualSns(json.manual_sns || {})
+        setContact(prev => ({ ...prev, manual_sns: json.manual_sns }))
+        setDetectedSns(null)
+      }
+    } catch (e) { console.error(e) }
+    finally { setAddSnsSaving(false) }
   }
 
   async function handleRescan(e) {
@@ -458,12 +583,59 @@ export default function ContactDetail() {
           <div className="section">
             <div className="section-hd">
               <span className="section-label">{t('contact.connect_section')}</span>
-              {isOwner && !showAddSnsForm && (
-                <button className="add-sns-btn" onClick={() => setShowAddSnsForm(true)}>
-                  + {t('contact.add_sns')}
-                </button>
+              {isOwner && (
+                <div className="sns-add-btns">
+                  {!showAddSnsForm && !detectedSns && (
+                    <>
+                      <label className="screenshot-sns-btn" style={{ opacity: detecting ? 0.6 : 1 }}>
+                        {detecting ? '…' : '📸'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={handleScreenshotDetect}
+                          disabled={detecting}
+                        />
+                      </label>
+                      <button className="add-sns-btn" onClick={() => setShowAddSnsForm(true)}>
+                        + {t('contact.add_sns')}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
+
+            {/* スクショ検出結果の確認UI */}
+            {detectedSns && (
+              <div className="detected-card">
+                <div className="detected-title">{t('contact.detected_title')}</div>
+                <div className="detected-item" style={{ borderColor: detectedSns.color }}>
+                  {detectedSns.icon ? (
+                    <img
+                      src={`https://cdn.simpleicons.org/${detectedSns.icon}/ffffff`}
+                      alt={detectedSns.label}
+                      className="sns-icon-img"
+                      onError={e => { e.target.style.display = 'none' }}
+                    />
+                  ) : (
+                    <span className="sns-icon-letter" style={{ background: detectedSns.color }}>{detectedSns.label[0]}</span>
+                  )}
+                  <div className="detected-info">
+                    <div className="detected-platform">{detectedSns.label}</div>
+                    <div className="detected-value">{detectedSns.value.replace(/^https?:\/\//, '').slice(0, 40)}</div>
+                  </div>
+                </div>
+                <div className="detected-actions">
+                  <button className="ctx-save-btn" onClick={confirmDetectedSns} disabled={addSnsSaving}>
+                    {addSnsSaving ? t('contact.saving') : t('contact.detect_confirm')}
+                  </button>
+                  <button className="ghost-btn" style={{ marginTop: 0 }} onClick={() => setDetectedSns(null)}>
+                    {t('contact.cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* SNS手動追加フォーム */}
             {showAddSnsForm && (
@@ -836,7 +1008,42 @@ export default function ContactDetail() {
           color: #5a5650; text-transform: uppercase;
         }
 
-        /* SNS手動追加 */
+        /* SNS手動追加 / スクショ検出 */
+        .sns-add-btns {
+          display: flex; align-items: center; gap: 6px;
+        }
+        .screenshot-sns-btn {
+          background: none; border: 1px solid #2a2a3a; border-radius: 6px;
+          font-size: 14px; width: 30px; height: 26px;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: border-color .15s;
+        }
+        .screenshot-sns-btn:hover { border-color: #7b9e87; }
+
+        .detected-card {
+          background: #0d0d14; border: 1px solid #1e1e2a;
+          border-radius: 10px; padding: 12px; margin-bottom: 12px;
+        }
+        .detected-title {
+          font-size: 10px; font-family: 'DM Mono', monospace;
+          color: #7b9e87; letter-spacing: .08em; text-transform: uppercase;
+          margin-bottom: 10px;
+        }
+        .detected-item {
+          display: flex; align-items: center; gap: 12px;
+          padding: 12px; border-radius: 10px;
+          border: 1.5px solid; background: #12121a;
+          margin-bottom: 10px;
+        }
+        .detected-info { flex: 1; min-width: 0; }
+        .detected-platform { font-size: 14px; font-weight: 500; color: #f0ede8; }
+        .detected-value {
+          font-size: 11px; font-family: 'DM Mono', monospace;
+          color: #5a5650; margin-top: 2px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .detected-actions { display: flex; flex-direction: column; gap: 8px; }
+
         .add-sns-btn {
           background: none; border: 1px solid #2a2a3a; border-radius: 6px;
           color: #5a5650; font-size: 11px; font-family: 'DM Mono', monospace;

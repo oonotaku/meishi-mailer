@@ -176,7 +176,10 @@
     "select_platform": "Select platform",
     "sns_url_placeholder": "Enter URL or username",
     "manual_added": "added",
-    "remove_sns": "Remove"
+    "remove_sns": "Remove",
+    "detect_failed": "Could not detect SNS. Please enter manually.",
+    "detected_title": "Detected",
+    "detect_confirm": "Add"
   },
   "team": {
     "page_title": "Team Management — Card Mailer",
