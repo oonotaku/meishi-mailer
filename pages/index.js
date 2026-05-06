@@ -405,11 +405,11 @@ export default function Home() {
 
         {/* Hero */}
         <section className="lp-hero">
-          <div className="lp-eyebrow">AI BUSINESS CARD SCANNER</div>
+          <div className="lp-eyebrow">MEISHI-MAILER</div>
           <h1 className="lp-hero-title">
             {i18n.language === 'en'
-              ? <>Snap a business card.<br />Send a thank-you. Done.</>
-              : <>名刺を撮るだけで、<br />お礼メールが届く。</>
+              ? <>Connect deeper with everyone you meet.</>
+              : <>名刺交換した人と、<br />最速で最深まで。</>
             }
           </h1>
           <p className="lp-hero-sub">{t('landing.hero_sub')}</p>

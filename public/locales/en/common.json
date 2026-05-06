@@ -1,12 +1,12 @@
 {
   "app": {
     "name": "Card Mailer",
-    "tagline": "AI Card Scanner"
+    "tagline": "Business card → SNS connection"
   },
   "nav": {
-    "contacts": "Saved Contacts",
-    "team": "Team Settings",
-    "profile": "Profile Settings",
+    "contacts": "Manage connections",
+    "team": "Use with team",
+    "profile": "Set up your profile",
     "logout": "Logout",
     "back": "← Back"
   },
@@ -19,10 +19,10 @@
     "watch": "Cool"
   },
   "home": {
-    "title_line1": "Snap a card.",
-    "title_line2": "Done.",
-    "sub_line1": "AI reads name, company & email,",
-    "sub_line2": "then sends a thank-you automatically.",
+    "title_line1": "Connect deeper with",
+    "title_line2": "everyone you meet.",
+    "sub_line1": "Scan a card to match SNS, send a thank-you,",
+    "sub_line2": "and record the encounter — all at once.",
     "capture": "Capture card",
     "gallery_hint": "or choose from gallery",
     "photo_count": "{{count}}/3 captured",
@@ -300,7 +300,7 @@
   "landing": {
     "login": "Login",
     "cta": "Get started free",
-    "hero_sub": "AI reads your business card, remembers your conversation, and auto-generates a personalized thank-you email.",
+    "hero_sub": "Scan a card to match SNS, send a thank-you email, and record the encounter — all at once.",
     "feat1_title": "Just snap it",
     "feat1_body": "Photograph the card and AI extracts all the text automatically",
     "feat2_title": "Add a note",
