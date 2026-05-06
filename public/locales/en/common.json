@@ -87,13 +87,16 @@
   },
   "duplicate": {
     "title": "Already in your contacts",
+    "name_title": "Same name found",
     "unknown_name": "(no name)",
     "date_label": "Scanned",
     "event_label": "Event",
     "location_label": "Location",
     "note": "This email address is already registered.\nDuplicate contacts cannot be imported.",
+    "name_note": "A contact with the same name already exists. If it's the same person, record a new encounter. If it's a different person, register as new.",
     "history_label": "Scan History",
     "add_encounter": "Record this encounter",
+    "register_new": "Register as new contact →",
     "view_contacts": "View Contacts",
     "scan_another": "Scan Another Card"
   },

@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import { SNS_CONFIG, PRESET_CATEGORIES } from '../lib/snsConfig'
 
-const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6, DUPLICATE: 7 }
+const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6, DUPLICATE_EMAIL: 7, DUPLICATE_NAME: 8 }
 
 async function compressImage(file) {
   return new Promise((resolve) => {
@@ -46,8 +46,12 @@ export default function Home() {
   const [eventName, setEventName] = useState('')
   const [temperature, setTemperature] = useState('normal')
   const [memo, setMemo] = useState('')
-  const [duplicates, setDuplicates] = useState([])
+  const [emailDuplicates, setEmailDuplicates] = useState([])
+  const [nameDuplicates, setNameDuplicates] = useState([])
+  const [cards, setCards] = useState([])
+  const [selectedCardIndex, setSelectedCardIndex] = useState(0)
   const [duplicateContactId, setDuplicateContactId] = useState(null)
+  const [duplicateType, setDuplicateType] = useState(null)
   const [matchedSns, setMatchedSns] = useState([])
   const [selectedPreset, setSelectedPreset] = useState('business')
   const [speechSupported, setSpeechSupported] = useState(false)
@@ -174,13 +178,32 @@ export default function Home() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      if (data.duplicates && data.duplicates.length > 0) {
+      const parsedCards = data.cards || [data.contact]
+      if (data.email_duplicates && data.email_duplicates.length > 0) {
         setContact(data.contact)
-        setDuplicates(data.duplicates)
-        setStep(STEPS.DUPLICATE)
+        setCards(parsedCards)
+        setSubject(data.subject)
+        setBody(data.body)
+        setEmailDuplicates(data.email_duplicates)
+        setDuplicateType('email')
+        setStep(STEPS.DUPLICATE_EMAIL)
+        return
+      }
+      if (data.name_duplicates && data.name_duplicates.length > 0) {
+        setContact(data.contact)
+        setCards(parsedCards)
+        setSubject(data.subject)
+        setBody(data.body)
+        setMatchedSns(data.matched_sns || [])
+        setSelectedPreset(data.recommended_preset || 'business')
+        setNameDuplicates(data.name_duplicates)
+        setDuplicateType('name')
+        setStep(STEPS.DUPLICATE_NAME)
         return
       }
       setContact(data.contact)
+      setCards(parsedCards)
+      setSelectedCardIndex(0)
       setSubject(data.subject)
       setBody(data.body)
       setMatchedSns(data.matched_sns || [])
@@ -239,6 +262,7 @@ export default function Home() {
         temperature,
         memo: memo || null,
         extracted_sns: contact?.sns || null,
+        cards: cards || [],
       }),
     })
     const json = await r.json()
@@ -426,8 +450,12 @@ export default function Home() {
     setEventName('')
     setTemperature('normal')
     setMemo('')
-    setDuplicates([])
+    setEmailDuplicates([])
+    setNameDuplicates([])
+    setCards([])
+    setSelectedCardIndex(0)
     setDuplicateContactId(null)
+    setDuplicateType(null)
     setMatchedSns([])
     setSelectedPreset('business')
     if (fileRef.current) fileRef.current.value = ''
@@ -931,7 +959,7 @@ export default function Home() {
         )}
 
         {/* ── DUPLICATE ── */}
-        {step === STEPS.DUPLICATE && (
+        {step === STEPS.DUPLICATE_EMAIL && (
           <div className="page">
             <div className="prog-bar"><div className="prog-fill" style={{ width: '50%' }} /></div>
 
@@ -939,12 +967,12 @@ export default function Home() {
             <h2 className="dup-title">{t('duplicate.title')}</h2>
             <p className="dup-email">{contact?.email}</p>
 
-            <div className="dup-name">{duplicates[0]?.name || t('duplicate.unknown_name')}</div>
-            {duplicates[0]?.company && <div className="dup-company">{duplicates[0].company}</div>}
+            <div className="dup-name">{emailDuplicates[0]?.name || t('duplicate.unknown_name')}</div>
+            {emailDuplicates[0]?.company && <div className="dup-company">{emailDuplicates[0].company}</div>}
 
             <div className="dup-history-label">{t('duplicate.history_label')}</div>
             <div className="dup-history">
-              {duplicates.map((d) => (
+              {emailDuplicates.map((d) => (
                 <div key={d.id} className="dup-history-item">
                   <div className="dup-history-date">
                     {d.met_at
@@ -965,7 +993,7 @@ export default function Home() {
               className="send-btn"
               style={{ marginTop: 20 }}
               onClick={() => {
-                setDuplicateContactId(duplicates[0].id)
+                setDuplicateContactId(emailDuplicates[0].id)
                 setStep(STEPS.CONTEXT)
               }}
             >
@@ -978,11 +1006,85 @@ export default function Home() {
           </div>
         )}
 
+        {step === STEPS.DUPLICATE_NAME && (
+          <div className="page">
+            <div className="prog-bar"><div className="prog-fill" style={{ width: '50%' }} /></div>
+
+            <div className="dup-icon">👤</div>
+            <h2 className="dup-title">{t('duplicate.name_title')}</h2>
+            <p className="dup-email">{contact?.name}</p>
+
+            <div className="dup-history-label">{t('duplicate.history_label')}</div>
+            <div className="dup-history">
+              {nameDuplicates.map((d) => (
+                <div key={d.id} className="dup-history-item">
+                  <div className="dup-history-date">
+                    {d.name}
+                    {d.company ? ` · ${d.company}` : ''}
+                    {d.email ? ` · ${d.email}` : ''}
+                  </div>
+                  <div className="dup-history-meta">
+                    {d.met_at
+                      ? new Date(d.met_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                      : new Date(d.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                    }
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="dup-note">{t('duplicate.name_note')}</p>
+
+            <button
+              className="send-btn"
+              style={{ marginTop: 20 }}
+              onClick={() => {
+                setNameDuplicates([])
+                setDuplicateType(null)
+                setStep(STEPS.CONFIRM)
+              }}
+            >
+              {t('duplicate.register_new')}
+            </button>
+            <button
+              className="save-btn"
+              onClick={() => {
+                setDuplicateContactId(nameDuplicates[0].id)
+                setStep(STEPS.CONTEXT)
+              }}
+            >
+              {t('duplicate.add_encounter')}
+            </button>
+            <button className="ghost-btn" onClick={() => router.push('/contacts')}>
+              {t('duplicate.view_contacts')}
+            </button>
+            <button className="ghost-btn" style={{ marginTop: 4 }} onClick={reset}>{t('duplicate.scan_another')}</button>
+          </div>
+        )}
+
         {/* ── CONFIRM ── */}
         {step === STEPS.CONFIRM && (
           <div className="page">
             <div className="prog-bar"><div className="prog-fill" style={{ width: '80%' }} /></div>
             <div className="step-label">{t('step.confirm')}</div>
+
+            {cards.length > 1 && (
+              <div className="card-tabs">
+                {cards.map((c, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`card-tab${selectedCardIndex === i ? ' active' : ''}`}
+                    onClick={() => {
+                      setSelectedCardIndex(i)
+                      setContact({ ...c, name: c.name || contact?.name })
+                    }}
+                  >
+                    {c.company || c.name || `Card ${i + 1}`}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="contact-card">
               <div className="avatar">{initials(contact?.name)}</div>
@@ -1183,7 +1285,7 @@ export default function Home() {
                   {t('context.send_now')}
                 </button>
                 <button className="save-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
-                <button className="ghost-btn" onClick={() => setStep(STEPS.DUPLICATE)}>{t('context.back')}</button>
+                <button className="ghost-btn" onClick={() => setStep(duplicateType === 'name' ? STEPS.DUPLICATE_NAME : STEPS.DUPLICATE_EMAIL)}>{t('context.back')}</button>
               </>
             ) : (
               <>
@@ -1437,6 +1539,28 @@ export default function Home() {
         }
         .thumb-add:active { border-color: #7b9e87; color: #7b9e87; }
 
+        .card-tabs {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 12px;
+          overflow-x: auto;
+        }
+        .card-tab {
+          flex: 0 0 auto;
+          padding: 6px 14px;
+          border-radius: 20px;
+          border: 1px solid #2a2a3a;
+          background: transparent;
+          color: #8a8680;
+          font-size: 12px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .card-tab.active {
+          border-color: #7b9e87;
+          color: #7b9e87;
+          background: rgba(123,158,135,.08);
+        }
         .confirm-thumbs {
           display: flex;
           gap: 8px;

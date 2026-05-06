@@ -87,13 +87,16 @@
   },
   "duplicate": {
     "title": "登録済みの名刺です",
+    "name_title": "同名の人が見つかりました",
     "unknown_name": "（名前なし）",
     "date_label": "撮影日",
     "event_label": "イベント",
     "location_label": "場所",
     "note": "同じメールアドレスの名刺はすでに登録されています。重複するコンタクトは取り込めません。",
+    "name_note": "同名のコンタクトがすでに存在します。同一人物なら出会いを記録し、別人なら新規登録できます。",
     "history_label": "撮影履歴",
     "add_encounter": "この出会いを記録する",
+    "register_new": "新規コンタクトとして登録する →",
     "view_contacts": "コンタクト一覧を見る",
     "scan_another": "別の名刺を撮影する"
   },

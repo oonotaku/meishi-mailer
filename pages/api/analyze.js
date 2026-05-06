@@ -92,7 +92,21 @@ export default async function handler(req, res) {
     const qrContext = qr_results.length > 0
       ? `\nDetected QR codes on the card: ${qr_results.join(', ')}`
       : ''
-    const ocrPrompt = `Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","website":"company or personal website URL or empty","sns":{"line":"URL or null","whatsapp":"phone or URL or null","instagram":"@user or URL or null","x":"@user or URL or null","facebook":"URL or null","linkedin":"URL or null","github":"user or URL or null","youtube":"URL or null","wantedly":"URL or null","note":"URL or null","sansan":"URL or null","eight":"URL or null","mybridge":"URL or null"}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.${qrContext}`
+    const ocrPrompt = `You are analyzing ${imageList.length} business card image(s). Extract info and return JSON only. No other text.
+If multiple distinct cards are visible (different companies or emails), output a "cards" array.
+If it's all the same person/company (front+back), output a single object.
+
+Single card format:
+{"name":"full name","company":"company","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","website":"website URL or empty","sns":{"line":null,"whatsapp":null,"instagram":null,"x":null,"facebook":null,"linkedin":null,"github":null,"youtube":null,"wantedly":null,"note":null,"sansan":null,"eight":null,"mybridge":null}}
+
+Multi-card format (when genuinely different people or companies):
+{"name":"shared name or primary","cards":[{"company":"Co A","title":"Title A","email":"emailA","phone":"phoneA","website":"","sns":{...}},{"company":"Co B","title":"Title B","email":"emailB","phone":"phoneB","website":"","sns":{...}}]}
+
+Rules:
+- name is always the person's name (same across all cards if same person)
+- Extract all SNS, URLs, QR links visible. Set null if not found.
+- department can be empty string
+${qrContext}`
     const ocrRes = await client.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 512,
@@ -100,29 +114,47 @@ export default async function handler(req, res) {
         role: 'user',
         content: [
           ...imageList.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.media_type, data: img.data } })),
-          { type: 'text', text: imageList.length > 1
-            ? `${imageList.length}枚の名刺画像（表面・裏面）から情報を抽出してください。全画像を参照して情報を統合してください。\n${ocrPrompt}`
-            : ocrPrompt
-          }
+          { type: 'text', text: ocrPrompt }
         ]
       }]
     })
 
     const raw = ocrRes.content[0].text.replace(/```json|```/g, '').trim()
-    const contact = JSON.parse(raw)
+    const parsed = JSON.parse(raw)
 
-    // 重複チェック
-    let duplicates = []
-    if (contact.email) {
+    // マルチカード正規化
+    let contact, cards
+    if (parsed.cards && Array.isArray(parsed.cards)) {
+      cards = parsed.cards.map(c => ({ ...c, name: c.name || parsed.name }))
+      contact = { name: parsed.name, ...cards[0] }
+    } else {
+      contact = parsed
+      cards = [parsed]
+    }
+
+    // emailベース重複チェック（全カードのemail）
+    let email_duplicates = []
+    const emails = [...new Set(cards.map(c => c.email).filter(Boolean))]
+    for (const email of emails) {
       const { data: existing } = await supabaseAdmin
         .from('contacts')
         .select('id, name, company, met_at, event_name, location, created_at')
         .eq('owner_id', user.id)
-        .ilike('email', contact.email)
+        .ilike('email', email)
         .order('met_at', { ascending: false, nullsFirst: false })
-      if (existing && existing.length > 0) {
-        duplicates = existing
-      }
+      if (existing?.length > 0) email_duplicates = [...email_duplicates, ...existing]
+    }
+
+    // nameベース重複チェック（emailヒットなし時のみ）
+    let name_duplicates = []
+    if (email_duplicates.length === 0 && contact.name) {
+      const { data: nameExisting } = await supabaseAdmin
+        .from('contacts')
+        .select('id, name, company, email, met_at, event_name, location, created_at')
+        .eq('owner_id', user.id)
+        .ilike('name', contact.name)
+        .order('met_at', { ascending: false, nullsFirst: false })
+      if (nameExisting?.length > 0) name_duplicates = nameExisting
     }
 
     // Step 2: メール生成（ロケール別プロンプト）
@@ -199,7 +231,7 @@ Rules:
 
     const recommended_preset = determinePreset(contact.title || '', cardSns)
 
-    res.json({ contact, subject, body, duplicates, matched_sns, recommended_preset })
+    res.json({ contact, cards, subject, body, email_duplicates, name_duplicates, matched_sns, recommended_preset })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: e.message })

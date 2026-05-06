@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     name, company, department, title, email, phone, website,
     card_image_urls, subject, body, mail_sent_at,
     location, event_name, met_at, temperature, memo,
-    extracted_sns,
+    extracted_sns, cards,
   } = req.body
 
   const { data, error } = await supabaseAdmin
@@ -47,6 +47,7 @@ export default async function handler(req, res) {
       memo: memo || null,
       visibility: 'private',
       extracted_sns: extracted_sns || null,
+      cards: cards || [],
     })
     .select()
     .single()

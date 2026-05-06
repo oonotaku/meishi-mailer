@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   if (contact.owner_id !== user.id) return res.status(403).json({ error: '権限がありません' })
 
   try {
-    const ocrPrompt = 'Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","sns":{"line":"URL or null","whatsapp":"phone or URL or null","instagram":"@user or URL or null","x":"@user or URL or null","facebook":"URL or null","linkedin":"URL or null","github":"user or URL or null","youtube":"URL or null","wantedly":"URL or null","note":"URL or null","sansan":"URL or null","eight":"URL or null","mybridge":"URL or null"}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.'
+    const ocrPrompt = 'Extract business card info and return JSON only. No other text.\n{"name":"full name","company":"company name","department":"dept or empty","title":"title or empty","email":"email or empty","phone":"phone or empty","website":"website URL or empty","sns":{"line":null,"whatsapp":null,"instagram":null,"x":null,"facebook":null,"linkedin":null,"github":null,"youtube":null,"wantedly":null,"note":null,"sansan":null,"eight":null,"mybridge":null}}\nExtract all SNS accounts, URLs, and QR code links visible on the card. Set null if not found.'
 
     const ocrRes = await client.messages.create({
       model: 'claude-opus-4-5',
@@ -44,6 +44,7 @@ export default async function handler(req, res) {
 
     const raw = ocrRes.content[0].text.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(raw)
+    const cards = [parsed]
 
     const newExtractedSns = {}
     for (const [platform, value] of Object.entries(parsed.sns || {})) {
@@ -54,13 +55,14 @@ export default async function handler(req, res) {
     const mergedExtractedSns = { ...(contact.extracted_sns || {}), ...newExtractedSns }
 
     // Only update extracted_sns and basic fields — never touch manual_sns
-    const updateFields = { extracted_sns: mergedExtractedSns }
+    const updateFields = { extracted_sns: mergedExtractedSns, cards }
     if (parsed.name) updateFields.name = parsed.name
     if (parsed.company) updateFields.company = parsed.company
     if (parsed.department !== undefined) updateFields.department = parsed.department || null
     if (parsed.title !== undefined) updateFields.title = parsed.title || null
     if (parsed.email) updateFields.email = parsed.email
     if (parsed.phone) updateFields.phone = parsed.phone
+    if (parsed.website) updateFields.website = parsed.website
 
     const { error: updateError } = await supabaseAdmin
       .from('contacts')
@@ -69,7 +71,7 @@ export default async function handler(req, res) {
 
     if (updateError) return res.status(500).json({ error: updateError.message })
 
-    res.json({ success: true, extracted_sns: mergedExtractedSns, updated: updateFields })
+    res.json({ success: true, extracted_sns: mergedExtractedSns, cards, updated: updateFields })
   } catch (e) {
     console.error('[rescan] error:', e)
     res.status(500).json({ error: e.message })
