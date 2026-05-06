@@ -34,6 +34,7 @@ Rules:
     const result = await client.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 128,
+      temperature: 0,
       messages: [{
         role: 'user',
         content: [
@@ -43,8 +44,10 @@ Rules:
       }]
     })
 
-    const raw = result.content[0].text.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(raw)
+    const raw = result.content[0].text.trim()
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) return res.json({ platform: null, value: null })
+    const parsed = JSON.parse(jsonMatch[0])
 
     res.json({ platform: parsed.platform || null, value: parsed.value || null })
   } catch (e) {
