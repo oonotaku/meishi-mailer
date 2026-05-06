@@ -344,12 +344,21 @@ export default function ContactDetail() {
         }
       }
 
-      // Step 2: Claude Vision fallback
+      // Step 2: Claude Vision fallback — resize to max 1200px before sending
       const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = ev => resolve(ev.target.result.split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(file)
+        const img2 = new Image()
+        img2.src = URL.createObjectURL(file)
+        img2.onload = () => {
+          const MAX = 1200
+          const scale = Math.min(1, MAX / Math.max(img2.width, img2.height))
+          const canvas2 = document.createElement('canvas')
+          canvas2.width = Math.round(img2.width * scale)
+          canvas2.height = Math.round(img2.height * scale)
+          canvas2.getContext('2d').drawImage(img2, 0, 0, canvas2.width, canvas2.height)
+          URL.revokeObjectURL(img2.src)
+          resolve(canvas2.toDataURL('image/jpeg', 0.85).split(',')[1])
+        }
+        img2.onerror = reject
       })
 
       const { data: { session } } = await supabase.auth.getSession()
@@ -506,6 +515,15 @@ export default function ContactDetail() {
       )}
 
       <div className="shell">
+        {detecting && (
+          <div className="detecting-overlay">
+            <div className="detecting-box">
+              <div className="detecting-spinner" />
+              <div className="detecting-text">{t('contact.detecting')}</div>
+            </div>
+          </div>
+        )}
+
         {/* ── HEADER ── */}
         <div className="header">
           <button className="back-btn" onClick={() => router.push('/contacts')}>{t('contact.back')}</button>
@@ -1006,6 +1024,26 @@ export default function ContactDetail() {
         .section-label {
           font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .1em;
           color: #5a5650; text-transform: uppercase;
+        }
+
+        /* 検出中オーバーレイ */
+        .detecting-overlay {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(10,10,15,0.85);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .detecting-box {
+          display: flex; flex-direction: column; align-items: center; gap: 14px;
+          background: #12121a; border: 1px solid #2a2a3a;
+          border-radius: 16px; padding: 28px 36px;
+        }
+        .detecting-spinner {
+          width: 28px; height: 28px;
+          border: 2px solid #1e1e2a; border-top-color: #7b9e87;
+          border-radius: 50%; animation: spin .7s linear infinite;
+        }
+        .detecting-text {
+          font-size: 13px; color: #8a8680; font-family: 'Noto Sans JP', sans-serif;
         }
 
         /* SNS手動追加 / スクショ検出 */

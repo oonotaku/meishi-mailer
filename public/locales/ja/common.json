@@ -179,7 +179,8 @@
     "remove_sns": "削除",
     "detect_failed": "SNSを検出できませんでした。手動で入力してください。",
     "detected_title": "検出されました",
-    "detect_confirm": "追加する"
+    "detect_confirm": "追加する",
+    "detecting": "SNSを検出中..."
   },
   "team": {
     "page_title": "チーム管理 — 名刺メーラー",

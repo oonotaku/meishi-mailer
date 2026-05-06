@@ -179,7 +179,8 @@
     "remove_sns": "Remove",
     "detect_failed": "Could not detect SNS. Please enter manually.",
     "detected_title": "Detected",
-    "detect_confirm": "Add"
+    "detect_confirm": "Add",
+    "detecting": "Detecting SNS..."
   },
   "team": {
     "page_title": "Team Management — Card Mailer",
