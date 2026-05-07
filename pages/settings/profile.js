@@ -1383,14 +1383,14 @@ export default function ProfileSettings() {
                     <tbody>
                       <tr>
                         <td style={{ paddingRight: '16px', verticalAlign: 'top' }}>
-                          <a href={`https://www.meishi-mailer.com/p/${user?.id}`} target="_blank" rel="noreferrer">
+                          <button type="button" onClick={() => setShowPreview(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}>
                             <img
                               src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user?.id}`)}&bgcolor=ffffff&color=000000&margin=2`}
                               width="100" height="100"
                               alt="Profile QR"
                               style={{ display: 'block', border: 0 }}
                             />
-                          </a>
+                          </button>
                           <div style={{ fontSize: '10px', color: '#999', textAlign: 'center', marginTop: '4px' }}>{t('profile.open_profile')}</div>
                         </td>
                         <td style={{ verticalAlign: 'middle' }}>
@@ -1404,9 +1404,9 @@ export default function ProfileSettings() {
                             <div style={{ color: '#777', fontSize: '12px' }}>{affiliations[0].title}</div>
                           )}
                           <div style={{ marginTop: '6px', fontSize: '11px' }}>
-                            <a href={`https://www.meishi-mailer.com/p/${user?.id}`} style={{ color: '#aaa', textDecoration: 'none' }} target="_blank" rel="noreferrer">
+                            <button type="button" onClick={() => setShowPreview(true)} style={{ color: '#aaa', textDecoration: 'none', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit' }}>
                               {`https://www.meishi-mailer.com/p/${user?.id}`}
-                            </a>
+                            </button>
                           </div>
                         </td>
                       </tr>
