@@ -169,6 +169,7 @@ export default function ProfileSettings() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const avatarFileRef = useRef(null)
   const [profileTheme, setProfileTheme] = useState(null)
+  const [showPreview, setShowPreview] = useState(false)
   const router = useRouter()
 
   const isDirtyAny = snsDirty || affilDirty
@@ -1325,9 +1326,9 @@ export default function ProfileSettings() {
                     {THEMES.find(t => t.id === profileTheme)?.label || 'ダーク'}
                   </span>
                   {user && (
-                    <a href={`/p/${user.id}`} target="_blank" rel="noopener noreferrer" className="theme-preview-link">
+                    <button type="button" onClick={() => setShowPreview(true)} className="theme-preview-link">
                       プレビューを見る →
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>
@@ -1639,6 +1640,22 @@ export default function ProfileSettings() {
           >
             {(activeTab === 'sns' ? snsSaving : affilSaving) ? t('profile.saving') : t('profile.save')}
           </button>
+        </div>
+      )}
+
+      {showPreview && (
+        <div className="preview-overlay" onClick={() => setShowPreview(false)}>
+          <div className="preview-sheet" onClick={e => e.stopPropagation()}>
+            <div className="preview-sheet-header">
+              <span className="preview-sheet-title">公開プロフィール プレビュー</span>
+              <button type="button" className="preview-close-btn" onClick={() => setShowPreview(false)}>✕ 閉じる</button>
+            </div>
+            <iframe
+              src={`/p/${user?.id}`}
+              className="preview-iframe"
+              title="プロフィールプレビュー"
+            />
+          </div>
         </div>
       )}
 
@@ -3059,10 +3076,66 @@ export default function ProfileSettings() {
           font-size: 12px;
           color: #5a5650;
           font-family: 'DM Mono', monospace;
-          text-decoration: none;
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
           transition: color .15s;
         }
         .theme-preview-link:hover { color: #7b9e87; }
+
+        /* ── プレビューモーダル ── */
+        .preview-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.7);
+          z-index: 1000;
+          display: flex;
+          align-items: flex-end;
+        }
+        .preview-sheet {
+          width: 100%;
+          height: 90vh;
+          background: #111;
+          border-radius: 16px 16px 0 0;
+          display: flex;
+          flex-direction: column;
+          animation: slideUp 0.3s ease;
+        }
+        .preview-sheet-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          border-bottom: 1px solid #333;
+          flex-shrink: 0;
+        }
+        .preview-sheet-title {
+          color: #fff;
+          font-size: 14px;
+          font-weight: 600;
+          font-family: 'Noto Sans JP', sans-serif;
+        }
+        .preview-close-btn {
+          color: #aaa;
+          background: none;
+          border: none;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          padding: 4px 8px;
+          transition: color .15s;
+        }
+        .preview-close-btn:hover { color: #fff; }
+        .preview-iframe {
+          flex: 1;
+          border: none;
+          width: 100%;
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
       `}</style>
     </>
   )
