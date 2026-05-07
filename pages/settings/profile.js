@@ -1273,14 +1273,20 @@ export default function ProfileSettings() {
                           <button key={s.id} type="button" className="completion-chip"
                             onClick={() => {
                               setActiveTab(s.tab)
-                              setTimeout(() => {
-                                if (s.scrollRef?.current) {
+                              if (s.id === 'bio') {
+                                setNameEdit(true)
+                                setTimeout(() => {
+                                  bioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                  bioRef.current?.focus()
+                                }, 150)
+                              } else if (s.scrollRef?.current) {
+                                setTimeout(() => {
                                   s.scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
                                   s.scrollRef.current.focus()
-                                } else {
-                                  window.scrollTo({ top: 300, behavior: 'smooth' })
-                                }
-                              }, 80)
+                                }, 80)
+                              } else {
+                                setTimeout(() => window.scrollTo({ top: 300, behavior: 'smooth' }), 80)
+                              }
                             }}>
                             + {s.label}
                           </button>
