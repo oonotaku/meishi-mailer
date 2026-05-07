@@ -160,23 +160,37 @@ export default function PublicProfile({ profile, blocks }) {
       <div className="shell">
         <div className="card">
 
-          {/* ── Hero ── */}
-          <div className="hero">
-            <div className="avatar-wrap">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.name || 'avatar'} className="avatar-img" />
-              ) : (
-                <div className="avatar-initials" style={{ color: theme.accent }}>{initials(profile.name)}</div>
+          {/* ── Bento Grid ── */}
+          <div className="bento-grid">
+            {/* ── Hero block (固定・全幅) ── */}
+            <div className="bento-block block-L" style={{
+              background: theme.card,
+              borderRadius: 16,
+              padding: '24px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+              minHeight: 'unset',
+            }}>
+              <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', border: `3px solid ${theme.accent}`, flexShrink: 0 }}>
+                {profile.avatar_url
+                  ? <img src={profile.avatar_url} alt={profile.name || 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ width: '100%', height: '100%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>{initials(profile.name)}</div>
+                }
+              </div>
+              <div style={{ color: theme.text, fontSize: 20, fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
+                {profile.name || '名前未設定'}
+              </div>
+              {profile.bio && (
+                <div style={{ color: theme.text, opacity: 0.7, fontSize: 14, textAlign: 'center', lineHeight: 1.7, maxWidth: 300 }}>
+                  {profile.bio}
+                </div>
               )}
             </div>
-            <div className="name" style={{ color: theme.text }}>{profile.name || '名前未設定'}</div>
-            {profile.bio && <div className="bio" style={{ color: theme.text }}>{profile.bio}</div>}
-          </div>
 
-          {/* ── Bento Grid ── */}
-          {blocks.length > 0 ? (
-            <div className="bento-grid">
-              {blocks.map((block, i) => {
+            {blocks.map((block, i) => {
                 const sizeClass = block.size === 'L' ? 'block-L' : block.size === 'S' ? 'block-S' : 'block-M'
                 const isSns = block.type === 'sns'
                 return (
@@ -192,12 +206,7 @@ export default function PublicProfile({ profile, blocks }) {
                   </div>
                 )
               })}
-            </div>
-          ) : (
-            <div className="bento-empty" style={{ color: theme.text }}>
-              ブロックを追加してプロフィールをカスタマイズしましょう
-            </div>
-          )}
+          </div>
         </div>
 
         {/* ── App banner ── */}
@@ -246,50 +255,6 @@ export default function PublicProfile({ profile, blocks }) {
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
-        }
-
-        /* ── Hero ── */
-        .hero {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          gap: 10px;
-        }
-        .avatar-wrap {
-          width: 96px;
-          height: 96px;
-          border-radius: 50%;
-          overflow: hidden;
-          background: ${theme.card};
-          flex-shrink: 0;
-          margin-bottom: 4px;
-        }
-        .avatar-img {
-          width: 96px;
-          height: 96px;
-          object-fit: cover;
-        }
-        .avatar-initials {
-          width: 96px;
-          height: 96px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 32px;
-          font-weight: 700;
-          font-family: 'DM Mono', monospace;
-        }
-        .name {
-          font-size: 26px;
-          font-weight: 700;
-          line-height: 1.3;
-        }
-        .bio {
-          font-size: 14px;
-          opacity: 0.6;
-          line-height: 1.7;
-          max-width: 320px;
         }
 
         /* ── Bento Grid ── */
