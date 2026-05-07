@@ -16,13 +16,27 @@ function initials(name) {
   return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
 }
 
-function PhotoBlock({ block, theme }) {
+function PhotoBlock({ block }) {
   if (!block.content?.image_url) return null
   return (
-    <div className="bento-block-inner photo-block">
-      <img src={block.content.image_url} alt={block.content.caption || ''} className="photo-img" />
+    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+      <img
+        src={block.content.image_url}
+        alt={block.content.caption || ''}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
       {block.content.caption && (
-        <div className="photo-caption" style={{ color: theme.text }}>{block.content.caption}</div>
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          padding: '20px 12px 10px',
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
+          color: '#fff',
+          fontSize: 11,
+          fontWeight: 600,
+          lineHeight: 1.4,
+        }}>
+          {block.content.caption}
+        </div>
       )}
     </div>
   )
@@ -31,14 +45,23 @@ function PhotoBlock({ block, theme }) {
 function TextBlock({ block, theme }) {
   const bg = block.content?.bg_color || theme.card
   const isLight = bg === '#ffffff' || bg === '#fff0f3' || bg === '#f8f8f8'
-  const textColor = isLight ? '#111111' : theme.text
+  const textColor = isLight ? '#111111' : '#ffffff'
   return (
-    <div className="bento-block-inner text-block" style={{ background: bg }}>
+    <div style={{
+      background: bg,
+      width: '100%', height: '100%',
+      display: 'flex', flexDirection: 'column',
+      padding: 16, gap: 8,
+    }}>
       {block.content?.title && (
-        <div className="text-block-title" style={{ color: textColor }}>{block.content.title}</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: textColor, lineHeight: 1.4 }}>
+          {block.content.title}
+        </div>
       )}
       {block.content?.body && (
-        <div className="text-block-body" style={{ color: textColor, opacity: 0.75 }}>{block.content.body}</div>
+        <div style={{ fontSize: 13, color: textColor, opacity: 0.75, lineHeight: 1.7 }}>
+          {block.content.body}
+        </div>
       )}
     </div>
   )
@@ -46,42 +69,80 @@ function TextBlock({ block, theme }) {
 
 function LinkBlock({ block, theme }) {
   if (!block.content?.url) return null
+  const displayUrl = block.content.url.replace(/^https?:\/\//, '').replace(/\/$/, '')
   return (
-    <a href={block.content.url} target="_blank" rel="noopener noreferrer" className="bento-block-inner link-block"
-      style={{ background: theme.card, borderColor: theme.card, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="link-block-title" style={{ color: theme.text }}>{block.content.title || block.content.url}</div>
+    <a
+      href={block.content.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'flex', flexDirection: 'column',
+        width: '100%', height: '100%',
+        padding: 16, gap: 6,
+        background: theme.card,
+        border: '1px solid rgba(255,255,255,0.1)',
+        textDecoration: 'none',
+        position: 'relative',
+        transition: 'opacity .15s',
+      }}
+    >
+      {/* ↗ アイコン */}
+      <span style={{
+        position: 'absolute', top: 12, right: 14,
+        fontSize: 14, color: theme.text, opacity: 0.35,
+      }}>↗</span>
+
+      <div style={{ fontSize: 16, fontWeight: 700, color: theme.text, lineHeight: 1.4, paddingRight: 20 }}>
+        {block.content.title || displayUrl}
+      </div>
       {block.content.description && (
-        <div className="link-block-desc" style={{ color: theme.text, opacity: 0.55 }}>{block.content.description}</div>
+        <div style={{ fontSize: 14, color: theme.text, opacity: 0.6, lineHeight: 1.6, flex: 1 }}>
+          {block.content.description}
+        </div>
       )}
-      <div className="link-block-url" style={{ color: theme.accent }}>
-        {block.content.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} →
+      <div style={{
+        fontSize: 12, color: theme.text, opacity: 0.4,
+        fontFamily: 'DM Mono, monospace',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        marginTop: 'auto',
+      }}>
+        {displayUrl}
       </div>
     </a>
   )
 }
 
-function SnsBlock({ block, profile, theme }) {
+function SnsBlock({ block, profile }) {
   const platform = block.content?.platform
   const cfg = SNS_CONFIG.find(s => s.key === platform)
   const url = profile[platform]
   if (!cfg || !url) return null
   return (
-    <button className="bento-block-inner sns-block"
-      style={{ background: 'transparent', border: `1.5px solid ${cfg.color}`, color: cfg.color, cursor: 'pointer' }}
-      onClick={() => window.open(url, '_blank')}>
-      <span className="sns-block-icon">
-        {cfg.icon ? (
-          <img src={`https://cdn.simpleicons.org/${cfg.icon}/${cfg.color.replace('#','')}`}
-            width="24" height="24" alt={cfg.label}
-            style={{ display: 'block' }}
-            onError={e => { e.target.style.display = 'none' }} />
-        ) : (
-          <span style={{ fontSize: 16, fontWeight: 700 }}>{cfg.label[0]}</span>
-        )}
+    <div
+      onClick={() => window.open(url, '_blank')}
+      style={{
+        background: cfg.color,
+        width: '100%', height: '100%',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: 8, cursor: 'pointer',
+      }}
+    >
+      {cfg.icon ? (
+        <img
+          src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+          width={36} height={36}
+          alt={cfg.label}
+          style={{ display: 'block', filter: 'brightness(0) invert(1)' }}
+          onError={e => { e.target.style.display = 'none' }}
+        />
+      ) : (
+        <span style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>{cfg.label[0]}</span>
+      )}
+      <span style={{ color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'Noto Sans JP, sans-serif' }}>
+        {cfg.label}
       </span>
-      <span className="sns-block-label">{cfg.label}</span>
-      <span className="sns-block-arrow">→</span>
-    </button>
+    </div>
   )
 }
 
@@ -117,9 +178,13 @@ export default function PublicProfile({ profile, blocks }) {
             <div className="bento-grid">
               {blocks.map((block, i) => {
                 const sizeClass = block.size === 'L' ? 'block-L' : block.size === 'S' ? 'block-S' : 'block-M'
+                const isSns = block.type === 'sns'
                 return (
-                  <div key={block.id || i} className={`bento-block ${sizeClass}`}
-                    style={{ background: theme.card, borderRadius: 16, overflow: 'hidden' }}>
+                  <div
+                    key={block.id || i}
+                    className={`bento-block ${sizeClass}${isSns ? ' block-sns' : ''}`}
+                    style={{ background: theme.card, borderRadius: 16, overflow: 'hidden' }}
+                  >
                     {block.type === 'photo' && <PhotoBlock block={block} theme={theme} />}
                     {block.type === 'text'  && <TextBlock  block={block} theme={theme} />}
                     {block.type === 'link'  && <LinkBlock  block={block} theme={theme} />}
@@ -137,7 +202,7 @@ export default function PublicProfile({ profile, blocks }) {
 
         {/* ── App banner ── */}
         <div className="app-banner" style={{ background: theme.card }}>
-          <div className="app-banner-text">
+          <div>
             <div className="app-banner-title" style={{ color: theme.text }}>名刺交換、その場でお礼メール。</div>
             <div className="app-banner-desc" style={{ color: theme.text }}>あなたも meishi-mailer で出会いを記録しませんか？</div>
           </div>
@@ -154,7 +219,8 @@ export default function PublicProfile({ profile, blocks }) {
 
         <div className="footer" style={{ color: theme.text }}>
           このページは{' '}
-          <a href="https://www.meishi-mailer.com" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ color: theme.text }}>
+          <a href="https://www.meishi-mailer.com" target="_blank" rel="noopener noreferrer"
+            style={{ color: theme.text, opacity: 0.4, textDecoration: 'none' }}>
             meishi-mailer
           </a>
           {' '}で作成されました
@@ -233,131 +299,37 @@ export default function PublicProfile({ profile, blocks }) {
           gap: 10px;
         }
         .bento-block {
-          min-height: 120px;
           position: relative;
-          box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+          overflow: hidden;
         }
         .block-S {
           grid-column: span 1;
-          aspect-ratio: 1;
+          height: 120px;
         }
         .block-M {
           grid-column: span 1;
-          min-height: 200px;
+          min-height: 180px;
         }
         .block-L {
           grid-column: span 2;
           min-height: 120px;
         }
-        .bento-block-inner {
-          width: 100%;
-          height: 100%;
-          min-height: inherit;
-          display: flex;
-          flex-direction: column;
-          padding: 16px;
+        /* SNSブロックは S/M どちらでも固定高さ */
+        .block-sns.block-S,
+        .block-sns.block-M {
+          height: 120px;
+          min-height: unset;
+        }
+        .block-sns.block-L {
+          height: 120px;
+          min-height: unset;
         }
         .bento-empty {
           text-align: center;
           font-size: 13px;
           opacity: 0.3;
           padding: 24px;
-        }
-
-        /* Photo */
-        .photo-block {
-          padding: 0;
-          position: relative;
-        }
-        .photo-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          flex: 1;
-          min-height: 0;
-        }
-        .photo-caption {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: 8px 12px;
-          font-size: 11px;
-          font-weight: 600;
-          background: linear-gradient(transparent, rgba(0,0,0,0.6));
-          color: #fff !important;
-        }
-
-        /* Text */
-        .text-block {
-          gap: 8px;
-          padding: 16px;
-        }
-        .text-block-title {
-          font-size: 15px;
-          font-weight: 700;
-          line-height: 1.4;
-        }
-        .text-block-body {
-          font-size: 13px;
-          line-height: 1.7;
-        }
-
-        /* Link */
-        .link-block {
-          padding: 16px;
-          gap: 6px;
-          transition: opacity .15s;
-        }
-        .link-block:active { opacity: .7; }
-        .link-block-title {
-          font-size: 14px;
-          font-weight: 700;
-          line-height: 1.4;
-        }
-        .link-block-desc {
-          font-size: 12px;
-          line-height: 1.6;
-          flex: 1;
-        }
-        .link-block-url {
-          font-size: 11px;
-          font-family: 'DM Mono', monospace;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          margin-top: auto;
-        }
-
-        /* SNS */
-        .sns-block {
-          flex-direction: row;
-          align-items: center;
-          padding: 0 16px;
-          gap: 12px;
-          border-radius: 12px;
-          font-family: 'Noto Sans JP', sans-serif;
-          transition: opacity .15s;
-        }
-        .sns-block:active { opacity: .65; }
-        .sns-block-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 28px;
-          flex-shrink: 0;
-        }
-        .sns-block-label {
-          flex: 1;
-          text-align: center;
-          font-size: 14px;
-          font-weight: 700;
-        }
-        .sns-block-arrow {
-          font-size: 12px;
-          opacity: .5;
-          flex-shrink: 0;
         }
 
         /* ── App banner ── */
@@ -400,11 +372,6 @@ export default function PublicProfile({ profile, blocks }) {
           margin-top: auto;
           padding-top: 1rem;
         }
-        .footer-link {
-          opacity: 0.4;
-          text-decoration: none;
-        }
-        .footer-link:hover { opacity: 0.7; }
       `}</style>
     </>
   )
