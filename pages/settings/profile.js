@@ -836,6 +836,11 @@ export default function ProfileSettings() {
                   <div className="hero-name">{(localName ?? profile?.name) || '—'}</div>
                   <button className="name-edit-btn" onClick={startNameEdit}>{t('profile.name_edit')}</button>
                 </div>
+                {bio && (
+                  <div className="bio-display" onClick={() => setNameEdit(true)}>
+                    {bio}
+                  </div>
+                )}
                 {nameMsg && (
                   <div className={`name-msg ${nameMsg.ok ? 'success' : 'error'}`}>{nameMsg.text}</div>
                 )}
@@ -1248,7 +1253,7 @@ export default function ProfileSettings() {
                 const steps = [
                   { id: 'avatar', label: '顔写真',    tab: 'profile_tab', weight: 20, done: !!avatarUrl,                                                    scrollRef: null },
                   { id: 'name',   label: '表示名',    tab: 'profile_tab', weight: 15, done: !!(localName ?? profile?.name),                                  scrollRef: null },
-                  { id: 'bio',    label: 'ひとこと',  tab: 'profile_tab', weight: 10, done: !!profile?.bio,                                                  scrollRef: bioRef },
+                  { id: 'bio',    label: 'ひとこと',  tab: 'profile_tab', weight: 10, done: !!bio,                                                          scrollRef: bioRef },
                   { id: 'affil',  label: '所属・会社', tab: 'profile_tab', weight: 20, done: affiliations.filter(a => a.company_name?.trim()).length > 0,    scrollRef: null },
                   { id: 'sns',    label: 'SNSリンク', tab: 'sns',         weight: 20, done: SNS_CONFIG.some(s => !!profile?.[s.key]),                        scrollRef: null },
                   { id: 'email',  label: 'メール設定', tab: 'email',      weight: 15, done: isConfigured,                                                    scrollRef: null },
@@ -1949,6 +1954,17 @@ export default function ProfileSettings() {
         }
         .name-msg.success { background: #0d1f15; border: 1px solid #1a3525; color: #7b9e87; }
         .name-msg.error { background: #1a0a0a; border: 1px solid #2a1010; color: #c08080; }
+        .bio-display {
+          font-size: 13px;
+          color: #a0a0b0;
+          text-align: center;
+          margin-top: 2px;
+          cursor: pointer;
+          line-height: 1.6;
+          max-width: 280px;
+          transition: color .15s;
+        }
+        .bio-display:hover { color: #f0ede8; }
         .affiliation-item {
           display: flex;
           align-items: flex-start;
