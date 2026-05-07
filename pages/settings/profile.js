@@ -7,6 +7,15 @@ import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 import { SNS_CONFIG, PRESET_CATEGORIES } from '../../lib/snsConfig'
 
+const THEMES = [
+  { id: 'dark',     label: 'ダーク',       bg: '#0a0a0a', card: '#1a1a1a', accent: '#22c55e', text: '#ffffff' },
+  { id: 'light',    label: 'ライト',       bg: '#f8f8f8', card: '#ffffff', accent: '#0070f3', text: '#111111' },
+  { id: 'midnight', label: 'ミッドナイト', bg: '#0f172a', card: '#1e293b', accent: '#818cf8', text: '#e2e8f0' },
+  { id: 'warm',     label: 'ウォーム',     bg: '#1c1410', card: '#2d2018', accent: '#f59e0b', text: '#fef3c7' },
+  { id: 'sakura',   label: 'サクラ',       bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
+  { id: 'ocean',    label: 'オーシャン',   bg: '#0c1a2e', card: '#0f2744', accent: '#38bdf8', text: '#e0f2fe' },
+]
+
 async function compressImage(file) {
   return new Promise((resolve) => {
     const img = new Image()
@@ -158,6 +167,7 @@ export default function ProfileSettings() {
   const [avatarUrl, setAvatarUrl] = useState(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const avatarFileRef = useRef(null)
+  const [profileTheme, setProfileTheme] = useState(null)
   const router = useRouter()
 
   const isDirtyAny = snsDirty || affilDirty
@@ -168,6 +178,7 @@ export default function ProfileSettings() {
       setLocalName(profile?.name || '')
       setBio(profile?.bio || '')
       if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
+      if (profileTheme === null) setProfileTheme(profile?.profile_theme || 'dark')
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
@@ -708,6 +719,20 @@ export default function ProfileSettings() {
     }
   }
 
+  async function handleThemeChange(themeId) {
+    setProfileTheme(themeId)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      await fetch('/api/profile/update-theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ profile_theme: themeId }),
+      })
+    } catch {
+      // optimistic update — silent fail
+    }
+  }
+
   async function handleAvatarFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -1215,6 +1240,76 @@ export default function ProfileSettings() {
 
           {activeTab === 'profile_tab' && (
             <div className="section">
+
+              {/* ── プロフィール完成度バー ── */}
+              {(() => {
+                const steps = [
+                  { id: 'avatar', label: '顔写真',        tab: 'profile_tab', weight: 20, done: !!avatarUrl },
+                  { id: 'name',   label: '表示名',         tab: 'profile_tab', weight: 15, done: !!(localName ?? profile?.name) },
+                  { id: 'bio',    label: 'ひとこと',       tab: 'profile_tab', weight: 10, done: !!profile?.bio },
+                  { id: 'affil',  label: '所属・会社',     tab: 'profile_tab', weight: 20, done: affiliations.filter(a => a.company_name?.trim()).length > 0 },
+                  { id: 'sns',    label: 'SNSリンク',      tab: 'sns',         weight: 20, done: SNS_CONFIG.some(s => !!profile?.[s.key]) },
+                  { id: 'email',  label: 'メール設定',     tab: 'email',       weight: 15, done: isConfigured },
+                ]
+                const pct = steps.reduce((s, x) => s + (x.done ? x.weight : 0), 0)
+                const incomplete = steps.filter(x => !x.done)
+                const isAll = pct === 100
+                return (
+                  <div className="completion-wrap">
+                    <div className="completion-header">
+                      <span className="completion-title">プロフィール完成度</span>
+                      <span className="completion-pct">{pct}%</span>
+                    </div>
+                    <div className="completion-bar-bg">
+                      <div className={`completion-bar-fill${isAll ? ' complete' : ''}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    {isAll ? (
+                      <div className="completion-done">✨ プロフィール完成！</div>
+                    ) : (
+                      <div className="completion-chips">
+                        {incomplete.map(s => (
+                          <button key={s.id} type="button" className="completion-chip"
+                            onClick={() => { setActiveTab(s.tab); setTimeout(() => window.scrollTo({ top: 200, behavior: 'smooth' }), 50) }}>
+                            + {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* ── テーマ選択 ── */}
+              <div className="theme-section">
+                <div className="section-label" style={{ marginBottom: 12 }}>テーマ（公開プロフィール）</div>
+                <div className="theme-swatches">
+                  {THEMES.map(th => (
+                    <button
+                      key={th.id}
+                      type="button"
+                      className={`theme-swatch${profileTheme === th.id ? ' selected' : ''}`}
+                      style={{
+                        background: `linear-gradient(135deg, ${th.bg} 60%, ${th.card})`,
+                        ['--swatch-accent']: th.accent,
+                      }}
+                      title={th.label}
+                      onClick={() => handleThemeChange(th.id)}
+                    />
+                  ))}
+                </div>
+                <div className="theme-label-row">
+                  <span className="theme-current-label">
+                    {THEMES.find(t => t.id === profileTheme)?.label || 'ダーク'}
+                  </span>
+                  {user && (
+                    <a href={`/p/${user.id}`} target="_blank" rel="noopener noreferrer" className="theme-preview-link">
+                      プレビューを見る →
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              <div className="section-divider" />
 
               {/* ── 所属＋連絡先 ── */}
               <div className="section-header">
@@ -2808,6 +2903,132 @@ export default function ProfileSettings() {
         }
         .sticky-save-btn:disabled { opacity: .6; cursor: not-allowed; }
         .sticky-save-btn:not(:disabled):active { opacity: .8; }
+
+        /* ── 完成度バー ── */
+        .completion-wrap {
+          margin-bottom: 20px;
+          padding: 14px 16px;
+          background: #0d0d14;
+          border: 1px solid #1e1e2a;
+          border-radius: 12px;
+        }
+        .completion-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        .completion-title {
+          font-size: 11px;
+          letter-spacing: .08em;
+          color: #5a5650;
+          text-transform: uppercase;
+          font-family: 'DM Mono', monospace;
+        }
+        .completion-pct {
+          font-size: 13px;
+          font-weight: 700;
+          font-family: 'DM Mono', monospace;
+          color: #f0ede8;
+        }
+        .completion-bar-bg {
+          height: 8px;
+          background: #1e1e2a;
+          border-radius: 4px;
+          overflow: hidden;
+          margin-bottom: 10px;
+        }
+        .completion-bar-fill {
+          height: 100%;
+          border-radius: 4px;
+          background: linear-gradient(to right, #22c55e, #3b82f6);
+          transition: width 0.6s ease;
+        }
+        .completion-bar-fill.complete {
+          background: linear-gradient(to right, #f59e0b, #ef4444);
+          animation: shimmer 1.8s ease infinite;
+        }
+        @keyframes shimmer {
+          0%   { filter: brightness(1); }
+          50%  { filter: brightness(1.35); }
+          100% { filter: brightness(1); }
+        }
+        .completion-done {
+          font-size: 13px;
+          color: #f59e0b;
+          font-weight: 700;
+          text-align: center;
+          animation: pop .4s ease;
+        }
+        @keyframes pop {
+          0%   { transform: scale(.85); opacity: 0; }
+          60%  { transform: scale(1.08); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .completion-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .completion-chip {
+          padding: 4px 10px;
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 999px;
+          color: #5a5650;
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          cursor: pointer;
+          transition: color .15s, border-color .15s;
+        }
+        .completion-chip:hover { color: #7b9e87; border-color: #7b9e87; }
+
+        /* ── テーマ選択 ── */
+        .theme-section {
+          margin-bottom: 4px;
+        }
+        .theme-swatches {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        .theme-swatch {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          border: 2px solid transparent;
+          cursor: pointer;
+          transition: transform .15s, outline .15s;
+          outline: 2px solid transparent;
+          outline-offset: 3px;
+          padding: 0;
+          flex-shrink: 0;
+        }
+        .theme-swatch:hover { transform: scale(1.1); }
+        .theme-swatch.selected {
+          outline: 2.5px solid #ffffff;
+          outline-offset: 3px;
+          transform: scale(1.08);
+        }
+        .theme-label-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .theme-current-label {
+          font-size: 12px;
+          color: #7b9e87;
+          font-family: 'DM Mono', monospace;
+        }
+        .theme-preview-link {
+          font-size: 12px;
+          color: #5a5650;
+          font-family: 'DM Mono', monospace;
+          text-decoration: none;
+          transition: color .15s;
+        }
+        .theme-preview-link:hover { color: #7b9e87; }
       `}</style>
     </>
   )

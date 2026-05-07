@@ -2,12 +2,22 @@ import Head from 'next/head'
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
 import { SNS_CONFIG } from '../../lib/snsConfig'
 
+const THEMES = [
+  { id: 'dark',     bg: '#0a0a0a', card: '#1a1a1a', accent: '#22c55e', text: '#ffffff' },
+  { id: 'light',    bg: '#f8f8f8', card: '#ffffff', accent: '#0070f3', text: '#111111' },
+  { id: 'midnight', bg: '#0f172a', card: '#1e293b', accent: '#818cf8', text: '#e2e8f0' },
+  { id: 'warm',     bg: '#1c1410', card: '#2d2018', accent: '#f59e0b', text: '#fef3c7' },
+  { id: 'sakura',   bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
+  { id: 'ocean',    bg: '#0c1a2e', card: '#0f2744', accent: '#38bdf8', text: '#e0f2fe' },
+]
+
 function initials(name) {
   if (!name) return '?'
   return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
 }
 
 export default function PublicProfile({ profile, affiliations }) {
+  const theme = THEMES.find(t => t.id === profile.profile_theme) || THEMES[0]
   const activeSns = SNS_CONFIG.filter(d => profile[d.key])
 
   return (
@@ -131,7 +141,7 @@ export default function PublicProfile({ profile, affiliations }) {
 
       <style jsx global>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { min-height: 100%; background: #0a0a0f; color: #f0ede8; font-family: 'Noto Sans JP', sans-serif; }
+        html, body { min-height: 100%; background: ${theme.bg}; color: ${theme.text}; font-family: 'Noto Sans JP', sans-serif; }
       `}</style>
 
       <style jsx>{`
@@ -163,7 +173,7 @@ export default function PublicProfile({ profile, affiliations }) {
           height: 96px;
           border-radius: 50%;
           overflow: hidden;
-          background: #1a2e22;
+          background: ${theme.card};
           flex-shrink: 0;
           margin-bottom: 4px;
         }
@@ -181,17 +191,18 @@ export default function PublicProfile({ profile, affiliations }) {
           font-size: 32px;
           font-weight: 700;
           font-family: 'DM Mono', monospace;
-          color: #7b9e87;
+          color: ${theme.accent};
         }
         .name {
           font-size: 26px;
           font-weight: 700;
-          color: #f0ede8;
+          color: ${theme.text};
           line-height: 1.3;
         }
         .bio {
           font-size: 14px;
-          color: #a0a0b0;
+          color: ${theme.text};
+          opacity: 0.6;
           line-height: 1.7;
           max-width: 320px;
         }
@@ -203,22 +214,24 @@ export default function PublicProfile({ profile, affiliations }) {
           gap: 10px;
         }
         .affil-card {
-          border: 1px solid #1e1e2a;
+          border: 1px solid ${theme.card};
           border-radius: 14px;
           padding: 16px 18px;
           display: flex;
           flex-direction: column;
           gap: 4px;
-          background: #0d0d14;
+          background: ${theme.card};
+          box-shadow: 0 1px 6px rgba(0,0,0,0.15);
         }
         .affil-company {
           font-size: 15px;
           font-weight: 700;
-          color: #f0ede8;
+          color: ${theme.text};
         }
         .affil-title {
           font-size: 13px;
-          color: #6a6a7a;
+          color: ${theme.text};
+          opacity: 0.5;
         }
         .contact-links {
           display: flex;
@@ -231,12 +244,13 @@ export default function PublicProfile({ profile, affiliations }) {
           align-items: center;
           gap: 10px;
           font-size: 13px;
-          color: #a0a0b0;
+          color: ${theme.text};
+          opacity: 0.6;
           text-decoration: none;
-          transition: color .15s;
+          transition: opacity .15s;
           word-break: break-all;
         }
-        .contact-link:hover { color: #7b9e87; }
+        .contact-link:hover { opacity: 1; }
         .contact-icon {
           font-size: 15px;
           flex-shrink: 0;
@@ -253,7 +267,8 @@ export default function PublicProfile({ profile, affiliations }) {
         .sns-heading {
           font-size: 11px;
           letter-spacing: .1em;
-          color: #5a5650;
+          color: ${theme.text};
+          opacity: 0.35;
           text-transform: uppercase;
           font-family: 'DM Mono', monospace;
         }
@@ -299,30 +314,32 @@ export default function PublicProfile({ profile, affiliations }) {
 
         /* ── App banner ── */
         .app-banner {
-          border: 1px solid #1e1e2a;
+          border: 1px solid ${theme.card};
           border-radius: 16px;
           padding: 20px;
           display: flex;
           flex-direction: column;
           gap: 16px;
-          background: #0d0d14;
+          background: ${theme.card};
+          box-shadow: 0 1px 6px rgba(0,0,0,0.15);
         }
         .app-banner-title {
           font-size: 15px;
           font-weight: 700;
-          color: #f0ede8;
+          color: ${theme.text};
           margin-bottom: 6px;
         }
         .app-banner-desc {
           font-size: 13px;
-          color: #5a5650;
+          color: ${theme.text};
+          opacity: 0.45;
           line-height: 1.6;
         }
         .app-banner-btn {
           display: block;
           text-align: center;
-          background: #7b9e87;
-          color: #0a0a0f;
+          background: ${theme.accent};
+          color: ${theme.bg};
           font-weight: 700;
           font-size: 14px;
           font-family: 'Noto Sans JP', sans-serif;
@@ -336,16 +353,18 @@ export default function PublicProfile({ profile, affiliations }) {
         /* ── Footer ── */
         .footer {
           font-size: 11px;
-          color: #3a3a4a;
+          color: ${theme.text};
+          opacity: 0.25;
           text-align: center;
           margin-top: auto;
           padding-top: 1rem;
         }
         .footer-link {
-          color: #5a5650;
+          color: ${theme.text};
+          opacity: 0.4;
           text-decoration: none;
         }
-        .footer-link:hover { color: #7b9e87; }
+        .footer-link:hover { opacity: 0.7; }
       `}</style>
     </>
   )
@@ -356,7 +375,7 @@ export async function getServerSideProps({ params }) {
 
   const [profileRes, affilRes] = await Promise.all([
     supabaseAdmin.from('profiles')
-      .select('name, bio, avatar_url, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
+      .select('name, bio, avatar_url, profile_theme, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_affiliations')
       .select('company_name, title, order_index, phone, website, contact_email, show_phone, show_website, show_email')
