@@ -16,6 +16,22 @@ const THEMES = [
   { id: 'ocean',    label: 'オーシャン',   bg: '#0c1a2e', card: '#0f2744', accent: '#38bdf8', text: '#e0f2fe' },
 ]
 
+const BLOCK_TYPE_LABELS = { photo: '📷 写真', text: '📝 テキスト', link: '🔗 リンク', sns: '💬 SNS' }
+const TEXT_BG_PRESETS = ['#0a0a0a', '#ffffff', '#0f172a', '#1c1410', '#fff0f3', '#0c1a2e']
+
+function getBlockTitle(block) {
+  switch (block.type) {
+    case 'photo': return block.content?.caption || '(キャプションなし)'
+    case 'text':  return block.content?.title || block.content?.body?.slice(0, 20) || '(テキストなし)'
+    case 'link':  return block.content?.title || block.content?.url || '(タイトルなし)'
+    case 'sns': {
+      const found = SNS_CONFIG.find(s => s.key === block.content?.platform)
+      return found?.label || block.content?.platform || '(未設定)'
+    }
+    default: return ''
+  }
+}
+
 async function compressImage(file) {
   return new Promise((resolve) => {
     const img = new Image()
@@ -170,10 +186,18 @@ export default function ProfileSettings() {
   const avatarFileRef = useRef(null)
   const [profileTheme, setProfileTheme] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [blocks, setBlocks] = useState([])
+  const [blocksDirty, setBlocksDirty] = useState(false)
+  const [blocksSaving, setBlocksSaving] = useState(false)
+  const [blocksMsg, setBlocksMsg] = useState(null)
+  const [showTypeSheet, setShowTypeSheet] = useState(false)
+  const [editingBlock, setEditingBlock] = useState(null)
+  const [blockImageUploading, setBlockImageUploading] = useState(false)
+  const blockImageRef = useRef(null)
   const router = useRouter()
 
-  const isDirtyAny = snsDirty || affilDirty
-  const isDirtyCurrent = (activeTab === 'sns' && snsDirty) || (activeTab === 'profile_tab' && affilDirty)
+  const isDirtyAny = snsDirty || affilDirty || blocksDirty
+  const isDirtyCurrent = (activeTab === 'sns' && snsDirty) || (activeTab === 'profile_tab' && affilDirty) || (activeTab === 'blocks' && blocksDirty)
 
   useEffect(() => {
     if (profile !== null && localName === null) {
@@ -265,6 +289,14 @@ export default function ProfileSettings() {
         if (data.affiliations) setAffiliations(data.affiliations)
       })
     })
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    fetch(`/api/profile/blocks?userId=${user.id}`)
+      .then(r => r.json())
+      .then(data => { if (data.blocks) setBlocks(data.blocks) })
+      .catch(() => {})
   }, [user])
 
   function startNameEdit() {
@@ -735,6 +767,51 @@ export default function ProfileSettings() {
     }
   }
 
+  async function handleBlocksSave() {
+    setBlocksSaving(true)
+    setBlocksMsg(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ blocks: blocks.map((b, i) => ({ ...b, order_index: i })) }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setBlocksDirty(false)
+      setBlocksMsg({ ok: true, text: '保存しました' })
+      setTimeout(() => setBlocksMsg(null), 2500)
+    } catch (err) {
+      setBlocksMsg({ ok: false, text: err.message })
+    } finally {
+      setBlocksSaving(false)
+    }
+  }
+
+  async function handleBlockImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setBlockImageUploading(true)
+    try {
+      const dataUrl = await compressImage(file)
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/upload-block-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ imageBase64: dataUrl.split(',')[1] }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error)
+      setEditingBlock(prev => ({ ...prev, content: { ...prev.content, image_url: data.image_url } }))
+    } catch {
+      // silent fail
+    } finally {
+      setBlockImageUploading(false)
+    }
+  }
+
   async function handleAvatarFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -882,6 +959,7 @@ export default function ProfileSettings() {
           <div className="tab-bar">
             {[
               { key: 'profile_tab',  label: t('profile.tab_profile') },
+              { key: 'blocks',       label: 'ブロック' },
               { key: 'sns',          label: 'SNS' },
               { key: 'email',        label: t('profile.tab_email') },
               { key: 'subscription', label: t('profile.tab_subscription') },
@@ -1417,6 +1495,69 @@ export default function ProfileSettings() {
             </div>
           )}
 
+          {activeTab === 'blocks' && (
+            <div className="section">
+              <div className="section-header">
+                <div className="section-label">ベントーブロック</div>
+                <span className={`config-badge ${blocks.length > 0 ? 'configured' : 'unconfigured'}`}>
+                  {blocks.length > 0 ? `${blocks.length}件` : '未設定'}
+                </span>
+              </div>
+              <p className="desc">公開プロフィールに表示するブロックを追加・並び替えできます。</p>
+
+              {blocks.length === 0 && (
+                <div className="blocks-empty">まだブロックがありません。追加してプロフィールをカスタマイズしましょう。</div>
+              )}
+
+              {blocks.map((block, index) => (
+                <div key={block.id || index} className="block-item">
+                  <div className="block-item-left">
+                    <span className="block-item-type-badge">{BLOCK_TYPE_LABELS[block.type]}</span>
+                    <span className="block-item-size-badge">{block.size}</span>
+                    <span className="block-item-title">{getBlockTitle(block)}</span>
+                  </div>
+                  <div className="block-item-actions">
+                    <button type="button" className="block-reorder-btn" disabled={index === 0}
+                      onClick={() => {
+                        setBlocks(prev => { const n = [...prev]; [n[index-1], n[index]] = [n[index], n[index-1]]; return n })
+                        setBlocksDirty(true)
+                      }}>↑</button>
+                    <button type="button" className="block-reorder-btn" disabled={index === blocks.length - 1}
+                      onClick={() => {
+                        setBlocks(prev => { const n = [...prev]; [n[index], n[index+1]] = [n[index+1], n[index]]; return n })
+                        setBlocksDirty(true)
+                      }}>↓</button>
+                    <button type="button" className="block-edit-btn"
+                      onClick={() => setEditingBlock({ index, type: block.type, size: block.size, content: { ...block.content } })}>
+                      編集
+                    </button>
+                    <button type="button" className="block-delete-btn"
+                      onClick={() => {
+                        if (window.confirm('このブロックを削除しますか？')) {
+                          setBlocks(prev => prev.filter((_, i) => i !== index))
+                          setBlocksDirty(true)
+                        }
+                      }}>✕</button>
+                  </div>
+                </div>
+              ))}
+
+              <button type="button" className="add-block-btn" onClick={() => setShowTypeSheet(true)}>
+                ＋ ブロックを追加
+              </button>
+
+              {blocksMsg && (
+                <div className={`msg ${blocksMsg.ok ? 'success' : 'error'}`} style={{ marginTop: 12 }}>{blocksMsg.text}</div>
+              )}
+
+              {blocksDirty && (
+                <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleBlocksSave} disabled={blocksSaving}>
+                  {blocksSaving ? '保存中...' : '保存'}
+                </button>
+              )}
+            </div>
+          )}
+
           {activeTab === 'subscription' && (() => {
             const isPro = profile?.plan === 'pro'
             const scanUsed = profile?.scan_count_month || 0
@@ -1633,13 +1774,207 @@ export default function ProfileSettings() {
           <button
             type="button"
             className="sticky-save-btn"
-            onClick={() => activeTab === 'sns'
-              ? handleSnsSave({ preventDefault: () => {} })
-              : handleAffilSave()}
-            disabled={activeTab === 'sns' ? snsSaving : affilSaving}
+            onClick={() => {
+              if (activeTab === 'sns') handleSnsSave({ preventDefault: () => {} })
+              else if (activeTab === 'blocks') handleBlocksSave()
+              else handleAffilSave()
+            }}
+            disabled={activeTab === 'sns' ? snsSaving : activeTab === 'blocks' ? blocksSaving : affilSaving}
           >
-            {(activeTab === 'sns' ? snsSaving : affilSaving) ? t('profile.saving') : t('profile.save')}
+            {(activeTab === 'sns' ? snsSaving : activeTab === 'blocks' ? blocksSaving : affilSaving) ? t('profile.saving') : t('profile.save')}
           </button>
+        </div>
+      )}
+
+      {/* ── タイプ選択シート ── */}
+      {showTypeSheet && (
+        <div className="scan-overlay" onClick={() => setShowTypeSheet(false)}>
+          <div className="scan-sheet" style={{ maxHeight: '55vh', minHeight: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="scan-sheet-header">
+              <span className="scan-sheet-title">ブロックのタイプを選択</span>
+              <button type="button" className="scan-sheet-close" onClick={() => setShowTypeSheet(false)}>✕</button>
+            </div>
+            <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { type: 'photo', label: '📷 写真',    desc: '画像とキャプションを表示' },
+                { type: 'text',  label: '📝 テキスト', desc: 'タイトルと本文を自由に記述' },
+                { type: 'link',  label: '🔗 リンク',  desc: 'URLへのリンクカード' },
+                { type: 'sns',   label: '💬 SNS',     desc: 'SNSリンクを大きく表示' },
+              ].map(({ type, label, desc }) => (
+                <button key={type} type="button" className="type-select-btn"
+                  onClick={() => { setShowTypeSheet(false); setEditingBlock({ index: null, type, size: 'M', content: {} }) }}>
+                  <span className="type-select-label">{label}</span>
+                  <span className="type-select-desc">{desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ブロック編集モーダル ── */}
+      {editingBlock && (
+        <div className="scan-overlay" onClick={() => setEditingBlock(null)}>
+          <div className="scan-sheet" onClick={e => e.stopPropagation()}>
+            <div className="scan-sheet-header">
+              <span className="scan-sheet-title">
+                {editingBlock.index !== null ? 'ブロックを編集' : 'ブロックを追加'} — {BLOCK_TYPE_LABELS[editingBlock.type]}
+              </span>
+              <button type="button" className="scan-sheet-close" onClick={() => setEditingBlock(null)}>✕</button>
+            </div>
+            <div className="scan-sheet-body">
+
+              {/* サイズ選択 */}
+              <div>
+                <div className="scan-field-label" style={{ marginBottom: 8 }}>サイズ</div>
+                <div className="size-select-row">
+                  {[
+                    { key: 'S', desc: '正方形' },
+                    { key: 'M', desc: '縦長' },
+                    { key: 'L', desc: '全幅' },
+                  ].map(({ key, desc }) => (
+                    <button key={key} type="button"
+                      className={`size-select-btn${editingBlock.size === key ? ' active' : ''}`}
+                      onClick={() => setEditingBlock(prev => ({ ...prev, size: key }))}>
+                      <span className="size-select-key">{key}</span>
+                      <span className="size-select-desc">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* photo */}
+              {editingBlock.type === 'photo' && (
+                <div>
+                  <div className="scan-field-label" style={{ marginBottom: 8 }}>画像</div>
+                  {editingBlock.content.image_url && (
+                    <img src={editingBlock.content.image_url} alt="block preview"
+                      style={{ width: '100%', borderRadius: 10, marginBottom: 8, maxHeight: 160, objectFit: 'cover', display: 'block' }} />
+                  )}
+                  <button type="button" className="qr-scan-btn" style={{ marginBottom: 10 }}
+                    onClick={() => blockImageRef.current?.click()}>
+                    {blockImageUploading ? 'アップロード中...' : editingBlock.content.image_url ? '画像を変更' : '📷 画像を選択'}
+                  </button>
+                  <input ref={blockImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBlockImageUpload} />
+                  <div className="scan-field-label" style={{ marginBottom: 4 }}>キャプション（任意）</div>
+                  <input type="text" value={editingBlock.content.caption || ''} maxLength={60}
+                    onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, caption: e.target.value } }))}
+                    placeholder="写真の説明" className="scan-field-input" />
+                </div>
+              )}
+
+              {/* text */}
+              {editingBlock.type === 'text' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>タイトル（任意）</div>
+                    <input type="text" value={editingBlock.content.title || ''} maxLength={40}
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, title: e.target.value } }))}
+                      placeholder="見出し" className="scan-field-input" />
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>本文</div>
+                    <textarea value={editingBlock.content.body || ''} maxLength={200} rows={4}
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, body: e.target.value } }))}
+                      placeholder="テキストを入力..." className="scan-field-input"
+                      style={{ resize: 'none', lineHeight: 1.6 }} />
+                    <div className="char-count">{(editingBlock.content.body || '').length} / 200</div>
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>背景色</div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {TEXT_BG_PRESETS.map(color => (
+                        <button key={color} type="button"
+                          style={{
+                            width: 34, height: 34, borderRadius: '50%', background: color,
+                            border: editingBlock.content.bg_color === color ? '3px solid #ffffff' : '2px solid #2a2a3a',
+                            cursor: 'pointer',
+                            outline: editingBlock.content.bg_color === color ? '2px solid #7b9e87' : 'none',
+                            outlineOffset: 2, padding: 0,
+                          }}
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, bg_color: color } }))} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* link */}
+              {editingBlock.type === 'link' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>タイトル（必須）</div>
+                    <input type="text" value={editingBlock.content.title || ''} maxLength={60}
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, title: e.target.value } }))}
+                      placeholder="リンクのタイトル" className="scan-field-input" />
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>URL（必須）</div>
+                    <input type="url" value={editingBlock.content.url || ''}
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, url: e.target.value } }))}
+                      placeholder="https://..." className="scan-field-input" />
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>説明（任意）</div>
+                    <input type="text" value={editingBlock.content.description || ''} maxLength={100}
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, description: e.target.value } }))}
+                      placeholder="リンクの説明文" className="scan-field-input" />
+                  </div>
+                </div>
+              )}
+
+              {/* sns */}
+              {editingBlock.type === 'sns' && (
+                <div>
+                  <div className="scan-field-label" style={{ marginBottom: 8 }}>プラットフォーム</div>
+                  <select value={editingBlock.content.platform || ''}
+                    onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, platform: e.target.value } }))}
+                    className="scan-field-input" style={{ cursor: 'pointer' }}>
+                    <option value="">選択してください</option>
+                    {SNS_CONFIG.map(f => (
+                      <option key={f.key} value={f.key} disabled={!snsValues[f.key]}>
+                        {f.label}{!snsValues[f.key] ? '（未設定）' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p style={{ fontSize: 11, color: '#5a5650', marginTop: 8, lineHeight: 1.6 }}>
+                    ※ SNSタブで設定済みのプラットフォームのみ選択できます
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="scan-sheet-actions">
+              <button type="button" className="save-btn"
+                onClick={() => {
+                  if (editingBlock.type === 'link' && (!editingBlock.content.title?.trim() || !editingBlock.content.url?.trim())) {
+                    return alert('タイトルとURLは必須です')
+                  }
+                  if (editingBlock.type === 'sns' && !editingBlock.content.platform) {
+                    return alert('プラットフォームを選択してください')
+                  }
+                  const newBlock = {
+                    id: editingBlock.index !== null ? (blocks[editingBlock.index]?.id || `new-${Date.now()}`) : `new-${Date.now()}`,
+                    type: editingBlock.type,
+                    size: editingBlock.size,
+                    content: editingBlock.content,
+                  }
+                  setBlocks(prev => {
+                    if (editingBlock.index !== null) {
+                      const next = [...prev]; next[editingBlock.index] = newBlock; return next
+                    }
+                    return [...prev, newBlock]
+                  })
+                  setBlocksDirty(true)
+                  setEditingBlock(null)
+                }}>
+                {editingBlock.index !== null ? '更新' : '追加'}
+              </button>
+              <button type="button" className="name-cancel-btn" onClick={() => setEditingBlock(null)} style={{ marginTop: 10 }}>
+                キャンセル
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -3135,6 +3470,188 @@ export default function ProfileSettings() {
         @keyframes slideUp {
           from { transform: translateY(100%); }
           to   { transform: translateY(0); }
+        }
+
+        /* ── ブロック管理UI ── */
+        .blocks-empty {
+          padding: 28px 20px;
+          text-align: center;
+          color: #3a3a4a;
+          font-size: 13px;
+          border: 1px dashed #1e1e2a;
+          border-radius: 12px;
+          margin-bottom: 12px;
+          line-height: 1.7;
+        }
+        .block-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 12px 12px 12px 14px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          margin-bottom: 8px;
+        }
+        .block-item-left {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+          min-width: 0;
+        }
+        .block-item-type-badge {
+          font-size: 11px;
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: #1e1e2a;
+          color: #a0a0b0;
+          font-family: 'DM Mono', monospace;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .block-item-size-badge {
+          font-size: 10px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          background: #0d1f15;
+          color: #7b9e87;
+          border: 1px solid #1a3525;
+          font-family: 'DM Mono', monospace;
+          flex-shrink: 0;
+        }
+        .block-item-title {
+          font-size: 13px;
+          color: #f0ede8;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .block-item-actions {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+        .block-reorder-btn {
+          background: none;
+          border: 1px solid #1e1e2a;
+          border-radius: 6px;
+          color: #5a5650;
+          font-size: 13px;
+          width: 32px;
+          height: 32px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color .15s, border-color .15s;
+          padding: 0;
+        }
+        .block-reorder-btn:hover:not(:disabled) { color: #f0ede8; border-color: #3a3a4a; }
+        .block-reorder-btn:disabled { opacity: .2; cursor: not-allowed; }
+        .block-edit-btn {
+          background: none;
+          border: 1px solid #2a4a35;
+          border-radius: 6px;
+          color: #7b9e87;
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          padding: 4px 10px;
+          cursor: pointer;
+          transition: background .15s;
+          height: 32px;
+        }
+        .block-edit-btn:hover { background: #0d1f15; }
+        .block-delete-btn {
+          background: none;
+          border: 1px solid #1e1e2a;
+          border-radius: 6px;
+          color: #4a4a5a;
+          font-size: 12px;
+          width: 32px;
+          height: 32px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: color .15s, border-color .15s, background .15s;
+          padding: 0;
+        }
+        .block-delete-btn:hover { color: #c08080; border-color: #3a1010; background: #1a0808; }
+        .add-block-btn {
+          width: 100%;
+          padding: 12px;
+          background: none;
+          border: 1px dashed #2a4a35;
+          border-radius: 10px;
+          color: #7b9e87;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: background .15s, border-color .15s;
+          margin-top: 4px;
+        }
+        .add-block-btn:hover { background: #0d1f15; border-color: #7b9e87; }
+
+        /* タイプ選択ボタン */
+        .type-select-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+          padding: 14px 16px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: border-color .15s, background .15s;
+          text-align: left;
+        }
+        .type-select-btn:hover { border-color: #7b9e87; background: #0d0d14; }
+        .type-select-label {
+          font-size: 15px;
+          font-weight: 700;
+          color: #f0ede8;
+          font-family: 'Noto Sans JP', sans-serif;
+        }
+        .type-select-desc {
+          font-size: 12px;
+          color: #5a5650;
+          font-family: 'DM Mono', monospace;
+        }
+
+        /* サイズ選択ボタン */
+        .size-select-row {
+          display: flex;
+          gap: 8px;
+        }
+        .size-select-btn {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          padding: 12px 8px;
+          background: #0d0d14;
+          border: 1.5px solid #1e1e2a;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: border-color .15s;
+        }
+        .size-select-btn.active { border-color: #7b9e87; background: #0d1f15; }
+        .size-select-btn:hover:not(.active) { border-color: #3a3a4a; }
+        .size-select-key {
+          font-size: 18px;
+          font-weight: 700;
+          font-family: 'DM Mono', monospace;
+          color: #f0ede8;
+        }
+        .size-select-desc {
+          font-size: 10px;
+          color: #5a5650;
+          font-family: 'DM Mono', monospace;
         }
       `}</style>
     </>

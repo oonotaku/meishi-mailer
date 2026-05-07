@@ -16,9 +16,77 @@ function initials(name) {
   return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
 }
 
-export default function PublicProfile({ profile, affiliations }) {
+function PhotoBlock({ block, theme }) {
+  if (!block.content?.image_url) return null
+  return (
+    <div className="bento-block-inner photo-block">
+      <img src={block.content.image_url} alt={block.content.caption || ''} className="photo-img" />
+      {block.content.caption && (
+        <div className="photo-caption" style={{ color: theme.text }}>{block.content.caption}</div>
+      )}
+    </div>
+  )
+}
+
+function TextBlock({ block, theme }) {
+  const bg = block.content?.bg_color || theme.card
+  const isLight = bg === '#ffffff' || bg === '#fff0f3' || bg === '#f8f8f8'
+  const textColor = isLight ? '#111111' : theme.text
+  return (
+    <div className="bento-block-inner text-block" style={{ background: bg }}>
+      {block.content?.title && (
+        <div className="text-block-title" style={{ color: textColor }}>{block.content.title}</div>
+      )}
+      {block.content?.body && (
+        <div className="text-block-body" style={{ color: textColor, opacity: 0.75 }}>{block.content.body}</div>
+      )}
+    </div>
+  )
+}
+
+function LinkBlock({ block, theme }) {
+  if (!block.content?.url) return null
+  return (
+    <a href={block.content.url} target="_blank" rel="noopener noreferrer" className="bento-block-inner link-block"
+      style={{ background: theme.card, borderColor: theme.card, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="link-block-title" style={{ color: theme.text }}>{block.content.title || block.content.url}</div>
+      {block.content.description && (
+        <div className="link-block-desc" style={{ color: theme.text, opacity: 0.55 }}>{block.content.description}</div>
+      )}
+      <div className="link-block-url" style={{ color: theme.accent }}>
+        {block.content.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} →
+      </div>
+    </a>
+  )
+}
+
+function SnsBlock({ block, profile, theme }) {
+  const platform = block.content?.platform
+  const cfg = SNS_CONFIG.find(s => s.key === platform)
+  const url = profile[platform]
+  if (!cfg || !url) return null
+  return (
+    <button className="bento-block-inner sns-block"
+      style={{ background: 'transparent', border: `1.5px solid ${cfg.color}`, color: cfg.color, cursor: 'pointer' }}
+      onClick={() => window.open(url, '_blank')}>
+      <span className="sns-block-icon">
+        {cfg.icon ? (
+          <img src={`https://cdn.simpleicons.org/${cfg.icon}/${cfg.color.replace('#','')}`}
+            width="24" height="24" alt={cfg.label}
+            style={{ display: 'block' }}
+            onError={e => { e.target.style.display = 'none' }} />
+        ) : (
+          <span style={{ fontSize: 16, fontWeight: 700 }}>{cfg.label[0]}</span>
+        )}
+      </span>
+      <span className="sns-block-label">{cfg.label}</span>
+      <span className="sns-block-arrow">→</span>
+    </button>
+  )
+}
+
+export default function PublicProfile({ profile, blocks }) {
   const theme = THEMES.find(t => t.id === profile.profile_theme) || THEMES[0]
-  const activeSns = SNS_CONFIG.filter(d => profile[d.key])
 
   return (
     <>
@@ -31,108 +99,62 @@ export default function PublicProfile({ profile, affiliations }) {
       <div className="shell">
         <div className="card">
 
-          {/* ── Avatar + Name + Bio ── */}
+          {/* ── Hero ── */}
           <div className="hero">
             <div className="avatar-wrap">
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} alt={profile.name || 'avatar'} className="avatar-img" />
               ) : (
-                <div className="avatar-initials">{initials(profile.name)}</div>
+                <div className="avatar-initials" style={{ color: theme.accent }}>{initials(profile.name)}</div>
               )}
             </div>
-            <div className="name">{profile.name || '名前未設定'}</div>
-            {profile.bio && <div className="bio">{profile.bio}</div>}
+            <div className="name" style={{ color: theme.text }}>{profile.name || '名前未設定'}</div>
+            {profile.bio && <div className="bio" style={{ color: theme.text }}>{profile.bio}</div>}
           </div>
 
-          {/* ── Affiliation cards ── */}
-          {affiliations.length > 0 && (
-            <div className="affiliations">
-              {affiliations.map((a, i) => (
-                <div key={i} className="affil-card">
-                  <div className="affil-company">{a.company_name}</div>
-                  {a.title && <div className="affil-title">{a.title}</div>}
-                  {((a.show_website && a.website) || (a.show_phone && a.phone) || (a.show_email && a.contact_email)) && (
-                    <div className="contact-links">
-                      {a.show_website && a.website && (
-                        <a href={a.website} target="_blank" rel="noopener noreferrer" className="contact-link">
-                          <span className="contact-icon">🌐</span>
-                          <span>{a.website.replace(/^https?:\/\//, '')}</span>
-                        </a>
-                      )}
-                      {a.show_phone && a.phone && (
-                        <a href={`tel:${a.phone}`} className="contact-link">
-                          <span className="contact-icon">📞</span>
-                          <span>{a.phone}</span>
-                        </a>
-                      )}
-                      {a.show_email && a.contact_email && (
-                        <a href={`mailto:${a.contact_email}`} className="contact-link">
-                          <span className="contact-icon">✉</span>
-                          <span>{a.contact_email}</span>
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+          {/* ── Bento Grid ── */}
+          {blocks.length > 0 ? (
+            <div className="bento-grid">
+              {blocks.map((block, i) => {
+                const sizeClass = block.size === 'L' ? 'block-L' : block.size === 'S' ? 'block-S' : 'block-M'
+                return (
+                  <div key={block.id || i} className={`bento-block ${sizeClass}`}
+                    style={{ background: theme.card, borderRadius: 16, overflow: 'hidden' }}>
+                    {block.type === 'photo' && <PhotoBlock block={block} theme={theme} />}
+                    {block.type === 'text'  && <TextBlock  block={block} theme={theme} />}
+                    {block.type === 'link'  && <LinkBlock  block={block} theme={theme} />}
+                    {block.type === 'sns'   && <SnsBlock   block={block} profile={profile} theme={theme} />}
+                  </div>
+                )
+              })}
             </div>
-          )}
-
-          {/* ── SNS buttons ── */}
-          {activeSns.length > 0 && (
-            <div className="sns-section">
-              <div className="sns-heading">SNSで繋がる</div>
-              <div className="sns-list">
-                {activeSns.map(d => (
-                  <button
-                    key={d.key}
-                    className="sns-btn"
-                    style={{ '--sns-color': d.color }}
-                    onClick={() => window.open(profile[d.key], '_blank')}
-                  >
-                    <span className="sns-icon-wrap">
-                      {d.icon ? (
-                        <img
-                          src={`https://cdn.simpleicons.org/${d.icon}/${d.color.replace('#','')}`}
-                          width="20" height="20"
-                          alt={d.label}
-                          style={{ display: 'block' }}
-                          onError={e => { e.target.style.display = 'none' }}
-                        />
-                      ) : (
-                        <div style={{ width: 20, height: 20, borderRadius: 4, background: d.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>
-                          {d.label[0]}
-                        </div>
-                      )}
-                    </span>
-                    <span className="sns-label">{d.label}</span>
-                    <span className="sns-arrow">→</span>
-                  </button>
-                ))}
-              </div>
+          ) : (
+            <div className="bento-empty" style={{ color: theme.text }}>
+              ブロックを追加してプロフィールをカスタマイズしましょう
             </div>
           )}
         </div>
 
         {/* ── App banner ── */}
-        <div className="app-banner">
+        <div className="app-banner" style={{ background: theme.card }}>
           <div className="app-banner-text">
-            <div className="app-banner-title">名刺交換、その場でお礼メール。</div>
-            <div className="app-banner-desc">あなたも meishi-mailer で出会いを記録しませんか？</div>
+            <div className="app-banner-title" style={{ color: theme.text }}>名刺交換、その場でお礼メール。</div>
+            <div className="app-banner-desc" style={{ color: theme.text }}>あなたも meishi-mailer で出会いを記録しませんか？</div>
           </div>
           <a
             href="https://www.meishi-mailer.com"
             target="_blank"
             rel="noopener noreferrer"
             className="app-banner-btn"
+            style={{ background: theme.accent, color: theme.bg }}
           >
             無料で始める →
           </a>
         </div>
 
-        <div className="footer">
+        <div className="footer" style={{ color: theme.text }}>
           このページは{' '}
-          <a href="https://www.meishi-mailer.com" target="_blank" rel="noopener noreferrer" className="footer-link">
+          <a href="https://www.meishi-mailer.com" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ color: theme.text }}>
             meishi-mailer
           </a>
           {' '}で作成されました
@@ -149,7 +171,7 @@ export default function PublicProfile({ profile, affiliations }) {
           min-height: 100svh;
           max-width: 480px;
           margin: 0 auto;
-          padding: 2.5rem 1.5rem 2rem;
+          padding: 2.5rem 1.25rem 2rem;
           display: flex;
           flex-direction: column;
           gap: 2rem;
@@ -157,7 +179,7 @@ export default function PublicProfile({ profile, affiliations }) {
         .card {
           display: flex;
           flex-direction: column;
-          gap: 2rem;
+          gap: 1.5rem;
         }
 
         /* ── Hero ── */
@@ -191,122 +213,148 @@ export default function PublicProfile({ profile, affiliations }) {
           font-size: 32px;
           font-weight: 700;
           font-family: 'DM Mono', monospace;
-          color: ${theme.accent};
         }
         .name {
           font-size: 26px;
           font-weight: 700;
-          color: ${theme.text};
           line-height: 1.3;
         }
         .bio {
           font-size: 14px;
-          color: ${theme.text};
           opacity: 0.6;
           line-height: 1.7;
           max-width: 320px;
         }
 
-        /* ── Affiliations ── */
-        .affiliations {
-          display: flex;
-          flex-direction: column;
+        /* ── Bento Grid ── */
+        .bento-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           gap: 10px;
         }
-        .affil-card {
-          border: 1px solid ${theme.card};
-          border-radius: 14px;
-          padding: 16px 18px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          background: ${theme.card};
+        .bento-block {
+          min-height: 120px;
+          position: relative;
           box-shadow: 0 1px 6px rgba(0,0,0,0.15);
         }
-        .affil-company {
-          font-size: 15px;
-          font-weight: 700;
-          color: ${theme.text};
+        .block-S {
+          grid-column: span 1;
+          aspect-ratio: 1;
         }
-        .affil-title {
-          font-size: 13px;
-          color: ${theme.text};
-          opacity: 0.5;
+        .block-M {
+          grid-column: span 1;
+          min-height: 200px;
         }
-        .contact-links {
+        .block-L {
+          grid-column: span 2;
+          min-height: 120px;
+        }
+        .bento-block-inner {
+          width: 100%;
+          height: 100%;
+          min-height: inherit;
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          margin-top: 10px;
+          padding: 16px;
         }
-        .contact-link {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-size: 13px;
-          color: ${theme.text};
-          opacity: 0.6;
-          text-decoration: none;
-          transition: opacity .15s;
-          word-break: break-all;
-        }
-        .contact-link:hover { opacity: 1; }
-        .contact-icon {
-          font-size: 15px;
-          flex-shrink: 0;
-          width: 20px;
+        .bento-empty {
           text-align: center;
+          font-size: 13px;
+          opacity: 0.3;
+          padding: 24px;
         }
 
-        /* ── SNS ── */
-        .sns-section {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .sns-heading {
-          font-size: 11px;
-          letter-spacing: .1em;
-          color: ${theme.text};
-          opacity: 0.35;
-          text-transform: uppercase;
-          font-family: 'DM Mono', monospace;
-        }
-        .sns-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .sns-btn {
-          width: 100%;
-          height: 56px;
-          background: transparent;
-          border: 1.5px solid var(--sns-color);
-          border-radius: 12px;
-          color: var(--sns-color);
-          font-size: 14px;
-          font-weight: 700;
-          font-family: 'Noto Sans JP', sans-serif;
-          cursor: pointer;
-          transition: opacity .15s;
-          display: flex;
-          align-items: center;
-          padding: 0 16px;
+        /* Photo */
+        .photo-block {
+          padding: 0;
           position: relative;
         }
-        .sns-btn:active { opacity: .65; }
-        .sns-icon-wrap {
+        .photo-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          flex: 1;
+          min-height: 0;
+        }
+        .photo-caption {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: 8px 12px;
+          font-size: 11px;
+          font-weight: 600;
+          background: linear-gradient(transparent, rgba(0,0,0,0.6));
+          color: #fff !important;
+        }
+
+        /* Text */
+        .text-block {
+          gap: 8px;
+          padding: 16px;
+        }
+        .text-block-title {
+          font-size: 15px;
+          font-weight: 700;
+          line-height: 1.4;
+        }
+        .text-block-body {
+          font-size: 13px;
+          line-height: 1.7;
+        }
+
+        /* Link */
+        .link-block {
+          padding: 16px;
+          gap: 6px;
+          transition: opacity .15s;
+        }
+        .link-block:active { opacity: .7; }
+        .link-block-title {
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.4;
+        }
+        .link-block-desc {
+          font-size: 12px;
+          line-height: 1.6;
+          flex: 1;
+        }
+        .link-block-url {
+          font-size: 11px;
+          font-family: 'DM Mono', monospace;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin-top: auto;
+        }
+
+        /* SNS */
+        .sns-block {
+          flex-direction: row;
+          align-items: center;
+          padding: 0 16px;
+          gap: 12px;
+          border-radius: 12px;
+          font-family: 'Noto Sans JP', sans-serif;
+          transition: opacity .15s;
+        }
+        .sns-block:active { opacity: .65; }
+        .sns-block-icon {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 24px;
+          width: 28px;
           flex-shrink: 0;
         }
-        .sns-label {
+        .sns-block-label {
           flex: 1;
           text-align: center;
+          font-size: 14px;
+          font-weight: 700;
         }
-        .sns-arrow {
+        .sns-block-arrow {
           font-size: 12px;
           opacity: .5;
           flex-shrink: 0;
@@ -314,32 +362,26 @@ export default function PublicProfile({ profile, affiliations }) {
 
         /* ── App banner ── */
         .app-banner {
-          border: 1px solid ${theme.card};
           border-radius: 16px;
           padding: 20px;
           display: flex;
           flex-direction: column;
           gap: 16px;
-          background: ${theme.card};
           box-shadow: 0 1px 6px rgba(0,0,0,0.15);
         }
         .app-banner-title {
           font-size: 15px;
           font-weight: 700;
-          color: ${theme.text};
           margin-bottom: 6px;
         }
         .app-banner-desc {
           font-size: 13px;
-          color: ${theme.text};
           opacity: 0.45;
           line-height: 1.6;
         }
         .app-banner-btn {
           display: block;
           text-align: center;
-          background: ${theme.accent};
-          color: ${theme.bg};
           font-weight: 700;
           font-size: 14px;
           font-family: 'Noto Sans JP', sans-serif;
@@ -353,14 +395,12 @@ export default function PublicProfile({ profile, affiliations }) {
         /* ── Footer ── */
         .footer {
           font-size: 11px;
-          color: ${theme.text};
           opacity: 0.25;
           text-align: center;
           margin-top: auto;
           padding-top: 1rem;
         }
         .footer-link {
-          color: ${theme.text};
           opacity: 0.4;
           text-decoration: none;
         }
@@ -373,15 +413,15 @@ export default function PublicProfile({ profile, affiliations }) {
 export async function getServerSideProps({ params }) {
   const { userId } = params
 
-  const [profileRes, affilRes] = await Promise.all([
+  const [profileRes, blocksRes] = await Promise.all([
     supabaseAdmin.from('profiles')
       .select('name, bio, avatar_url, profile_theme, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
       .eq('id', userId).single(),
-    supabaseAdmin.from('profile_affiliations')
-      .select('company_name, title, order_index, phone, website, contact_email, show_phone, show_website, show_email')
+    supabaseAdmin.from('profile_blocks')
+      .select('id, type, size, content, order_index')
       .eq('user_id', userId).order('order_index'),
   ])
 
   if (profileRes.error || !profileRes.data) return { notFound: true }
-  return { props: { profile: profileRes.data, affiliations: affilRes.data || [] } }
+  return { props: { profile: profileRes.data, blocks: blocksRes.data || [] } }
 }
