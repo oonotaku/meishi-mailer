@@ -146,6 +146,7 @@ export default function ProfileSettings() {
   const personalRef = useRef(null)
   const businessRef = useRef(null)
   const cardappRef = useRef(null)
+  const bioRef = useRef(null)
   const [qrTarget, setQrTarget] = useState(null)
   const [scanStep, setScanStep] = useState('idle')
   const [scanResult, setScanResult] = useState(null)
@@ -802,6 +803,7 @@ export default function ProfileSettings() {
                 <div className="field-group" style={{ marginTop: 16 }}>
                   <div className="field-label">{t('profile.bio_label')}</div>
                   <textarea
+                    ref={bioRef}
                     value={bio}
                     onChange={e => setBio(e.target.value)}
                     placeholder={t('profile.bio_placeholder')}
@@ -1244,12 +1246,12 @@ export default function ProfileSettings() {
               {/* ── プロフィール完成度バー ── */}
               {(() => {
                 const steps = [
-                  { id: 'avatar', label: '顔写真',        tab: 'profile_tab', weight: 20, done: !!avatarUrl },
-                  { id: 'name',   label: '表示名',         tab: 'profile_tab', weight: 15, done: !!(localName ?? profile?.name) },
-                  { id: 'bio',    label: 'ひとこと',       tab: 'profile_tab', weight: 10, done: !!profile?.bio },
-                  { id: 'affil',  label: '所属・会社',     tab: 'profile_tab', weight: 20, done: affiliations.filter(a => a.company_name?.trim()).length > 0 },
-                  { id: 'sns',    label: 'SNSリンク',      tab: 'sns',         weight: 20, done: SNS_CONFIG.some(s => !!profile?.[s.key]) },
-                  { id: 'email',  label: 'メール設定',     tab: 'email',       weight: 15, done: isConfigured },
+                  { id: 'avatar', label: '顔写真',    tab: 'profile_tab', weight: 20, done: !!avatarUrl,                                                    scrollRef: null },
+                  { id: 'name',   label: '表示名',    tab: 'profile_tab', weight: 15, done: !!(localName ?? profile?.name),                                  scrollRef: null },
+                  { id: 'bio',    label: 'ひとこと',  tab: 'profile_tab', weight: 10, done: !!profile?.bio,                                                  scrollRef: bioRef },
+                  { id: 'affil',  label: '所属・会社', tab: 'profile_tab', weight: 20, done: affiliations.filter(a => a.company_name?.trim()).length > 0,    scrollRef: null },
+                  { id: 'sns',    label: 'SNSリンク', tab: 'sns',         weight: 20, done: SNS_CONFIG.some(s => !!profile?.[s.key]),                        scrollRef: null },
+                  { id: 'email',  label: 'メール設定', tab: 'email',      weight: 15, done: isConfigured,                                                    scrollRef: null },
                 ]
                 const pct = steps.reduce((s, x) => s + (x.done ? x.weight : 0), 0)
                 const incomplete = steps.filter(x => !x.done)
@@ -1269,7 +1271,17 @@ export default function ProfileSettings() {
                       <div className="completion-chips">
                         {incomplete.map(s => (
                           <button key={s.id} type="button" className="completion-chip"
-                            onClick={() => { setActiveTab(s.tab); setTimeout(() => window.scrollTo({ top: 200, behavior: 'smooth' }), 50) }}>
+                            onClick={() => {
+                              setActiveTab(s.tab)
+                              setTimeout(() => {
+                                if (s.scrollRef?.current) {
+                                  s.scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                  s.scrollRef.current.focus()
+                                } else {
+                                  window.scrollTo({ top: 300, behavior: 'smooth' })
+                                }
+                              }, 80)
+                            }}>
                             + {s.label}
                           </button>
                         ))}
