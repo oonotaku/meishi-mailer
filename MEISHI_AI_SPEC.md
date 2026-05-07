@@ -91,9 +91,12 @@
 - 全テキストi18n対応（日本語/英語）
 
 **公開プロフィールページ（`/p/[userId]`）**
-- 名前・bio（一言コメント）・所属（全件）・SNSタップボタン（simpleiconsアイコン付き）を表示（認証不要）
+- **ベントーグリッド方式に全面リデザイン済み**（2026-05-07）
+- グリッド最上段に固定ヘッダーブロック（Lサイズ全幅：80px丸アバター＋名前＋bio）
+- `profile_blocks` テーブルから追加ブロックを取得・表示（4タイプ: photo/text/link/sns、3サイズ: S/M/L）
+- 6種テーマ（`profile_theme`）に対応。旧デザイン（所属カード・SNSフル幅ボタン列）は廃止
 - メール送信時にQRコードとしてHTMLメール署名に自動挿入
-- アプリ招待バナーをフッター上部に表示
+- アプリ招待バナーをフッター上部に表示（認証不要）
 
 **Stripe課金（本番稼働中）**
 - Free: 10スキャン/月、Pro: 100スキャン/月（¥980/月）
@@ -193,7 +196,7 @@ Contact詳細（/contacts/[id]）
 
 | 項目 | 技術 |
 |---|---|
-| フロントエンド | Next.js 14 (Pages Router) |
+| フロントエンド | Next.js 14 (Pages Router) + **next-pwa（PWA対応）** |
 | デプロイ | Vercel |
 | DB | Supabase (PostgreSQL) |
 | 認証 | Supabase Auth |
@@ -230,7 +233,8 @@ profiles (
   scan_count_month int,      -- 今月のスキャン数（月初リセット）
   scan_count_reset_at timestamptz,
   stripe_customer_id text,
-  stripe_subscription_id text
+  stripe_subscription_id text,
+  profile_theme text         -- 'dark'(default) | 'light' | 'midnight' | 'warm' | 'sakura' | 'ocean'  2026-05-07追加
 )
 
 -- 所属情報（1ユーザーに最大5件）
@@ -240,6 +244,23 @@ profile_affiliations (
   company_name text,
   title text,
   order_index int,           -- 表示順（0始まり）
+  phone, website, contact_email,
+  show_phone bool DEFAULT false,
+  show_website bool DEFAULT true,
+  show_email bool DEFAULT false,
+  created_at
+)
+-- RLS無効。supabaseAdmin経由のAPI routeのみアクセス
+-- send.js がメール署名の所属として先頭1件を参照。公開プロフィールはベントーグリッド移行済み
+
+-- 公開プロフィール ブロック（ベントーグリッド用）
+profile_blocks (
+  id uuid DEFAULT gen_random_uuid(),
+  user_id → profiles,
+  type text,        -- 'photo' | 'text' | 'link' | 'sns'
+  size text,        -- 'S' | 'M' | 'L'
+  content jsonb,    -- タイプ別スキーマ（image_url/caption, title/body/bg_color, title/url/description, platform）
+  order_index int,
   created_at
 )
 -- RLS無効。supabaseAdmin経由のAPI routeのみアクセス
@@ -355,6 +376,13 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] 「＋ 名刺を追加」機能（preview_onlyでOCR→確認シート→add-card APIで追記、addingCardスピナー表示）（2026-05-06）
 - [x] メールボタンに送信先アドレス表示（選択中カードの email を displayEmail として使用）（2026-05-06）
 - [x] encountersバケットRLSポリシー追加（authenticated INSERT + public SELECT）（2026-05-06）
+- [x] PWA化（next-pwa + manifest.json + アイコン生成 public/icons/）（2026-05-07）
+- [x] プロフィール設定にテーマ選択追加（6種: dark/light/midnight/warm/sakura/ocean、`profiles.profile_theme` DBカラム）（2026-05-07）
+- [x] プロフィール完成度バー（6項目・重み付き合計100%、100%でゴールドアニメーション）（2026-05-07）
+- [x] プレビューモーダル（iframeボトムシート、`window.open` を廃止してモバイルフレンドリー化）（2026-05-07）
+- [x] 公開プロフィールページをベントーグリッド方式に全面リデザイン（`profile_blocks` テーブル新設、4タイプ×3サイズ、ヘッダー統合）（2026-05-07）
+- [x] ブロック管理UI追加（プロフィール設定「ブロック」タブ、追加・編集・削除・↑↓並び替え）（2026-05-07）
+- [x] Google OAuth審査申請済み（gmail.send スコープ、審査中）（2026-05-07）
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）

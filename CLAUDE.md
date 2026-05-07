@@ -14,7 +14,7 @@ No test framework is configured.
 
 ## Architecture
 
-**meishi-mailer** is a mobile-first business card scanner that OCRs card photos, auto-generates/sends Japanese thank-you emails, and supports team sharing of contacts.
+**meishi-mailer** is a mobile-first business card scanner that OCRs card photos, auto-generates/sends Japanese thank-you emails, and supports team sharing of contacts. **PWA対応済み**（next-pwa + manifest.json + public/icons/）。**Google OAuth審査申請済み**（gmail.send スコープ、審査中）。
 
 **Core flow (通常):** Photo capture → `/api/analyze` (Claude Vision OCR + email generation) → `/api/contacts/save` (Supabase Storage + `contacts` table + `encounters` テーブルに初回出会いを自動挿入) → `/api/send` (SendGrid) → mark `mail_sent_at`
 
@@ -35,8 +35,8 @@ No test framework is configured.
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
-| `settings/profile.js` | Profile settings — 4タブ UI（プロフィール / SNS / メール設定 / サブスクリプション）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、SendGrid/Gmail/SMTP 設定、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）、SNS/所属タブで変更時に画面下部に固定保存ボタン表示。完全i18n対応。|
-| `p/[userId].js` | Public profile page (Linktreeライクなリデザイン済み) — 96px丸アバター（`avatar_url`あり→画像、なし→イニシャル）、name、bio、所属カード（枠線付き、会社名・肩書き・連絡先リンク）、SNS フル幅ボタン（56px、ブランドカラー枠線、simpleicons アイコン左）、アプリ招待バナー。No auth。`getServerSideProps` + `supabaseAdmin`。|
+| `settings/profile.js` | Profile settings — **5タブ UI**（プロフィール / ブロック / SNS / メール設定 / サブスクリプション）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、**テーマ選択（6種: dark/light/midnight/warm/sakura/ocean）**、**プロフィール完成度バー（6項目、100%でゴールドアニメーション）**、**プレビューモーダル（iframeボトムシート）**、**ブロック管理タブ（追加・編集・削除・↑↓並び替え、4タイプ×3サイズ）**、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、SendGrid/Gmail/SMTP 設定、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）、SNS/所属/ブロックタブで変更時に画面下部に固定保存ボタン表示。完全i18n対応。|
+| `p/[userId].js` | Public profile page — **ベントーグリッド方式に全面リデザイン済み**。`profile_blocks` テーブルからブロックを取得し、グリッド最上段に固定ヘッダーブロック（Lサイズ：80px丸アバター＋名前＋bio）を配置。以降のブロックは S（1列・高さ固定）/ M（1列・縦長）/ L（全幅）の3サイズ。ブロックタイプ: photo（画像＋グラデーションキャプション）/ text（自由テキスト＋背景色）/ link（↗アイコン付きリンクカード）/ sns（ブランドカラー背景＋simpleiconsアイコン）。6種テーマ（profile_theme）に対応。No auth。`getServerSideProps` + `supabaseAdmin`。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -83,6 +83,10 @@ No test framework is configured.
 - `GET /api/profile/affiliations` — returns `profile_affiliations` (including phone/website/contact_email/show_* fields) ordered by `order_index` ASC
 - `POST /api/profile/affiliations` — replaces all affiliations (delete-all + insert); max 5 rows, skips entries with empty `company_name`. phone/website/contact_email/show_* を含む
 - `POST /api/profile/update-contact` — 旧: profiles テーブルの連絡先を更新。現在は affiliations 経由のため実質未使用
+- `GET /api/profile/blocks` — `profile_blocks` を `?userId` で取得（認証不要）。`order_index` 昇順
+- `POST /api/profile/blocks` — Bearer auth。`profile_blocks` を delete-all + insert でバッチ更新。`{ blocks: [{ type, size, content, order_index }] }`
+- `POST /api/profile/upload-block-image` — Bearer auth。base64画像を `avatars` バケットに `{userId}/block_{timestamp}.jpg` としてアップロード。公開URLを返す
+- `POST /api/profile/update-theme` — Bearer auth。`profiles.profile_theme` を更新（楽観的更新用）
 
 ### AI model usage
 
@@ -96,7 +100,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 
 **`organizations`** — `id, name, created_at`
 
-**`profiles`** — `id, email, name, bio, avatar_url, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id`
+**`profiles`** — `id, email, name, bio, avatar_url, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id, profile_theme`
 - `current_organization_id` always points to the org where the user is `owner`
 - `sender_email` + `sendgrid_api_key` are set by the user via `/settings/profile`; `sendgrid_api_key` is never returned to the client
 - `smtp_provider`: `'sendgrid'` (default) | `'gmail'` | `'smtp'`
@@ -108,6 +112,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - `plan`: `'free'` (default) or `'pro'`; updated by Stripe webhook
 - `scan_count_month`: resets when `scan_count_reset_at < startOfMonth`; Free limit=10, Pro limit=100
 - `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
+- `profile_theme`: `'dark'` (default) | `'light'` | `'midnight'` | `'warm'` | `'sakura'` | `'ocean'`。`/p/[userId].js` の背景・カード・アクセント・テキスト色を決定
 
 **`user_organizations`** — `user_id, organization_id, role (owner|member), created_at`
 - Junction table for many-to-many users ↔ orgs
@@ -133,12 +138,24 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - RLS無効（supabaseAdmin経由のみアクセス）
 - `order_index` で表示順管理（最大5件）
 - `/api/profile/affiliations` POST は delete-all + insert のバッチ更新
-- `send.js` と `p/[userId].js` が `order_index ASC` の先頭1件または全件を参照
-- `show_*` フラグが `true` の連絡先のみ公開プロフィール（`p/[userId].js`）に表示
+- `send.js` がメール署名の所属として `order_index ASC` の先頭1件を参照
+- 公開プロフィール（`p/[userId].js`）はベントーグリッド方式に移行したため affiliations を参照しない（旧設計の名残として DB には存在）
+
+**`profile_blocks`** — `id, user_id (FK → profiles.id), type, size, content (jsonb), order_index, created_at`
+- RLS無効（supabaseAdmin経由のみアクセス）
+- `type`: `'photo'` | `'text'` | `'link'` | `'sns'`
+- `size`: `'S'`（1列・高さ固定120px）| `'M'`（1列・縦長180px+）| `'L'`（全幅2列）
+- `content` JSONB スキーマ:
+  - photo: `{ image_url, caption }`
+  - text: `{ title, body, bg_color }`
+  - link: `{ title, url, description }`
+  - sns: `{ platform }` — `SNS_CONFIG` の `key`（例: `'sns_x'`）を指定
+- `/api/profile/blocks` POST は delete-all + insert のバッチ更新
+- `p/[userId].js` が `order_index ASC` で全件取得してベントーグリッドに表示
 
 Supabase Storage:
 - `cards` バケット — 公開バケット。名刺画像を保存
-- `avatars` バケット — 公開バケット。顔写真を `{userId}/avatar.jpg` パスで保存（upsert）
+- `avatars` バケット — 公開バケット。顔写真を `{userId}/avatar.jpg`、ブロック画像を `{userId}/block_{timestamp}.jpg` で保存
 - `encounters` バケット — 公開バケット。出会い写真を保存。RLSポリシー: authenticated INSERT + public SELECT
 
 #### Key invariants
@@ -210,4 +227,4 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 
 ## Current status
 
-フェーズ1完了。公開プロフィールページがLinktreeライクなデザインに刷新済み（顔写真、bio、所属カード、SNSフル幅ボタン）。Stripe課金はlive本番稼働中（¥980/mo Proプラン）。次の候補: SNS並び替え機能、フェーズ2（スキャン後SNSマッチング）。See `MEISHI_AI_SPEC.md` for roadmap.
+ベントーグリッド型公開プロフィール実装済み（profile_blocksテーブル、4タイプ×3サイズ、6種テーマ）。PWA化完了。Stripe課金はlive本番稼働中（¥980/mo Proプラン）。Google OAuth審査申請中（gmail.send スコープ）。次の候補: ベントーデザイン微調整、SEO対応（canonical）、リアルタイムプレビュー。See `MEISHI_AI_SPEC.md` for roadmap.
