@@ -1003,16 +1003,20 @@ export default function Home() {
                 const file = e.target.files[0]
                 if (!file) return
                 const bitmap = await createImageBitmap(file)
+                const MAX = 800
+                const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height))
+                const w = Math.round(bitmap.width * scale)
+                const h = Math.round(bitmap.height * scale)
                 const canvas = document.createElement('canvas')
-                canvas.width = bitmap.width
-                canvas.height = bitmap.height
+                canvas.width = w
+                canvas.height = h
                 const ctx = canvas.getContext('2d')
-                ctx.drawImage(bitmap, 0, 0)
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+                ctx.drawImage(bitmap, 0, 0, w, h)
+                const imageData = ctx.getImageData(0, 0, w, h)
                 const jsQR = (await import('jsqr')).default
-                const qr = jsQR(imageData.data, imageData.width, imageData.height)
+                const qr = jsQR(imageData.data, w, h)
                 if (!qr) {
-                  alert('QRコードを読み取れませんでした。もう一度試してください。')
+                  alert('QRコードを読み取れませんでした。QRコードが画面中央に収まるよう撮影してください。')
                   return
                 }
                 const url = qr.data
