@@ -732,7 +732,11 @@ export default function ContactDetail() {
   }
 
   const isOwner = user?.id === contact?.owner_id
-  const allContactSns = computeAllSns(contact?.extracted_sns, manualSns, profile)
+  const liveSns = meishiProfile?.extracted_sns
+  const snsSource = liveSns && Object.keys(liveSns).length > 0
+    ? liveSns
+    : contact?.extracted_sns
+  const allContactSns = computeAllSns(snsSource, manualSns, profile)
 
   // 表示中のカードデータ（複数名刺の場合は選択されたカードの情報を表示）
   const cards = contact?.cards || []
