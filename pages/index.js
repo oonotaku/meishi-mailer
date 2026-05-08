@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth'
 import { SNS_CONFIG, PRESET_CATEGORIES } from '../lib/snsConfig'
 
-const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6, DUPLICATE_EMAIL: 7, DUPLICATE_NAME: 8 }
+const STEPS = { UPLOAD: 0, ANALYZING: 1, CONFIRM: 2, CONTEXT: 3, SENDING: 4, DONE: 5, ERROR: 6, DUPLICATE_EMAIL: 7, DUPLICATE_NAME: 8, USER_QR_SCAN: 'USER_QR_SCAN', USER_QR_CONFIRM: 'USER_QR_CONFIRM' }
 
 async function compressImage(file) {
   return new Promise((resolve) => {
@@ -50,6 +50,8 @@ export default function Home() {
   const [nameDuplicates, setNameDuplicates] = useState([])
   const [cards, setCards] = useState([])
   const [selectedCardIndex, setSelectedCardIndex] = useState(0)
+  const [scannedProfile, setScannedProfile] = useState(null)
+  const [meishiUser, setMeishiUser] = useState(null)
   const [duplicateContactId, setDuplicateContactId] = useState(null)
   const [duplicateType, setDuplicateType] = useState(null)
   const [matchedSns, setMatchedSns] = useState([])
@@ -208,6 +210,7 @@ export default function Home() {
       setBody(data.body)
       setMatchedSns(data.matched_sns || [])
       setSelectedPreset(data.recommended_preset || 'business')
+      setMeishiUser(data.meishi_user || null)
       setStep(STEPS.CONFIRM)
     } catch (err) {
       setErrorMsg(err.message)
@@ -936,12 +939,37 @@ export default function Home() {
             <button className="list-btn" onClick={() => router.push('/contacts')}>
               {t('nav.contacts')} →
             </button>
+            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => setStep(STEPS.USER_QR_SCAN)}>
+              🔗 QRで繋がる →
+            </button>
             <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/team')}>
               {t('nav.team')} →
             </button>
             <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/profile')}>
               {t('nav.profile')} →
             </button>
+
+            {/* 自分のプロフィールQR */}
+            {user && (
+              <div style={{
+                marginTop: 20, padding: '16px', borderRadius: 16,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+              }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.5px' }}>
+                  自分のプロフィールQR
+                </div>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
+                  alt="My profile QR"
+                  style={{ width: 120, height: 120, borderRadius: 8 }}
+                />
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
+                  meishi-mailer.com/p/{user.id.slice(0, 8)}...
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -955,6 +983,127 @@ export default function Home() {
             </div>
             {cardImages[0] && <img src={cardImages[0].preview} className="preview-img" alt="" />}
             <p className="hint" style={{ marginTop: 16 }}>{t('home.analyzing_hint')}</p>
+          </div>
+        )}
+
+        {/* ── USER_QR_SCAN ── */}
+        {step === STEPS.USER_QR_SCAN && (
+          <div className="page">
+            <h2 className="step-title">QRで繋がる</h2>
+            <p className="hint" style={{ marginBottom: 16 }}>
+              相手の meishi-mailer プロフィールQRを撮影してください
+            </p>
+
+            <button className="upload-btn" onClick={() => {
+              const input = document.createElement('input')
+              input.type = 'file'
+              input.accept = 'image/*'
+              input.capture = 'environment'
+              input.onchange = async e => {
+                const file = e.target.files[0]
+                if (!file) return
+                const bitmap = await createImageBitmap(file)
+                const canvas = document.createElement('canvas')
+                canvas.width = bitmap.width
+                canvas.height = bitmap.height
+                const ctx = canvas.getContext('2d')
+                ctx.drawImage(bitmap, 0, 0)
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+                const jsQR = (await import('jsqr')).default
+                const qr = jsQR(imageData.data, imageData.width, imageData.height)
+                if (!qr) {
+                  alert('QRコードを読み取れませんでした。もう一度試してください。')
+                  return
+                }
+                const url = qr.data
+                const match = url.match(/meishi-mailer\.com\/p\/([0-9a-f-]{36})/i)
+                  || url.match(/meishi-mailer-mu\.vercel\.app\/p\/([0-9a-f-]{36})/i)
+                if (!match) {
+                  alert('meishi-mailerのプロフィールQRではありません。')
+                  return
+                }
+                const userId = match[1]
+                if (userId === user?.id) {
+                  alert('自分自身のQRコードです。')
+                  return
+                }
+                const r = await fetch(`/api/profile/public?userId=${userId}`)
+                if (!r.ok) { alert('プロフィールの取得に失敗しました。'); return }
+                const data = await r.json()
+                setScannedProfile(data)
+                setStep(STEPS.USER_QR_CONFIRM)
+              }
+              input.click()
+            }}>
+              📷 QRコードを撮影
+            </button>
+
+            <button className="ghost-btn" style={{ marginTop: 12 }} onClick={() => setStep(STEPS.UPLOAD)}>
+              キャンセル
+            </button>
+          </div>
+        )}
+
+        {/* ── USER_QR_CONFIRM ── */}
+        {step === STEPS.USER_QR_CONFIRM && scannedProfile && (
+          <div className="page">
+            <h2 className="step-title">コンタクトに追加</h2>
+
+            <div style={{
+              background: 'rgba(255,255,255,0.05)', borderRadius: 16,
+              padding: 20, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 10, marginBottom: 24,
+            }}>
+              {scannedProfile.avatar_url && (
+                <img src={scannedProfile.avatar_url} alt=""
+                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover' }} />
+              )}
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{scannedProfile.name}</div>
+              {scannedProfile.company && (
+                <div style={{ fontSize: 14, opacity: 0.6 }}>{scannedProfile.company} {scannedProfile.title}</div>
+              )}
+              {scannedProfile.bio && (
+                <div style={{ fontSize: 13, opacity: 0.5, textAlign: 'center' }}>{scannedProfile.bio}</div>
+              )}
+              <div style={{ fontSize: 11, color: '#22c55e', fontFamily: 'monospace', marginTop: 4 }}>
+                ✓ meishi-mailerユーザー
+              </div>
+            </div>
+
+            <button className="upload-btn" onClick={async () => {
+              const session = await supabase.auth.getSession()
+              const token = session.data.session?.access_token
+              const body = {
+                name: scannedProfile.name,
+                company: scannedProfile.company || '',
+                title: scannedProfile.title || '',
+                email: scannedProfile.email || '',
+                phone: scannedProfile.phone || '',
+                memo: `meishi-mailerプロフィール: ${scannedProfile.profile_url}`,
+                met_at: new Date().toISOString(),
+                visibility: 'private',
+              }
+              const r = await fetch('/api/contacts/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify(body),
+              })
+              if (r.ok) {
+                setScannedProfile(null)
+                setStep(STEPS.DONE)
+              } else {
+                alert('保存に失敗しました')
+              }
+            }}>
+              コンタクトに追加
+            </button>
+
+            <button className="ghost-btn" style={{ marginTop: 12 }} onClick={() => {
+              setScannedProfile(null)
+              setStep(STEPS.UPLOAD)
+            }}>
+              キャンセル
+            </button>
           </div>
         )}
 
@@ -1093,6 +1242,34 @@ export default function Home() {
                 <div className="contact-meta">{[contact?.company, contact?.title].filter(Boolean).join(' · ') || '—'}</div>
               </div>
             </div>
+
+            {meishiUser && (
+              <a
+                href={meishiUser.profile_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 14px', borderRadius: 12,
+                  background: 'rgba(34,197,94,0.1)',
+                  border: '1px solid rgba(34,197,94,0.3)',
+                  textDecoration: 'none', marginTop: 8,
+                }}
+              >
+                {meishiUser.avatar_url && (
+                  <img src={meishiUser.avatar_url} alt=""
+                    style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                )}
+                <div>
+                  <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700 }}>
+                    ✓ meishi-mailerユーザーです
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                    プロフィールを見る →
+                  </div>
+                </div>
+              </a>
+            )}
 
             {cardImages.length > 0 && (
               <div className="confirm-thumbs">

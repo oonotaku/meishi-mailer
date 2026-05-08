@@ -157,6 +157,24 @@ ${qrContext}`
       if (nameExisting?.length > 0) name_duplicates = nameExisting
     }
 
+    // meishi-mailerユーザー検出（OCRで取得したemailでprofilesを検索）
+    let meishi_user = null
+    if (emails.length > 0) {
+      const { data: profileMatch } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name, avatar_url')
+        .ilike('email', emails[0])
+        .maybeSingle()
+      if (profileMatch && profileMatch.id !== user.id) {
+        meishi_user = {
+          user_id: profileMatch.id,
+          name: profileMatch.name,
+          avatar_url: profileMatch.avatar_url,
+          profile_url: `https://www.meishi-mailer.com/p/${profileMatch.id}`,
+        }
+      }
+    }
+
     // Step 2: メール生成（ロケール別プロンプト）
     let mailPrompt
     if (locale === 'en') {
@@ -231,7 +249,7 @@ Rules:
 
     const recommended_preset = determinePreset(contact.title || '', cardSns)
 
-    res.json({ contact, cards, subject, body, email_duplicates, name_duplicates, matched_sns, recommended_preset })
+    res.json({ contact, cards, subject, body, email_duplicates, name_duplicates, matched_sns, recommended_preset, meishi_user })
   } catch (e) {
     console.error(e)
     res.status(500).json({ error: e.message })
