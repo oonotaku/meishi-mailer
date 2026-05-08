@@ -125,8 +125,8 @@
     "back_to_login": "← Back to login"
   },
   "contacts": {
-    "page_title": "Saved Contacts — Card Mailer",
-    "header": "Saved Contacts",
+    "page_title": "Your Connections — Card Mailer",
+    "header": "Your Connections",
     "empty": "No saved contacts",
     "capture": "Capture a card",
     "search_placeholder": "Search by name, company, email or event",

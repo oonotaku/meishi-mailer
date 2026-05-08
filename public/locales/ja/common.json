@@ -125,8 +125,8 @@
     "back_to_login": "← ログインに戻る"
   },
   "contacts": {
-    "page_title": "保存済み名刺 — 名刺メーラー",
-    "header": "保存済み名刺",
+    "page_title": "あなたのつながり一覧 — 名刺メーラー",
+    "header": "あなたのつながり一覧",
     "empty": "保存された名刺はありません",
     "capture": "名刺を撮影する",
     "search_placeholder": "名前・会社・メール・イベントで検索",
