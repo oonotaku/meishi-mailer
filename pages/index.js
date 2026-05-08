@@ -63,6 +63,8 @@ export default function Home() {
   const contextFileRef = useRef()
   const recognitionRef = useRef(null)
   const memoBaseRef = useRef('')
+  const videoRef = useRef(null)
+  const qrScanningRef = useRef(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -78,6 +80,80 @@ export default function Home() {
       if (fileRef.current) fileRef.current.click()
     }, 300)
   }, [authLoading, router.query.scan])
+
+  useEffect(() => {
+    if (step !== STEPS.USER_QR_SCAN) return
+
+    let stream = null
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    qrScanningRef.current = true
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+        })
+        if (!videoRef.current) return
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+        scanLoop()
+      } catch (err) {
+        alert('カメラへのアクセスが拒否されました。設定からカメラを許可してください。')
+        setStep(STEPS.UPLOAD)
+      }
+    }
+
+    async function scanLoop() {
+      if (!qrScanningRef.current) return
+      const video = videoRef.current
+      if (!video || video.readyState < 2) {
+        requestAnimationFrame(scanLoop)
+        return
+      }
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      ctx.drawImage(video, 0, 0)
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+      const jsQR = (await import('jsqr')).default
+      const qr = jsQR(imageData.data, imageData.width, imageData.height)
+
+      if (qr) {
+        const url = qr.data
+        const match = url.match(/meishi-mailer\.com\/p\/([0-9a-f-]{36})/i)
+          || url.match(/meishi-mailer-mu\.vercel\.app\/p\/([0-9a-f-]{36})/i)
+
+        if (match) {
+          qrScanningRef.current = false
+          if (stream) stream.getTracks().forEach(t => t.stop())
+
+          const userId = match[1]
+          if (userId === user?.id) {
+            alert('自分自身のQRコードです。')
+            setStep(STEPS.UPLOAD)
+            return
+          }
+
+          const r = await fetch(`/api/profile/public?userId=${userId}`)
+          if (!r.ok) { alert('プロフィールの取得に失敗しました。'); setStep(STEPS.UPLOAD); return }
+          const data = await r.json()
+          setScannedProfile(data)
+          setStep(STEPS.USER_QR_CONFIRM)
+          return
+        }
+      }
+
+      requestAnimationFrame(scanLoop)
+    }
+
+    startCamera()
+
+    return () => {
+      qrScanningRef.current = false
+      if (stream) stream.getTracks().forEach(t => t.stop())
+    }
+  }, [step])
 
   const TEMP_OPTIONS = [
     { value: 'hot',    label: t('temp.hot'),    emoji: '🔥' },
@@ -988,63 +1064,61 @@ export default function Home() {
 
         {/* ── USER_QR_SCAN ── */}
         {step === STEPS.USER_QR_SCAN && (
-          <div className="page">
-            <h2 className="step-title">QRで繋がる</h2>
-            <p className="hint" style={{ marginBottom: 16 }}>
-              相手の meishi-mailer プロフィールQRを撮影してください
-            </p>
-
-            <button className="upload-btn" onClick={() => {
-              const input = document.createElement('input')
-              input.type = 'file'
-              input.accept = 'image/*'
-              input.capture = 'environment'
-              input.onchange = async e => {
-                const file = e.target.files[0]
-                if (!file) return
-                const bitmap = await createImageBitmap(file)
-                const MAX = 800
-                const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height))
-                const w = Math.round(bitmap.width * scale)
-                const h = Math.round(bitmap.height * scale)
-                const canvas = document.createElement('canvas')
-                canvas.width = w
-                canvas.height = h
-                const ctx = canvas.getContext('2d')
-                ctx.drawImage(bitmap, 0, 0, w, h)
-                const imageData = ctx.getImageData(0, 0, w, h)
-                const jsQR = (await import('jsqr')).default
-                const qr = jsQR(imageData.data, w, h)
-                if (!qr) {
-                  alert('QRコードを読み取れませんでした。QRコードが画面中央に収まるよう撮影してください。')
-                  return
-                }
-                const url = qr.data
-                const match = url.match(/meishi-mailer\.com\/p\/([0-9a-f-]{36})/i)
-                  || url.match(/meishi-mailer-mu\.vercel\.app\/p\/([0-9a-f-]{36})/i)
-                if (!match) {
-                  alert('meishi-mailerのプロフィールQRではありません。')
-                  return
-                }
-                const userId = match[1]
-                if (userId === user?.id) {
-                  alert('自分自身のQRコードです。')
-                  return
-                }
-                const r = await fetch(`/api/profile/public?userId=${userId}`)
-                if (!r.ok) { alert('プロフィールの取得に失敗しました。'); return }
-                const data = await r.json()
-                setScannedProfile(data)
-                setStep(STEPS.USER_QR_CONFIRM)
-              }
-              input.click()
+          <div className="page" style={{ padding: 0, position: 'relative' }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: '100%',
+                height: '100svh',
+                objectFit: 'cover',
+                display: 'block',
+                background: '#000',
+              }}
+            />
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'space-between',
+              padding: '60px 24px 48px',
+              pointerEvents: 'none',
             }}>
-              📷 QRコードを撮影
-            </button>
-
-            <button className="ghost-btn" style={{ marginTop: 12 }} onClick={() => setStep(STEPS.UPLOAD)}>
-              キャンセル
-            </button>
+              <div style={{
+                color: '#fff', fontSize: 15, fontWeight: 600,
+                textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+                background: 'rgba(0,0,0,0.4)', padding: '8px 16px',
+                borderRadius: 20, backdropFilter: 'blur(8px)',
+              }}>
+                meishi-mailerのQRに向けてください
+              </div>
+              <div style={{
+                width: 220, height: 220,
+                border: '3px solid rgba(255,255,255,0.8)',
+                borderRadius: 20,
+                boxShadow: '0 0 0 4000px rgba(0,0,0,0.45)',
+              }} />
+              <button
+                onClick={() => {
+                  qrScanningRef.current = false
+                  if (videoRef.current?.srcObject) {
+                    videoRef.current.srcObject.getTracks().forEach(t => t.stop())
+                  }
+                  setStep(STEPS.UPLOAD)
+                }}
+                style={{
+                  pointerEvents: 'auto',
+                  background: 'rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  color: '#fff', fontSize: 15, fontWeight: 600,
+                  padding: '12px 32px', borderRadius: 30,
+                  backdropFilter: 'blur(8px)', cursor: 'pointer',
+                }}
+              >
+                キャンセル
+              </button>
+            </div>
           </div>
         )}
 
