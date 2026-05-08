@@ -1941,6 +1941,25 @@ export default function ProfileSettings() {
                   <p style={{ fontSize: 11, color: '#5a5650', marginTop: 8, lineHeight: 1.6 }}>
                     ※ SNSタブで設定済みのプラットフォームのみ選択できます
                   </p>
+
+                  {/* ひとこと */}
+                  <div style={{ marginTop: 12 }}>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>ひとこと（任意）</div>
+                    <input
+                      type="text"
+                      value={editingBlock.content.caption || ''}
+                      maxLength={40}
+                      placeholder="例: 採用・ビジネス相談はこちら"
+                      className="scan-field-input"
+                      onChange={e => setEditingBlock(prev => ({
+                        ...prev,
+                        content: { ...prev.content, caption: e.target.value }
+                      }))}
+                    />
+                    <div style={{ fontSize: 11, color: '#5a5650', marginTop: 4, textAlign: 'right' }}>
+                      {(editingBlock.content.caption || '').length} / 40
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

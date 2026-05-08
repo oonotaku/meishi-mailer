@@ -139,8 +139,10 @@ function SnsBlock({ block, profile }) {
         background: bgColor,
         width: '100%', height: '100%',
         display: 'flex', flexDirection: 'column',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
         padding: 16,
+        gap: 10,
         cursor: 'pointer',
         position: 'relative',
         transition: 'opacity 0.15s',
@@ -176,7 +178,17 @@ function SnsBlock({ block, profile }) {
         <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>
           {cfg.label}
         </div>
-        {handleText && (
+        {block.content?.caption ? (
+          <div style={{
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: 11,
+            lineHeight: 1.5,
+            marginTop: 3,
+            fontFamily: 'Noto Sans JP, sans-serif',
+          }}>
+            {block.content.caption}
+          </div>
+        ) : handleText ? (
           <div style={{
             color: 'rgba(255,255,255,0.55)', fontSize: 11,
             fontFamily: 'DM Mono, monospace',
@@ -184,7 +196,7 @@ function SnsBlock({ block, profile }) {
           }}>
             {handleText}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -363,7 +375,7 @@ export default function PublicProfile({ profile, blocks }) {
         .block-sns.block-S,
         .block-sns.block-M,
         .block-sns.block-XL {
-          height: 140px;
+          height: 150px;
           min-height: unset;
         }
         .block-sns.block-L {
