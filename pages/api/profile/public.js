@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin'
 
+const SNS_KEYS = ['sns_line','sns_whatsapp','sns_instagram','sns_x','sns_facebook','sns_tiktok','sns_threads','sns_telegram','sns_wechat','sns_linkedin','sns_github','sns_vercel','sns_note','sns_wantedly','sns_youtube','sns_discord','sns_bluesky','sns_pinterest','sns_sansan','sns_eight','sns_mybridge']
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
@@ -8,7 +10,7 @@ export default async function handler(req, res) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('id, name, bio, avatar_url')
+    .select(`id, name, bio, avatar_url, ${SNS_KEYS.join(', ')}`)
     .eq('id', userId)
     .single()
 
@@ -22,6 +24,12 @@ export default async function handler(req, res) {
     .limit(1)
 
   const aff = affiliations?.[0]
+
+  const extracted_sns = {}
+  for (const key of SNS_KEYS) {
+    if (profile[key]) extracted_sns[key] = profile[key]
+  }
+
   res.json({
     id: profile.id,
     name: profile.name,
@@ -32,5 +40,6 @@ export default async function handler(req, res) {
     email: aff?.show_email ? aff.contact_email : null,
     phone: aff?.show_phone ? aff.phone : null,
     profile_url: `https://www.meishi-mailer.com/p/${profile.id}`,
+    extracted_sns,
   })
 }

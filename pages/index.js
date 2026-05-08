@@ -1157,6 +1157,7 @@ export default function Home() {
                 title: scannedProfile.title || '',
                 email: scannedProfile.email || '',
                 phone: scannedProfile.phone || '',
+                extracted_sns: scannedProfile.extracted_sns || {},
                 memo: `meishi-mailerプロフィール: ${scannedProfile.profile_url}`,
                 met_at: new Date().toISOString(),
                 visibility: 'private',
