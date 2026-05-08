@@ -28,15 +28,15 @@ No test framework is configured.
 
 | File | Purpose |
 |------|---------|
-| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。DUPLICATE画面から「この出会いを記録する」でCONTEXTへ進み `encounters/save` を呼ぶ。 |
-| `contacts.js` | Saved contacts list (own + team-shared). Shows team name badge for contacts from other orgs. |
-| `contacts/[id].js` | Contact detail — 繋がりハブ。名刺サムネイル → 連絡先情報 → 今すぐ繋がる（SNSマッチング） → 出会いの記録 → メール（折りたたみ）。**複数名刺対応**: チップバーで名刺切替（`activeCardIdx` state）、`displayCompany`/`displayEmail`等は `activeCardIdx` から導出。「🔄 再スキャン」は複数枚時にカード選択シートを経由。「＋ 名刺を追加」はOCR（preview_only）→確認シート→`add-card` API追記。メールボタンは選択中カードのアドレスを表示して送信。出会い履歴は `/api/encounters/list` から取得し `met_at` 降順表示。Send/rescan/add-card buttons shown only to `owner_id === user.id`。i18nはrequire()でJSONをバンドル（Vercel serverless cwd対応）。 |
+| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7)/USER_QR_SCAN/USER_QR_CONFIRM(10). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。**QRで繋がる**: UPLOAD画面の「🔗 QRで繋がる →」からUSER_QR_SCANへ遷移、`getUserMedia` ライブカメラ＋`requestAnimationFrame`で毎フレームjsQR解析、meishi-mailerプロフィールURL検出後 `/api/profile/public` でプロフィール取得→USER_QR_CONFIRMで確認→`/api/contacts/save`で `extracted_sns` を含めて保存→コンタクト詳細へ遷移。**自分のプロフィールQR**: UPLOAD画面下部に `api.qrserver.com` を使ったQRコードを常時表示。**meishi-mailerユーザー検出**: `/api/analyze` が `meishi_user` フィールドを返すようになり、CONFIRM画面でバッジ（✓ meishi-mailerユーザーです）＋プロフィールリンクを表示。 |
+| `contacts.js` | 「あなたのつながり一覧」（旧: 保存済み名刺一覧）。Own + team-shared contacts. Shows team name badge for contacts from other orgs. |
+| `contacts/[id].js` | Contact detail — 繋がりハブ。**meishi-mailerユーザー検出**: contact.emailで `/api/profile/find-by-email` を呼び、meishi-mailerユーザーであれば name/company/title/email/phone/avatar/extracted_sns/blocks/profile_theme をライブデータで上書き表示。`displayName`/`displayCompany`/`displayEmail` 等の表示変数は meishiProfile → activeCard → contact の優先順で導出。`displayAvatar` がある場合は丸いアバター画像を表示（名刺サムネイルの代わり）。`MiniBlock` コンポーネントと `THEMES` 定数をファイル冒頭に定義し、meishiProfile.blocks があればベントーグリッドをインライン表示（「今すぐ繋がる」とメールセクションの間）。SNSも meishiProfile.extracted_sns のライブデータを優先。**複数名刺対応**: チップバーで名刺切替（`activeCardIdx` state）。「🔄 再スキャン」は複数枚時にカード選択シートを経由。「＋ 名刺を追加」はOCR（preview_only）→確認シート→`add-card` API追記。出会い履歴は `/api/encounters/list` から取得し `met_at` 降順表示。Send/rescan/add-card buttons shown only to `owner_id === user.id`。i18nはrequire()でJSONをバンドル（Vercel serverless cwd対応）。 |
 | `login.js` | Email/password login + signup + password reset (forgot mode). signUp に `emailRedirectTo` を指定して現在のロケールURLへリダイレクト。 |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
 | `settings/profile.js` | Profile settings — **5タブ UI**（プロフィール / ブロック / SNS / メール設定 / サブスクリプション）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、**テーマ選択（6種: dark/light/midnight/warm/sakura/ocean）**、**プロフィール完成度バー（6項目、100%でゴールドアニメーション）**、**プレビューモーダル（iframeボトムシート）**、**ブロック管理タブ（追加・編集・削除・↑↓並び替え、4タイプ×3サイズ）**、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、SendGrid/Gmail/SMTP 設定、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）、SNS/所属/ブロックタブで変更時に画面下部に固定保存ボタン表示。完全i18n対応。|
-| `p/[userId].js` | Public profile page — **ベントーグリッド方式に全面リデザイン済み**。`profile_blocks` テーブルからブロックを取得し、グリッド最上段に固定ヘッダーブロック（Lサイズ：80px丸アバター＋名前＋bio）を配置。以降のブロックは S（1列・高さ固定）/ M（1列・縦長）/ L（全幅）の3サイズ。ブロックタイプ: photo（画像＋グラデーションキャプション）/ text（自由テキスト＋背景色）/ link（↗アイコン付きリンクカード）/ sns（ブランドカラー背景＋simpleiconsアイコン）。6種テーマ（profile_theme）に対応。No auth。`getServerSideProps` + `supabaseAdmin`。|
+| `p/[userId].js` | Public profile page — **ベントーグリッド方式に全面リデザイン済み**。`profile_blocks` テーブルからブロックを取得し、グリッド最上段に固定ヘッダーブロック（Lサイズ全幅・アバター左＋テキスト右の横並びレイアウト）を配置。以降のブロックは S（1列×120px固定）/ M（1列×180px+）/ L（全幅）/ **XL（1列×300px縦長）** の4サイズ。ブロックタイプ: photo（画像＋グラデーションキャプション）/ text（下寄せ配置・背景色自動判定文字色）/ link（↗アイコン付きリンクカード）/ sns（ブランドカラー背景・左上アイコン・左下ラベル＋caption・右上↗・上詰めレイアウト）。6種テーマ（profile_theme）に対応。border-radius 20px統一。バナーはシンプルなフッターリンク（「名刺から、SNSでつながる。meishi-mailer ↗」）。No auth。`getServerSideProps` + `supabaseAdmin`。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -58,7 +58,7 @@ No test framework is configured.
 - `GET /api/encounters/list` — `contact_id` で encounter一覧取得（`met_at` 降順）。owner または チームメンバー（`visibility='team'`）のみアクセス可。
 
 **Core**
-- `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。
+- `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。**meishi-mailerユーザー検出**: OCR抽出メールアドレスで `profiles` テーブルを検索し、自分以外のユーザーがヒットすれば `meishi_user: { user_id, name, avatar_url, profile_url }` をレスポンスに含める。クライアントはCONFIRM画面にバッジを表示。
 - `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured.
 
 **Billing**
@@ -87,6 +87,8 @@ No test framework is configured.
 - `POST /api/profile/blocks` — Bearer auth。`profile_blocks` を delete-all + insert でバッチ更新。`{ blocks: [{ type, size, content, order_index }] }`
 - `POST /api/profile/upload-block-image` — Bearer auth。base64画像を `avatars` バケットに `{userId}/block_{timestamp}.jpg` としてアップロード。公開URLを返す
 - `POST /api/profile/update-theme` — Bearer auth。`profiles.profile_theme` を更新（楽観的更新用）
+- `GET /api/profile/public` — 認証不要。`?userId=` でプロフィールを取得。name/bio/avatar_url/company/title/email（show_email時）/phone（show_phone時）/profile_theme/blocks/extracted_sns（sns_* フィールドを `sns_` プレフィックス除去した形式）を返す。QRスキャンによるコンタクト追加フローで使用。
+- `GET /api/profile/find-by-email` — 認証不要。`?email=` でprofilesテーブルを検索しmeishi-mailerユーザー判定。name/avatar_url/bio/profile_theme/extracted_sns/blocks/company/title/email/phone/website（affiliations経由・show_*フラグ尊重）を返す。contacts/[id].js がコンタクト詳細表示時にライブデータ取得に使用。
 
 ### AI model usage
 
@@ -144,12 +146,12 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 **`profile_blocks`** — `id, user_id (FK → profiles.id), type, size, content (jsonb), order_index, created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
 - `type`: `'photo'` | `'text'` | `'link'` | `'sns'`
-- `size`: `'S'`（1列・高さ固定120px）| `'M'`（1列・縦長180px+）| `'L'`（全幅2列）
+- `size`: `'S'`（1列・高さ固定120px）| `'M'`（1列・縦長180px+）| `'L'`（全幅）| `'XL'`（1列・縦長300px）
 - `content` JSONB スキーマ:
   - photo: `{ image_url, caption }`
   - text: `{ title, body, bg_color }`
   - link: `{ title, url, description }`
-  - sns: `{ platform }` — `SNS_CONFIG` の `key`（例: `'sns_x'`）を指定
+  - sns: `{ platform, caption? }` — `platform` は `SNS_CONFIG` の `key`（例: `'sns_x'`）、`caption` はひとこと（最大40文字、省略可）
 - `/api/profile/blocks` POST は delete-all + insert のバッチ更新
 - `p/[userId].js` が `order_index ASC` で全件取得してベントーグリッドに表示
 
@@ -220,6 +222,7 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
   - `business` カテゴリ: LinkedIn, GitHub, Vercel, note, Wantedly, YouTube, Discord, Bluesky, Pinterest
   - `cardapp` カテゴリ: Sansan, Eight, myBridge
   - `inputMode`: `'qr'`（LINE/WhatsApp）、`'username'`（X/Instagram等）、`'url'`（Facebook/Discord/WeChat等）
+  - `color` フィールドの黒系SNS修正済み: X→`#000000`、TikTok→`#010101`、Threads→`#000000`、GitHub→`#24292e`、Vercel→`#000000`（ベントーSNSブロック背景色として使用）
 
 ## Dependencies (notable)
 
@@ -227,4 +230,4 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 
 ## Current status
 
-ベントーグリッド型公開プロフィール実装済み（profile_blocksテーブル、4タイプ×3サイズ、6種テーマ）。PWA化完了。Stripe課金はlive本番稼働中（¥980/mo Proプラン）。Google OAuth審査申請中（gmail.send スコープ）。次の候補: ベントーデザイン微調整、SEO対応（canonical）、リアルタイムプレビュー。See `MEISHI_AI_SPEC.md` for roadmap.
+ベントーグリッド型公開プロフィール実装済み（profile_blocksテーブル、4タイプ×4サイズ S/M/L/XL、SNSブロックひとことcaption、6種テーマ）。PWA化完了。Stripe課金はlive本番稼働中（¥980/mo Proプラン）。Google OAuth審査申請中（gmail.send スコープ）。**QRで繋がる機能実装済み**（ライブカメラQRスキャン、meishi-mailerユーザー自動検出、コンタクト詳細にライブプロフィールデータ表示）。次の候補: SEO対応（canonical）、リアルタイムプレビュー、Contact引き継ぎ機能。See `MEISHI_AI_SPEC.md` for roadmap.

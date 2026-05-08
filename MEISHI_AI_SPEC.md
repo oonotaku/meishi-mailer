@@ -91,12 +91,12 @@
 - 全テキストi18n対応（日本語/英語）
 
 **公開プロフィールページ（`/p/[userId]`）**
-- **ベントーグリッド方式に全面リデザイン済み**（2026-05-07）
-- グリッド最上段に固定ヘッダーブロック（Lサイズ全幅：80px丸アバター＋名前＋bio）
-- `profile_blocks` テーブルから追加ブロックを取得・表示（4タイプ: photo/text/link/sns、3サイズ: S/M/L）
-- 6種テーマ（`profile_theme`）に対応。旧デザイン（所属カード・SNSフル幅ボタン列）は廃止
+- **ベントーグリッド方式に全面リデザイン済み**（2026-05-07〜05-08）
+- グリッド最上段に固定ヘッダーブロック（Lサイズ全幅・アバター左＋テキスト右の横並びレイアウト）
+- `profile_blocks` テーブルから追加ブロックを取得・表示（4タイプ: photo/text/link/sns、**4サイズ: S/M/L/XL**）
+- SNSブロック: ブランドカラー背景・上詰めレイアウト・左上アイコン・左下ラベル＋ひとこと（caption）・右上↗
+- 6種テーマ（`profile_theme`）に対応。border-radius 20px統一。フッターにシンプルバナー表示
 - メール送信時にQRコードとしてHTMLメール署名に自動挿入
-- アプリ招待バナーをフッター上部に表示（認証不要）
 
 **Stripe課金（本番稼働中）**
 - Free: 10スキャン/月、Pro: 100スキャン/月（¥980/月）
@@ -258,8 +258,12 @@ profile_blocks (
   id uuid DEFAULT gen_random_uuid(),
   user_id → profiles,
   type text,        -- 'photo' | 'text' | 'link' | 'sns'
-  size text,        -- 'S' | 'M' | 'L'
-  content jsonb,    -- タイプ別スキーマ（image_url/caption, title/body/bg_color, title/url/description, platform）
+  size text,        -- 'S'（120px固定）| 'M'（180px+）| 'L'（全幅）| 'XL'（300px縦長）  2026-05-08: XL追加
+  content jsonb,    -- タイプ別スキーマ:
+                    --   photo: { image_url, caption }
+                    --   text:  { title, body, bg_color }
+                    --   link:  { title, url, description }
+                    --   sns:   { platform, caption? }  ← caption=ひとこと（最大40文字）2026-05-08追加
   order_index int,
   created_at
 )
@@ -383,6 +387,17 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] 公開プロフィールページをベントーグリッド方式に全面リデザイン（`profile_blocks` テーブル新設、4タイプ×3サイズ、ヘッダー統合）（2026-05-07）
 - [x] ブロック管理UI追加（プロフィール設定「ブロック」タブ、追加・編集・削除・↑↓並び替え）（2026-05-07）
 - [x] Google OAuth審査申請済み（gmail.send スコープ、審査中）（2026-05-07）
+- [x] ベントーグリッドSNSブロック全面改善（上詰めレイアウト、ブランドカラー背景、左上アイコン、右上↗）（2026-05-08）
+- [x] SNSブロックひとこと（caption）フィールド追加（settings UIで最大40文字入力、公開プロフィールで表示）（2026-05-08）
+- [x] ベントーグリッドXLサイズ追加（1列×300px縦長、settings UIに追加）（2026-05-08）
+- [x] アプリバナーをシンプルなフッターリンクに変更（「名刺から、SNSでつながる。meishi-mailer ↗」）（2026-05-08）
+- [x] QRで繋がる機能実装（`getUserMedia`ライブカメラ＋`requestAnimationFrame`でリアルタイムQR検出、meishi-mailerプロフィールURLを検出したら `/api/profile/public` でデータ取得→USER_QR_CONFIRM→コンタクト保存→詳細ページへ）（2026-05-08）
+- [x] 自分のプロフィールQRをホーム画面に常時表示（`api.qrserver.com`でQR生成）（2026-05-08）
+- [x] meishi-mailerユーザー検出（`/api/analyze` がOCRメールで `profiles` を検索し `meishi_user` フィールドを返す、CONFIRM画面にバッジ表示）（2026-05-08）
+- [x] `/api/profile/public`・`/api/profile/find-by-email` 新設（認証不要、QRコンタクト追加・コンタクト詳細ライブデータ取得に使用）（2026-05-08）
+- [x] コンタクト詳細のmeishi-mailerユーザーライブ表示（name/company/email/avatar/SNS/profileBlocksをAPIから毎回取得、displayAvatar時は丸アバター表示）（2026-05-08）
+- [x] コンタクト詳細にベントーグリッドMiniBlock表示（meishi-mailerユーザーのprofile_blocksをインライン描画）（2026-05-08）
+- [x] つながり一覧タイトル変更（「保存済み名刺一覧」→「あなたのつながり一覧」/「Your Connections」）（2026-05-08）
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）
