@@ -741,12 +741,15 @@ export default function ContactDetail() {
   // 表示中のカードデータ（複数名刺の場合は選択されたカードの情報を表示）
   const cards = contact?.cards || []
   const activeCard = cards.length > 1 && activeCardIdx > 0 ? cards[activeCardIdx] : null
-  const displayCompany = activeCard?.company || contact?.company
-  const displayTitle = activeCard?.title || contact?.title
-  const displayDept = activeCard?.department || contact?.department
-  const displayEmail = activeCard?.email || contact?.email
-  const displayPhone = activeCard?.phone || contact?.phone
-  const displayWebsite = activeCard?.website || contact?.website
+  // meishi-mailerユーザーの場合はライブデータを優先
+  const displayName    = meishiProfile?.name    || contact?.name    || ''
+  const displayCompany = meishiProfile?.company || activeCard?.company || contact?.company || ''
+  const displayTitle   = meishiProfile?.title   || activeCard?.title   || contact?.title   || ''
+  const displayDept    = activeCard?.department  || contact?.department || ''
+  const displayEmail   = meishiProfile?.email   || activeCard?.email   || contact?.email   || ''
+  const displayPhone   = meishiProfile?.phone   || activeCard?.phone   || contact?.phone   || ''
+  const displayWebsite = meishiProfile?.website || activeCard?.website || contact?.website || ''
+  const displayAvatar  = meishiProfile?.avatar_url || null
 
   const formatDate = (iso) => {
     if (!iso) return ''
@@ -778,7 +781,7 @@ export default function ContactDetail() {
   return (
     <>
       <Head>
-        <title>{contact.name || t('contact.page_title_fallback')} — meishi-mailer</title>
+        <title>{displayName || t('contact.page_title_fallback')} — meishi-mailer</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
@@ -876,7 +879,15 @@ export default function ContactDetail() {
         <div className="page">
 
           {/* ── CARD IMAGES ── */}
-          {imgs.length > 0 ? (
+          {displayAvatar ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px' }}>
+              <img
+                src={displayAvatar}
+                alt=""
+                style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid #22c55e' }}
+              />
+            </div>
+          ) : imgs.length > 0 ? (
             <div className="thumbs-row">
               {imgs.map((url, i) => (
                 <div key={i} className="thumb-wrap" onClick={() => setExpandedImg(url)}>
@@ -928,7 +939,7 @@ export default function ContactDetail() {
 
           {/* ── CONTACT INFO ── */}
           <div className="info-block">
-            <div className="info-name">{contact.name || t('contact.no_name')}</div>
+            <div className="info-name">{displayName || t('contact.no_name')}</div>
             {displayCompany && <div className="info-company">{displayCompany}</div>}
             {(displayDept || displayTitle) && (
               <div className="info-sub">{[displayDept, displayTitle].filter(Boolean).join(' · ')}</div>

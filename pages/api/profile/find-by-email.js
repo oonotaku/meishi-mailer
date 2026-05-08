@@ -16,11 +16,21 @@ export default async function handler(req, res) {
 
   if (!data) return res.status(404).json({ error: 'not found' })
 
-  const { data: blocks } = await supabaseAdmin
-    .from('profile_blocks')
-    .select('id, type, size, content, order_index')
-    .eq('user_id', data.id)
-    .order('order_index', { ascending: true })
+  const [blocksRes, affiliationsRes] = await Promise.all([
+    supabaseAdmin
+      .from('profile_blocks')
+      .select('id, type, size, content, order_index')
+      .eq('user_id', data.id)
+      .order('order_index', { ascending: true }),
+    supabaseAdmin
+      .from('profile_affiliations')
+      .select('company_name, title, contact_email, show_email, phone, show_phone, website, show_website')
+      .eq('user_id', data.id)
+      .order('order_index', { ascending: true })
+      .limit(1),
+  ])
+
+  const aff = affiliationsRes.data?.[0]
 
   const extracted_sns = {}
   for (const key of SNS_KEYS) {
@@ -34,7 +44,12 @@ export default async function handler(req, res) {
     bio: data.bio,
     profile_theme: data.profile_theme || 'dark',
     extracted_sns,
-    blocks: blocks || [],
+    blocks: blocksRes.data || [],
     profile_url: `https://www.meishi-mailer.com/p/${data.id}`,
+    company: aff?.company_name || '',
+    title: aff?.title || '',
+    email: aff?.show_email ? aff.contact_email : null,
+    phone: aff?.show_phone ? aff.phone : null,
+    website: aff?.show_website ? aff.website : null,
   })
 }
