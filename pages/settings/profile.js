@@ -1832,6 +1832,7 @@ export default function ProfileSettings() {
                     { key: 'S', desc: '正方形' },
                     { key: 'M', desc: '縦長' },
                     { key: 'L', desc: '全幅' },
+                    { key: 'XL', desc: '超縦長' },
                   ].map(({ key, desc }) => (
                     <button key={key} type="button"
                       className={`size-select-btn${editingBlock.size === key ? ' active' : ''}`}

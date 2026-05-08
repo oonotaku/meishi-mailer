@@ -17,7 +17,11 @@ function initials(name) {
 }
 
 function PhotoBlock({ block }) {
-  if (!block.content?.image_url) return null
+  if (!block.content?.image_url) return (
+    <div style={{ width: '100%', height: '100%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ fontSize: 28, opacity: 0.3 }}>📷</span>
+    </div>
+  )
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
       <img
@@ -28,12 +32,9 @@ function PhotoBlock({ block }) {
       {block.content.caption && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
-          padding: '20px 12px 10px',
-          background: 'linear-gradient(transparent, rgba(0,0,0,0.65))',
-          color: '#fff',
-          fontSize: 11,
-          fontWeight: 600,
-          lineHeight: 1.4,
+          padding: '32px 14px 14px',
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
+          color: '#fff', fontSize: 12, fontWeight: 600, lineHeight: 1.5,
         }}>
           {block.content.caption}
         </div>
@@ -44,22 +45,23 @@ function PhotoBlock({ block }) {
 
 function TextBlock({ block, theme }) {
   const bg = block.content?.bg_color || theme.card
-  const isLight = bg === '#ffffff' || bg === '#fff0f3' || bg === '#f8f8f8'
+  const lightBgs = ['#ffffff', '#fff0f3', '#f8f8f8', '#fef3c7', '#f0f9ff']
+  const isLight = lightBgs.some(c => bg.toLowerCase() === c.toLowerCase())
   const textColor = isLight ? '#111111' : '#ffffff'
   return (
     <div style={{
       background: bg,
       width: '100%', height: '100%',
-      display: 'flex', flexDirection: 'column',
-      padding: 16, gap: 8,
+      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+      padding: 18, gap: 6,
     }}>
       {block.content?.title && (
-        <div style={{ fontSize: 15, fontWeight: 700, color: textColor, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: textColor, lineHeight: 1.35, letterSpacing: '-0.2px' }}>
           {block.content.title}
         </div>
       )}
       {block.content?.body && (
-        <div style={{ fontSize: 13, color: textColor, opacity: 0.75, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 13, color: textColor, opacity: 0.75, lineHeight: 1.75 }}>
           {block.content.body}
         </div>
       )}
@@ -86,12 +88,10 @@ function LinkBlock({ block, theme }) {
         transition: 'opacity .15s',
       }}
     >
-      {/* ↗ アイコン */}
       <span style={{
         position: 'absolute', top: 12, right: 14,
         fontSize: 14, color: theme.text, opacity: 0.35,
       }}>↗</span>
-
       <div style={{ fontSize: 16, fontWeight: 700, color: theme.text, lineHeight: 1.4, paddingRight: 20 }}>
         {block.content.title || displayUrl}
       </div>
@@ -117,31 +117,75 @@ function SnsBlock({ block, profile }) {
   const cfg = SNS_CONFIG.find(s => s.key === platform)
   const url = profile[platform]
   if (!cfg || !url) return null
+
+  const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
+  const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
+
+  const handleText = (() => {
+    if (cfg.inputMode === 'qr') return ''
+    if (cfg.inputMode === 'url') return ''
+    try {
+      const u = new URL(url)
+      const parts = u.pathname.replace(/\/$/, '').split('/')
+      const handle = parts[parts.length - 1]
+      return handle ? '@' + handle : ''
+    } catch { return '' }
+  })()
+
   return (
     <div
       onClick={() => window.open(url, '_blank')}
       style={{
-        background: cfg.color,
+        background: bgColor,
         width: '100%', height: '100%',
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        gap: 8, cursor: 'pointer',
+        justifyContent: 'space-between',
+        padding: 16,
+        cursor: 'pointer',
+        position: 'relative',
+        transition: 'opacity 0.15s',
       }}
+      onTouchStart={e => e.currentTarget.style.opacity = '0.8'}
+      onTouchEnd={e => e.currentTarget.style.opacity = '1'}
     >
-      {cfg.icon ? (
-        <img
-          src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
-          width={36} height={36}
-          alt={cfg.label}
-          style={{ display: 'block', filter: 'brightness(0) invert(1)' }}
-          onError={e => { e.target.style.display = 'none' }}
-        />
-      ) : (
-        <span style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>{cfg.label[0]}</span>
-      )}
-      <span style={{ color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'Noto Sans JP, sans-serif' }}>
-        {cfg.label}
-      </span>
+      <div style={{ position: 'absolute', top: 14, right: 14, color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>↗</div>
+
+      <div>
+        {cfg.icon ? (
+          <img
+            src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+            width={32} height={32}
+            alt={cfg.label}
+            style={{ display: 'block' }}
+            onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+          />
+        ) : null}
+        <div style={{
+          display: cfg.icon ? 'none' : 'flex',
+          width: 36, height: 36,
+          borderRadius: 10,
+          background: 'rgba(255,255,255,0.2)',
+          alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, fontWeight: 900, color: '#fff',
+        }}>
+          {cfg.label[0]}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>
+          {cfg.label}
+        </div>
+        {handleText && (
+          <div style={{
+            color: 'rgba(255,255,255,0.55)', fontSize: 11,
+            fontFamily: 'DM Mono, monospace',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {handleText}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -159,72 +203,104 @@ export default function PublicProfile({ profile, blocks }) {
 
       <div className="shell">
         <div className="card">
-
-          {/* ── Bento Grid ── */}
           <div className="bento-grid">
-            {/* ── Hero block (固定・全幅) ── */}
+            {/* Hero block — 横並びレイアウト */}
             <div className="bento-block block-L" style={{
               background: theme.card,
-              borderRadius: 16,
-              padding: '24px 20px',
+              padding: '20px',
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: 'row',
               alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
+              gap: 16,
               minHeight: 'unset',
+              height: 'auto',
             }}>
-              <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', border: `3px solid ${theme.accent}`, flexShrink: 0 }}>
+              <div style={{
+                width: 68, height: 68, borderRadius: '50%',
+                overflow: 'hidden', flexShrink: 0,
+                border: `3px solid ${theme.accent}`,
+                boxShadow: `0 0 0 3px ${theme.bg}, 0 0 0 5px ${theme.accent}40`,
+              }}>
                 {profile.avatar_url
-                  ? <img src={profile.avatar_url} alt={profile.name || 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ width: '100%', height: '100%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>{initials(profile.name)}</div>
+                  ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ width: '100%', height: '100%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>{initials(profile.name)}</div>
                 }
               </div>
-              <div style={{ color: theme.text, fontSize: 20, fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>
-                {profile.name || '名前未設定'}
-              </div>
-              {profile.bio && (
-                <div style={{ color: theme.text, opacity: 0.7, fontSize: 14, textAlign: 'center', lineHeight: 1.7, maxWidth: 300 }}>
-                  {profile.bio}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  color: theme.text, fontSize: 18, fontWeight: 800,
+                  lineHeight: 1.3, letterSpacing: '-0.3px',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {profile.name || '名前未設定'}
                 </div>
-              )}
+                {profile.bio && (
+                  <div style={{
+                    color: theme.text, opacity: 0.6,
+                    fontSize: 12, lineHeight: 1.6, marginTop: 4,
+                    display: '-webkit-box', WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {profile.bio}
+                  </div>
+                )}
+                <div style={{ marginTop: 8, width: 28, height: 3, borderRadius: 2, background: theme.accent }} />
+              </div>
             </div>
 
             {blocks.map((block, i) => {
-                const sizeClass = block.size === 'L' ? 'block-L' : block.size === 'S' ? 'block-S' : 'block-M'
-                const isSns = block.type === 'sns'
-                return (
-                  <div
-                    key={block.id || i}
-                    className={`bento-block ${sizeClass}${isSns ? ' block-sns' : ''}`}
-                    style={{ background: theme.card, borderRadius: 16, overflow: 'hidden' }}
-                  >
-                    {block.type === 'photo' && <PhotoBlock block={block} theme={theme} />}
-                    {block.type === 'text'  && <TextBlock  block={block} theme={theme} />}
-                    {block.type === 'link'  && <LinkBlock  block={block} theme={theme} />}
-                    {block.type === 'sns'   && <SnsBlock   block={block} profile={profile} theme={theme} />}
-                  </div>
-                )
-              })}
+              const sizeClass =
+                block.size === 'L'  ? 'block-L'  :
+                block.size === 'XL' ? 'block-XL' :
+                block.size === 'S'  ? 'block-S'  : 'block-M'
+              const isSns = block.type === 'sns'
+              return (
+                <div
+                  key={block.id || i}
+                  className={`bento-block ${sizeClass}${isSns ? ' block-sns' : ''}`}
+                  style={{ background: theme.card, overflow: 'hidden' }}
+                  onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)'; e.currentTarget.style.transition = 'transform 0.1s' }}
+                  onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                >
+                  {block.type === 'photo' && <PhotoBlock block={block} theme={theme} />}
+                  {block.type === 'text'  && <TextBlock  block={block} theme={theme} />}
+                  {block.type === 'link'  && <LinkBlock  block={block} theme={theme} />}
+                  {block.type === 'sns'   && <SnsBlock   block={block} profile={profile} theme={theme} />}
+                </div>
+              )
+            })}
           </div>
         </div>
 
-        {/* ── App banner ── */}
-        <div className="app-banner" style={{ background: theme.card }}>
-          <div>
-            <div className="app-banner-title" style={{ color: theme.text }}>名刺交換、その場でお礼メール。</div>
-            <div className="app-banner-desc" style={{ color: theme.text }}>あなたも meishi-mailer で出会いを記録しませんか？</div>
-          </div>
-          <a
-            href="https://www.meishi-mailer.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="app-banner-btn"
-            style={{ background: theme.accent, color: theme.bg }}
-          >
-            無料で始める →
-          </a>
-        </div>
+        {/* App banner */}
+        <a
+          href="https://www.meishi-mailer.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            padding: '14px 20px',
+            background: `${theme.card}99`,
+            borderRadius: 14,
+            textDecoration: 'none',
+            border: `1px solid ${theme.text}10`,
+          }}
+        >
+          <span style={{ fontSize: 13, color: theme.text, opacity: 0.5, lineHeight: 1.5 }}>
+            名刺から、SNSでつながる。
+          </span>
+          <span style={{
+            fontSize: 12, fontWeight: 700,
+            color: theme.accent,
+            fontFamily: 'DM Mono, monospace',
+            opacity: 0.8,
+          }}>
+            meishi-mailer ↗
+          </span>
+        </a>
 
         <div className="footer" style={{ color: theme.text }}>
           このページは{' '}
@@ -246,7 +322,7 @@ export default function PublicProfile({ profile, blocks }) {
           min-height: 100svh;
           max-width: 480px;
           margin: 0 auto;
-          padding: 2.5rem 1.25rem 2rem;
+          padding: 1.5rem 1rem 2rem;
           display: flex;
           flex-direction: column;
           gap: 2rem;
@@ -257,14 +333,14 @@ export default function PublicProfile({ profile, blocks }) {
           gap: 1.5rem;
         }
 
-        /* ── Bento Grid ── */
         .bento-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
+          gap: 12px;
         }
         .bento-block {
           position: relative;
+          border-radius: 20px;
           box-shadow: 0 2px 12px rgba(0,0,0,0.3);
           overflow: hidden;
         }
@@ -280,14 +356,18 @@ export default function PublicProfile({ profile, blocks }) {
           grid-column: span 2;
           min-height: 120px;
         }
-        /* SNSブロックは S/M どちらでも固定高さ */
+        .block-XL {
+          grid-column: span 1;
+          height: 300px;
+        }
         .block-sns.block-S,
-        .block-sns.block-M {
-          height: 120px;
+        .block-sns.block-M,
+        .block-sns.block-XL {
+          height: 140px;
           min-height: unset;
         }
         .block-sns.block-L {
-          height: 120px;
+          height: 100px;
           min-height: unset;
         }
         .bento-empty {
@@ -297,39 +377,6 @@ export default function PublicProfile({ profile, blocks }) {
           padding: 24px;
         }
 
-        /* ── App banner ── */
-        .app-banner {
-          border-radius: 16px;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          box-shadow: 0 1px 6px rgba(0,0,0,0.15);
-        }
-        .app-banner-title {
-          font-size: 15px;
-          font-weight: 700;
-          margin-bottom: 6px;
-        }
-        .app-banner-desc {
-          font-size: 13px;
-          opacity: 0.45;
-          line-height: 1.6;
-        }
-        .app-banner-btn {
-          display: block;
-          text-align: center;
-          font-weight: 700;
-          font-size: 14px;
-          font-family: 'Noto Sans JP', sans-serif;
-          padding: 13px;
-          border-radius: 10px;
-          text-decoration: none;
-          transition: opacity .15s;
-        }
-        .app-banner-btn:active { opacity: .75; }
-
-        /* ── Footer ── */
         .footer {
           font-size: 11px;
           opacity: 0.25;
