@@ -12,6 +12,94 @@ import i18nConfig from '../../next-i18next.config'
 const jaCommon = require('../../public/locales/ja/common.json')
 const enCommon = require('../../public/locales/en/common.json')
 
+const THEMES = [
+  { id: 'dark',     bg: '#0a0a0a', card: '#1a1a1a', accent: '#22c55e', text: '#ffffff' },
+  { id: 'light',    bg: '#f8f8f8', card: '#ffffff', accent: '#0070f3', text: '#111111' },
+  { id: 'midnight', bg: '#0f172a', card: '#1e293b', accent: '#818cf8', text: '#e2e8f0' },
+  { id: 'warm',     bg: '#1c1410', card: '#2d2018', accent: '#f59e0b', text: '#fef3c7' },
+  { id: 'sakura',   bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
+  { id: 'ocean',    bg: '#0c1a2e', card: '#0f2744', accent: '#38bdf8', text: '#e0f2fe' },
+]
+
+function MiniBlock({ block, theme }) {
+  const sizeStyle = block.size === 'L'
+    ? { gridColumn: 'span 2', minHeight: 100 }
+    : block.size === 'S'
+    ? { gridColumn: 'span 1', height: 110 }
+    : { gridColumn: 'span 1', minHeight: 150 }
+
+  const baseStyle = {
+    borderRadius: 14,
+    overflow: 'hidden',
+    background: theme.card,
+    position: 'relative',
+    boxShadow: '0 1px 8px rgba(0,0,0,0.25)',
+    ...sizeStyle,
+  }
+
+  if (block.type === 'photo') {
+    if (!block.content?.image_url) return null
+    return (
+      <div style={baseStyle}>
+        <img src={block.content.image_url} alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        {block.content.caption && (
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            padding: '20px 10px 10px',
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+            color: '#fff', fontSize: 11, fontWeight: 600,
+          }}>{block.content.caption}</div>
+        )}
+      </div>
+    )
+  }
+
+  if (block.type === 'text') {
+    const bg = block.content?.bg_color || theme.card
+    const isLight = ['#ffffff','#fff0f3','#f8f8f8','#fef3c7'].includes(bg)
+    return (
+      <div style={{ ...baseStyle, background: bg, padding: 14, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4 }}>
+        {block.content?.title && <div style={{ fontSize: 13, fontWeight: 800, color: isLight ? '#111' : '#fff' }}>{block.content.title}</div>}
+        {block.content?.body && <div style={{ fontSize: 12, color: isLight ? '#111' : '#fff', opacity: 0.75, lineHeight: 1.6 }}>{block.content.body}</div>}
+      </div>
+    )
+  }
+
+  if (block.type === 'link') {
+    return (
+      <a href={block.content?.url} target="_blank" rel="noopener noreferrer"
+        style={{ ...baseStyle, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 14, textDecoration: 'none', gap: 4, border: `1px solid ${theme.text}15` }}>
+        <span style={{ position: 'absolute', top: 10, right: 12, color: theme.text, opacity: 0.35, fontSize: 13 }}>↗</span>
+        <div style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>{block.content?.title || block.content?.url}</div>
+        {block.content?.description && <div style={{ fontSize: 11, color: theme.text, opacity: 0.55 }}>{block.content.description}</div>}
+      </a>
+    )
+  }
+
+  if (block.type === 'sns') {
+    const cfg = SNS_CONFIG.find(s => s.key === block.content?.platform)
+    if (!cfg) return null
+    const darkBrands = ['#000000','#010101','#24292e','#e7e7e7']
+    const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
+    return (
+      <div style={{ ...baseStyle, background: bgColor, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: 14, gap: 8, cursor: 'default' }}>
+        <span style={{ position: 'absolute', top: 10, right: 12, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>↗</span>
+        {cfg.icon
+          ? <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`} width={28} height={28} alt={cfg.label} />
+          : <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff' }}>{cfg.label[0]}</div>
+        }
+        <div>
+          <div style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{cfg.label}</div>
+          {block.content?.caption && <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 }}>{block.content.caption}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 // Build a clickable URL from an extracted SNS value
 function buildSnsUrl(platform, value) {
   if (!value) return null
@@ -1078,6 +1166,30 @@ export default function ContactDetail() {
               </div>
             )}
           </div>
+
+          {/* ── meishi-mailerプロフィールブロック ── */}
+          {meishiProfile?.blocks?.length > 0 && (() => {
+            const theme = THEMES.find(t => t.id === meishiProfile.profile_theme) || THEMES[0]
+            return (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
+                  プロフィール
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 8,
+                  padding: '16px',
+                  background: theme.bg,
+                  borderRadius: 16,
+                }}>
+                  {meishiProfile.blocks.map((block, i) => (
+                    <MiniBlock key={block.id || i} block={block} theme={theme} />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* ── EMAIL SECTION (collapsible) ── */}
           {emailOpen && (
