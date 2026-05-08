@@ -1167,8 +1167,14 @@ export default function Home() {
                 body: JSON.stringify(body),
               })
               if (r.ok) {
+                const data = await r.json()
+                const contactId = data.data?.id
                 setScannedProfile(null)
-                setStep(STEPS.DONE)
+                if (contactId) {
+                  router.push(`/contacts/${contactId}`)
+                } else {
+                  setStep(STEPS.UPLOAD)
+                }
               } else {
                 alert('保存に失敗しました')
               }

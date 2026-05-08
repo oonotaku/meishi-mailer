@@ -200,6 +200,9 @@ export default function ContactDetail() {
   // Expanded card image
   const [expandedImg, setExpandedImg] = useState(null)
 
+  // meishi-mailerユーザー検出
+  const [meishiProfile, setMeishiProfile] = useState(null)
+
   const TEMP_OPTIONS = [
     { value: 'hot', label: t('temp.hot'), emoji: '🔥' },
     { value: 'normal', label: t('temp.normal'), emoji: '🤝' },
@@ -254,6 +257,13 @@ export default function ContactDetail() {
     loadContact()
     loadEncounters()
   }, [id])
+
+  useEffect(() => {
+    if (!contact?.email) return
+    fetch(`/api/profile/find-by-email?email=${encodeURIComponent(contact.email)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.user_id) setMeishiProfile(data) })
+  }, [contact?.email])
 
   function switchLocale() {
     const next = i18n.language === 'ja' ? 'en' : 'ja'
@@ -873,6 +883,45 @@ export default function ContactDetail() {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* meishi-mailerユーザーバッジ */}
+          {meishiProfile && (
+            <a
+              href={meishiProfile.profile_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 16px',
+                background: 'rgba(34,197,94,0.08)',
+                border: '1px solid rgba(34,197,94,0.25)',
+                borderRadius: 14,
+                textDecoration: 'none',
+                margin: '0 0 16px',
+              }}
+            >
+              {meishiProfile.avatar_url && (
+                <img
+                  src={meishiProfile.avatar_url}
+                  alt=""
+                  style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, marginBottom: 2 }}>
+                  ✓ meishi-mailerユーザー
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                  プロフィールを見る →
+                </div>
+                {meishiProfile.bio && (
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+                    {meishiProfile.bio}
+                  </div>
+                )}
+              </div>
+            </a>
           )}
 
           {/* ── 今すぐ繋がる ── */}
