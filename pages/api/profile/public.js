@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
   const extracted_sns = {}
   for (const key of SNS_KEYS) {
-    if (profile[key]) extracted_sns[key] = profile[key]
+    if (profile[key]) extracted_sns[key.replace('sns_', '')] = profile[key]
   }
 
   res.json({
