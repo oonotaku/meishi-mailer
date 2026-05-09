@@ -14,24 +14,12 @@ export default async function handler(req, res) {
 
   const { data: contact } = await supabaseAdmin
     .from('contacts')
-    .select('owner_id, organization_id, visibility')
+    .select('owner_id')
     .eq('id', contact_id)
     .single()
 
   if (!contact) return res.status(404).json({ error: 'Not found' })
-
-  const isOwner = contact.owner_id === user.id
-  if (!isOwner) {
-    const { data: membership } = await supabaseAdmin
-      .from('user_organizations')
-      .select('organization_id')
-      .eq('user_id', user.id)
-      .eq('organization_id', contact.organization_id)
-      .single()
-    if (!membership || contact.visibility !== 'team') {
-      return res.status(403).json({ error: 'Forbidden' })
-    }
-  }
+  if (contact.owner_id !== user.id) return res.status(403).json({ error: 'Forbidden' })
 
   const { data, error } = await supabaseAdmin
     .from('encounters')

@@ -9,14 +9,6 @@ export default async function handler(req, res) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return res.status(401).json({ error: '認証が必要です' })
 
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('current_organization_id')
-    .eq('id', user.id)
-    .single()
-
-  const orgId = profile?.current_organization_id || null
-
   const {
     name, company, department, title, email, phone, website,
     card_image_urls, subject, body, mail_sent_at,
@@ -28,7 +20,6 @@ export default async function handler(req, res) {
     .from('contacts')
     .insert({
       owner_id: user.id,
-      organization_id: orgId,
       name: name || null,
       company: company || null,
       department: department || null,
@@ -45,7 +36,6 @@ export default async function handler(req, res) {
       met_at: met_at || null,
       temperature: temperature || 'normal',
       memo: memo || null,
-      visibility: 'private',
       extracted_sns: extracted_sns || null,
       cards: cards || [],
     })

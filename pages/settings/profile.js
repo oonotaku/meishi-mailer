@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
@@ -333,13 +333,17 @@ export default function ProfileSettings() {
     }
   }
 
-  async function handleCheckout() {
+  async function handleCheckout(planType = 'monthly') {
     setBillingLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ plan_type: planType }),
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
@@ -958,10 +962,9 @@ export default function ProfileSettings() {
 
           <div className="tab-bar">
             {[
-              { key: 'profile_tab',  label: t('profile.tab_profile') },
+              { key: 'profile_tab', label: t('profile.tab_profile') },
               { key: 'blocks',       label: 'ブロック' },
               { key: 'sns',          label: 'SNS' },
-              { key: 'email',        label: t('profile.tab_email') },
               { key: 'subscription', label: t('profile.tab_subscription') },
             ].map(tab => (
               <button
@@ -974,177 +977,6 @@ export default function ProfileSettings() {
               </button>
             ))}
           </div>
-
-          {activeTab === 'email' && (
-            <div className="section">
-              <div className="section-header">
-                <div className="section-label">{t('profile.email_settings_label')}</div>
-                <span className={`config-badge ${isConfigured ? 'configured' : 'unconfigured'}`}>
-                  {isConfigured ? t('profile.configured') : t('profile.unconfigured')}
-                </span>
-              </div>
-
-              {isConfigured && (
-                <div className="current-email">
-                  {t('profile.current')}
-                  <span className="mono">
-                    {currentProvider === 'gmail' ? profile?.gmail_email : profile?.sender_email}
-                  </span>
-                </div>
-              )}
-
-              {/* プロバイダー選択タブ */}
-              <div className="provider-tabs">
-                {['sendgrid', 'gmail', 'custom'].map(p => {
-                  const effective = savedProvider || profile?.smtp_provider || 'sendgrid'
-                  const isCurrentProvider =
-                    effective === p ||
-                    (effective === 'other' && p === 'custom')
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      className={`provider-tab ${normalizedProvider === p ? 'active' : ''}`}
-                      onClick={() => { setProvider(p); setMsg(null) }}
-                    >
-                      {t(`profile.provider_${p}`)}
-                      {isCurrentProvider && (
-                        <span className="in-use-badge">{t('profile.in_use')}</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <form onSubmit={handleSave} className="email-form">
-                {/* Gmail以外: 送信元メール共通入力 */}
-                {normalizedProvider !== 'gmail' && (
-                  <>
-                    <label className="field-label">{t('profile.sender_email_label')}</label>
-                    <input
-                      type="email"
-                      value={senderEmail}
-                      onChange={e => setSenderEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      required
-                      className="text-input"
-                    />
-                  </>
-                )}
-
-                {/* SendGrid */}
-                {normalizedProvider === 'sendgrid' && (
-                  <>
-                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.api_key_label')}</label>
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={e => setApiKey(e.target.value)}
-                      placeholder={t('profile.api_key_placeholder')}
-                      required
-                      className="text-input"
-                      autoComplete="new-password"
-                    />
-                    <p className="caution">{t('profile.caution')}</p>
-                    <div className="link-row" style={{ marginTop: 10 }}>
-                      <a href="https://sendgrid.com" target="_blank" rel="noopener noreferrer" className="ext-link">
-                        {t('profile.create_account')}
-                      </a>
-                      <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="ext-link">
-                        {t('profile.create_api_key')}
-                      </a>
-                    </div>
-                  </>
-                )}
-
-                {/* Gmail — OAuth 2.0 */}
-                {normalizedProvider === 'gmail' && (
-                  <div className="gmail-oauth-box">
-                    <p className="desc">{t('profile.gmail_connect_desc')}</p>
-                    {gmailEmail ? (
-                      <>
-                        <div className="gmail-oauth-connected">
-                          <span className="gmail-oauth-check">✓</span>
-                          <span className="mono">{gmailEmail}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="gmail-disconnect-btn"
-                          onClick={handleGmailDisconnect}
-                          disabled={gmailDisconnecting}
-                        >
-                          {gmailDisconnecting ? '解除中...' : t('profile.gmail_disconnect_btn')}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        className="gmail-connect-btn"
-                        onClick={handleGmailConnect}
-                      >
-                        <span className="google-g">G</span>
-                        {t('profile.gmail_connect_btn')}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* カスタムSMTP */}
-                {normalizedProvider === 'custom' && (
-                  <>
-                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_host_label')}</label>
-                    <input
-                      type="text"
-                      value={smtpHost}
-                      onChange={e => setSmtpHost(e.target.value)}
-                      placeholder={t('profile.smtp_host_placeholder')}
-                      required
-                      className="text-input"
-                    />
-                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_port_label')}</label>
-                    <input
-                      type="number"
-                      value={smtpPort}
-                      onChange={e => setSmtpPort(e.target.value)}
-                      placeholder="587"
-                      required
-                      className="text-input"
-                    />
-                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_user_label')}</label>
-                    <input
-                      type="text"
-                      value={smtpUser}
-                      onChange={e => setSmtpUser(e.target.value)}
-                      placeholder="user@example.com"
-                      required
-                      className="text-input"
-                    />
-                    <label className="field-label" style={{ marginTop: 12 }}>{t('profile.smtp_password_label')}</label>
-                    <input
-                      type="password"
-                      value={smtpPassword}
-                      onChange={e => setSmtpPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="text-input"
-                      autoComplete="new-password"
-                    />
-                  </>
-                )}
-
-                {msg && (
-                  <div className={`msg ${msg.ok ? 'success' : 'error'}`}>{msg.text}</div>
-                )}
-
-                {normalizedProvider !== 'gmail' && (
-                  <button type="submit" className="save-btn" disabled={saving}>
-                    {saving ? t('profile.saving') : t('profile.save')}
-                  </button>
-                )}
-              </form>
-
-            </div>
-          )}
 
           {activeTab === 'sns' && (
             <div className="section">
@@ -1385,19 +1217,23 @@ export default function ProfileSettings() {
               <div className="theme-section">
                 <div className="section-label" style={{ marginBottom: 12 }}>テーマ（公開プロフィール）</div>
                 <div className="theme-swatches">
-                  {THEMES.map(th => (
-                    <button
-                      key={th.id}
-                      type="button"
-                      className={`theme-swatch${profileTheme === th.id ? ' selected' : ''}`}
-                      style={{
-                        background: `linear-gradient(135deg, ${th.bg} 60%, ${th.card})`,
-                        ['--swatch-accent']: th.accent,
-                      }}
-                      title={th.label}
-                      onClick={() => handleThemeChange(th.id)}
-                    />
-                  ))}
+                  {THEMES.map(th => {
+                    const isLocked = profile?.plan !== 'pro' && th.id !== 'dark'
+                    return (
+                      <div key={th.id} className="theme-swatch-wrap" title={isLocked ? `${th.label}（Pro）` : th.label}>
+                        <button
+                          type="button"
+                          className={`theme-swatch${profileTheme === th.id ? ' selected' : ''}${isLocked ? ' locked' : ''}`}
+                          style={{
+                            background: `linear-gradient(135deg, ${th.bg} 60%, ${th.card})`,
+                            ['--swatch-accent']: th.accent,
+                          }}
+                          onClick={() => isLocked ? setActiveTab('subscription') : handleThemeChange(th.id)}
+                        />
+                        {isLocked && <div className="theme-lock-badge">🔒</div>}
+                      </div>
+                    )
+                  })}
                 </div>
                 <div className="theme-label-row">
                   <span className="theme-current-label">
@@ -1504,6 +1340,18 @@ export default function ProfileSettings() {
                 </span>
               </div>
               <p className="desc">公開プロフィールに表示するブロックを追加・並び替えできます。</p>
+              {profile?.plan !== 'pro' && (
+                <div className="paywall-overlay">
+                  <div className="paywall-box">
+                    <div className="paywall-icon">⬡</div>
+                    <div className="paywall-title">Proプランで使えます</div>
+                    <div className="paywall-desc">ベントーグリッドのカスタマイズはProプランの機能です。</div>
+                    <button className="paywall-btn" onClick={() => setActiveTab('subscription')}>
+                      アップグレードする →
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {blocks.length === 0 && (
                 <div className="blocks-empty">まだブロックがありません。追加してプロフィールをカスタマイズしましょう。</div>
@@ -1560,15 +1408,13 @@ export default function ProfileSettings() {
 
           {activeTab === 'subscription' && (() => {
             const isPro = profile?.plan === 'pro'
-            const scanUsed = profile?.scan_count_month || 0
-            const scanLimit = isPro ? 100 : 10
-            const pct = Math.min(100, (scanUsed / scanLimit) * 100)
+            const [planType, setPlanType] = React.useState('yearly')
             return (
               <div className="section">
                 <div className="section-header">
-                  <div className="section-label">{t('billing.section_label')}</div>
+                  <div className="section-label">プラン</div>
                   <span className={`plan-badge ${isPro ? 'pro' : 'free'}`}>
-                    {isPro ? t('billing.plan_pro') : t('billing.plan_free')}
+                    {isPro ? 'Pro' : 'Free'}
                   </span>
                 </div>
 
@@ -1576,27 +1422,67 @@ export default function ProfileSettings() {
                   <div className="msg success" style={{ marginBottom: 12 }}>{upgradeMsg}</div>
                 )}
 
-                <div className="scan-bar-wrap">
-                  <div className="scan-bar">
-                    <div className="scan-fill" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="scan-label">
-                    {t('billing.scan_count', { used: scanUsed, limit: scanLimit })}
-                  </span>
-                </div>
-
-                <p className="desc" style={{ marginBottom: 14 }}>
-                  {isPro ? t('billing.limit_note_pro') : t('billing.limit_note_free')}
-                </p>
-
                 {isPro ? (
-                  <button className="manage-btn" onClick={handlePortal} disabled={billingLoading}>
-                    {billingLoading ? t('billing.redirecting') : t('billing.manage_btn')}
-                  </button>
+                  <>
+                    <div className="pro-active-box">
+                      <div className="pro-active-icon">✦</div>
+                      <div className="pro-active-text">
+                        <div className="pro-active-title">Proプラン利用中</div>
+                        <div className="pro-active-desc">ベントー編集・QR発行・全テーマが使えます</div>
+                      </div>
+                    </div>
+                    <button className="manage-btn" onClick={handlePortal} disabled={billingLoading} style={{ marginTop: 16 }}>
+                      {billingLoading ? '移動中...' : 'サブスクリプションを管理'}
+                    </button>
+                  </>
                 ) : (
-                  <button className="upgrade-btn" onClick={handleCheckout} disabled={billingLoading}>
-                    {billingLoading ? t('billing.redirecting') : t('billing.upgrade_btn')}
-                  </button>
+                  <>
+                    {/* Proでできること */}
+                    <div className="pro-features">
+                      {[
+                        { icon: '⬡', label: 'ベントーグリッドをカスタマイズ', desc: 'ブロックの追加・編集・並び替え' },
+                        { icon: '◉', label: 'QRコードを発行', desc: 'プロフィールURLのQRを即生成' },
+                        { icon: '◈', label: '6種類のテーマ', desc: 'ダーク・サクラ・オーシャンなど' },
+                      ].map(f => (
+                        <div key={f.label} className="pro-feature-row">
+                          <div className="pro-feature-icon">{f.icon}</div>
+                          <div>
+                            <div className="pro-feature-label">{f.label}</div>
+                            <div className="pro-feature-desc">{f.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 月/年切替 */}
+                    <div className="plan-toggle">
+                      <button
+                        type="button"
+                        className={`plan-toggle-btn ${planType === 'monthly' ? 'active' : ''}`}
+                        onClick={() => setPlanType('monthly')}
+                      >
+                        <div className="plan-toggle-price">¥500</div>
+                        <div className="plan-toggle-period">/ 月</div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`plan-toggle-btn ${planType === 'yearly' ? 'active' : ''}`}
+                        onClick={() => setPlanType('yearly')}
+                      >
+                        <div className="plan-toggle-badge">2ヶ月分お得</div>
+                        <div className="plan-toggle-price">¥5,000</div>
+                        <div className="plan-toggle-period">/ 年（月換算 ¥417）</div>
+                      </button>
+                    </div>
+
+                    <button
+                      className="upgrade-btn"
+                      onClick={() => handleCheckout(planType)}
+                      disabled={billingLoading}
+                    >
+                      {billingLoading ? '移動中...' : `Proにアップグレード（${planType === 'yearly' ? '¥5,000/年' : '¥500/月'}）`}
+                    </button>
+                  </>
                 )}
               </div>
             )
@@ -2460,6 +2346,81 @@ export default function ProfileSettings() {
         }
         .manage-btn:disabled { opacity: .6; cursor: not-allowed; }
         .manage-btn:not(:disabled):active { background: #0d1f15; }
+
+        /* ── サブスクUI ── */
+        .pro-active-box {
+          display: flex; align-items: center; gap: 14px;
+          padding: 16px; background: #0d1f15; border: 1px solid #1a3525;
+          border-radius: 14px; margin-bottom: 4px;
+        }
+        .pro-active-icon { font-size: 22px; color: #7b9e87; flex-shrink: 0; }
+        .pro-active-title { font-size: 15px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; }
+        .pro-active-desc { font-size: 12px; color: #7b9e87; }
+
+        .pro-features {
+          display: flex; flex-direction: column; gap: 10px;
+          margin-bottom: 20px;
+        }
+        .pro-feature-row {
+          display: flex; align-items: flex-start; gap: 12px;
+          padding: 12px 14px; background: #12121a;
+          border: 1px solid #1e1e2a; border-radius: 12px;
+        }
+        .pro-feature-icon { font-size: 18px; color: #7b9e87; flex-shrink: 0; margin-top: 1px; }
+        .pro-feature-label { font-size: 14px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; }
+        .pro-feature-desc { font-size: 11px; color: #5a5650; }
+
+        .plan-toggle {
+          display: flex; gap: 8px; margin-bottom: 12px;
+        }
+        .plan-toggle-btn {
+          flex: 1; padding: 14px 10px; background: #12121a;
+          border: 1px solid #1e1e2a; border-radius: 12px;
+          cursor: pointer; transition: border-color .15s, background .15s;
+          text-align: center; position: relative;
+        }
+        .plan-toggle-btn.active {
+          border-color: #7b9e87; background: #0d1f15;
+        }
+        .plan-toggle-badge {
+          display: inline-block; font-size: 9px; font-family: 'DM Mono', monospace;
+          background: #7b9e87; color: #0a0a0f; padding: 2px 6px;
+          border-radius: 999px; margin-bottom: 6px; font-weight: 700;
+        }
+        .plan-toggle-price {
+          font-size: 22px; font-weight: 800; color: #f0ede8;
+          font-family: 'DM Mono', monospace; line-height: 1;
+        }
+        .plan-toggle-period {
+          font-size: 10px; color: #5a5650; margin-top: 4px;
+          font-family: 'DM Mono', monospace;
+        }
+
+        /* ── ペイウォール ── */
+        .paywall-overlay {
+          position: relative; margin: 8px 0 16px;
+          background: linear-gradient(180deg, transparent 0%, #0a0a0f 60%);
+          border-radius: 14px; overflow: hidden;
+        }
+        .paywall-box {
+          display: flex; flex-direction: column; align-items: center;
+          padding: 32px 20px; text-align: center; gap: 8px;
+          background: rgba(10,10,15,0.85);
+          border: 1px solid #1e1e2a; border-radius: 14px;
+        }
+        .paywall-icon { font-size: 32px; color: #7b9e87; margin-bottom: 4px; }
+        .paywall-title { font-size: 16px; font-weight: 800; color: #f0ede8; }
+        .paywall-desc { font-size: 13px; color: #5a5650; line-height: 1.6; }
+        .paywall-btn {
+          margin-top: 8px; padding: 12px 24px;
+          background: #7b9e87; color: #0a0a0f;
+          border: none; border-radius: 10px;
+          font-size: 14px; font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer; transition: opacity .15s;
+        }
+        .paywall-btn:hover { opacity: .85; }
+
         .config-badge {
           font-size: 10px;
           font-family: 'DM Mono', monospace;
@@ -3416,6 +3377,12 @@ export default function ProfileSettings() {
           outline: 2.5px solid #ffffff;
           outline-offset: 3px;
           transform: scale(1.08);
+        }
+        .theme-swatch.locked { opacity: 0.45; cursor: pointer; }
+        .theme-swatch-wrap { position: relative; display: inline-block; }
+        .theme-lock-badge {
+          position: absolute; bottom: -2px; right: -4px;
+          font-size: 10px; line-height: 1; pointer-events: none;
         }
         .theme-label-row {
           display: flex;

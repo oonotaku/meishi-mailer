@@ -9,76 +9,7 @@ export default async function handler(req, res) {
   const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
   if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
 
-  // 現在の全メンバーシップを取得
-  let { data: memberships } = await supabaseAdmin
-    .from('user_organizations')
-    .select('organization_id, role, organizations(id, name)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-  memberships = memberships || []
-
-  let ownerMembership = memberships.find(m => m.role === 'owner')
-
-  if (!ownerMembership) {
-    // profilesを先に作成してFK制約を満たす
-    const { data: existingProfileEarly } = await supabaseAdmin
-      .from('profiles')
-      .select('name')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    await supabaseAdmin
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        email: user.email,
-        name: existingProfileEarly?.name || user.email.split('@')[0],
-      }, { onConflict: 'id' })
-
-    // 招待経由: metadata の organization_id を member として登録（未登録なら）
-    const orgIdFromMeta = user.user_metadata?.organization_id
-      || user.app_metadata?.organization_id
-    console.error('ensure-profile invite debug:', {
-      user_id: user.id,
-      user_metadata: user.user_metadata,
-      app_metadata: user.app_metadata,
-      orgIdFromMeta,
-    })
-    if (orgIdFromMeta && !memberships.some(m => m.organization_id === orgIdFromMeta)) {
-      const { error: insertErr } = await supabaseAdmin
-        .from('user_organizations')
-        .insert({ user_id: user.id, organization_id: orgIdFromMeta, role: 'member' })
-      if (insertErr) console.error('ensure-profile member insert error:', insertErr)
-    }
-
-    // 自分のチームを新規作成して owner になる
-    const acceptLang = req.headers['accept-language'] || 'ja'
-    const defaultOrgName = acceptLang.startsWith('en') ? 'My Team' : 'マイチーム'
-    const { data: org, error: orgErr } = await supabaseAdmin
-      .from('organizations')
-      .insert({ name: defaultOrgName })
-      .select('id, name')
-      .single()
-    if (orgErr) return res.status(500).json({ error: orgErr.message })
-
-    const { error: memErr } = await supabaseAdmin
-      .from('user_organizations')
-      .insert({ user_id: user.id, organization_id: org.id, role: 'owner' })
-    if (memErr) return res.status(500).json({ error: memErr.message })
-
-    // 最新のメンバーシップを再取得
-    const { data: refreshed } = await supabaseAdmin
-      .from('user_organizations')
-      .select('organization_id, role, organizations(id, name)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true })
-    memberships = refreshed || []
-    ownerMembership = memberships.find(m => m.role === 'owner')
-  }
-
-  const ownerOrgId = ownerMembership.organization_id
-
-  // プロフィールを upsert（current_organization_id は常に owner のチームを指す）
+  // プロフィールを upsert
   const { data: existingProfile } = await supabaseAdmin
     .from('profiles')
     .select('name')
@@ -91,9 +22,8 @@ export default async function handler(req, res) {
       id: user.id,
       email: user.email,
       name: existingProfile?.name || user.email.split('@')[0],
-      current_organization_id: ownerOrgId,
     }, { onConflict: 'id' })
-    .select('id, email, name, current_organization_id, sender_email')
+    .select('id, email, name, sender_email')
     .single()
 
   if (profileErr) return res.status(500).json({ error: profileErr.message })
@@ -111,13 +41,7 @@ export default async function handler(req, res) {
     .eq('id', user.id)
     .single()
 
-  const organizations = memberships.map(m => ({
-    organization_id: m.organization_id,
-    name: m.organizations?.name,
-    role: m.role,
-  }))
-
-  const responseObject = {
+  return res.status(200).json({
     profile: {
       ...profile,
       plan: billingData?.plan ?? 'free',
@@ -157,13 +81,6 @@ export default async function handler(req, res) {
       avatar_url: billingData?.avatar_url ?? null,
       bio: billingData?.bio ?? null,
       profile_theme: billingData?.profile_theme ?? 'dark',
-      organization_id: ownerOrgId,
-      role: 'owner',
-      organizations,
     },
-  }
-
-  console.error('ensure-profile response:', JSON.stringify(responseObject))
-
-  return res.status(200).json(responseObject)
+  })
 }

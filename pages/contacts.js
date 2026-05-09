@@ -131,21 +131,14 @@ export default function Contacts() {
           return (
             <div className="list">
               {displayContacts.map(c => {
-                const isOtherTeam = c.organization_id && profile?.organization_id && c.organization_id !== profile.organization_id
                 return (
                   <button key={c.id} className="card" onClick={() => router.push(`/contacts/${c.id}`)}>
                     <div className="avatar">{initials(c.name)}</div>
                     <div className="info">
                       <div className="name">{c.name || t('contacts.no_name')}</div>
                       <div className="meta">{c.company || '—'}</div>
-                      {isOtherTeam && c.organization_name && (
-                        <div className="team-label">{c.organization_name}</div>
-                      )}
                     </div>
                     <div className="badges">
-                      <div className={`vis-badge ${c.visibility === 'team' ? 'team' : 'private'}`}>
-                        {c.visibility === 'team' ? '👥' : '🔒'}
-                      </div>
                       <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
                         {c.mail_sent_at ? t('contacts.sent') : t('contacts.unsent')}
                       </div>
@@ -289,17 +282,6 @@ export default function Contacts() {
         .info { flex: 1; min-width: 0; }
         .name { font-size: 15px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .meta { font-size: 12px; color: #5a5650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .team-label {
-          display: inline-block;
-          margin-top: 4px;
-          font-size: 10px;
-          font-family: 'DM Mono', monospace;
-          color: #7b9e87;
-          background: #0d1f15;
-          border: 1px solid #1a3525;
-          border-radius: 4px;
-          padding: 1px 6px;
-        }
         .badge {
           font-size: 11px;
           font-family: 'DM Mono', monospace;
@@ -316,11 +298,6 @@ export default function Contacts() {
           gap: 4px;
           flex-shrink: 0;
         }
-        .vis-badge {
-          font-size: 12px;
-          line-height: 1;
-        }
-
         .search-wrap {
           position: relative;
           display: flex;

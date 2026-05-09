@@ -1018,8 +1018,8 @@ export default function Home() {
             <button className="list-btn" style={{ marginTop: 8 }} onClick={() => setStep(STEPS.USER_QR_SCAN)}>
               🔗 QRで繋がる →
             </button>
-            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/team')}>
-              {t('nav.team')} →
+            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/email')}>
+              ✉️ メール設定 →
             </button>
             <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/profile')}>
               {t('nav.profile')} →
@@ -1036,14 +1036,42 @@ export default function Home() {
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.5px' }}>
                   自分のプロフィールQR
                 </div>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
-                  alt="My profile QR"
-                  style={{ width: 120, height: 120, borderRadius: 8 }}
-                />
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
-                  meishi-mailer.com/p/{user.id.slice(0, 8)}...
-                </div>
+                {profile?.plan === 'pro' ? (
+                  <>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
+                      alt="My profile QR"
+                      style={{ width: 120, height: 120, borderRadius: 8 }}
+                    />
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
+                      meishi-mailer.com/p/{user.id.slice(0, 8)}...
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    onClick={() => router.push('/settings/profile?tab=subscription')}
+                    style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
+                  >
+                    <div style={{
+                      width: 120, height: 120, borderRadius: 8,
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px dashed rgba(255,255,255,0.15)',
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}>
+                      <div style={{ fontSize: 28 }}>🔒</div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 1.4 }}>
+                        Proで発行
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: 11, color: '#7b9e87',
+                      fontFamily: 'Noto Sans JP, sans-serif',
+                    }}>
+                      ¥500/月 → QRを発行する
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

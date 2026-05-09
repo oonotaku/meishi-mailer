@@ -21,9 +21,16 @@ export default async function handler(req, res) {
   const host = req.headers['x-forwarded-host'] || req.headers['host']
   const baseUrl = `${proto}://${host}`
 
+  const { plan_type } = req.body || {}
+  const priceId = plan_type === 'yearly'
+    ? process.env.STRIPE_PRO_PRICE_ID_YEARLY
+    : process.env.STRIPE_PRO_PRICE_ID_MONTHLY
+
+  if (!priceId) return res.status(500).json({ error: 'Price ID が設定されていません' })
+
   const params = {
     mode: 'subscription',
-    line_items: [{ price: process.env.STRIPE_PRO_PRICE_ID, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${baseUrl}/settings/profile?upgrade=success`,
     cancel_url: `${baseUrl}/settings/profile`,
     metadata: { user_id: user.id },
