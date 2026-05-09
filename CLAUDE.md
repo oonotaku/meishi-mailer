@@ -14,7 +14,7 @@ No test framework is configured.
 
 ## Architecture
 
-**meishi-mailer** is a mobile-first business card scanner that OCRs card photos, auto-generates/sends Japanese thank-you emails, and supports team sharing of contacts. **PWA対応済み**（next-pwa + manifest.json + public/icons/）。**Google OAuth審査申請済み**（gmail.send スコープ、審査中）。
+**Koryu（交流）** is a mobile-first app that scans business cards, auto-generates a bento-grid profile page, and connects people via SNS. ドメイン: `koryu.app`。旧名: meishi-mailer。**PWA対応済み**（next-pwa + manifest.json + public/icons/）。**Google OAuth審査申請済み**（gmail.send スコープ、審査中）。**チーム機能は削除済み**（2026-05-09）。個人向けフリーミアムに方向転換。
 
 **Core flow (通常):** Photo capture → `/api/analyze` (Claude Vision OCR + email generation) → `/api/contacts/save` (Supabase Storage + `contacts` table + `encounters` テーブルに初回出会いを自動挿入) → `/api/send` (SendGrid) → mark `mail_sent_at`
 
@@ -34,7 +34,7 @@ No test framework is configured.
 | `login.js` | Email/password login + signup + password reset (forgot mode). signUp に `emailRedirectTo` を指定して現在のロケールURLへリダイレクト。 |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
-| `settings/team.js` | Team management — two sections: "自分のチーム" (own org: name edit, members, invite) and "参加中のチーム" (read-only list of orgs user is member of) |
+| `settings/email.js` | メール設定（SendGrid/Gmail/SMTP）— プロフィール設定から独立した無料メニュー |
 | `settings/profile.js` | Profile settings — **5タブ UI**（プロフィール / ブロック / SNS / メール設定 / サブスクリプション）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、**テーマ選択（6種: dark/light/midnight/warm/sakura/ocean）**、**プロフィール完成度バー（6項目、100%でゴールドアニメーション）**、**プレビューモーダル（iframeボトムシート）**、**ブロック管理タブ（追加・編集・削除・↑↓並び替え、4タイプ×3サイズ）**、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、SendGrid/Gmail/SMTP 設定、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）、SNS/所属/ブロックタブで変更時に画面下部に固定保存ボタン表示。完全i18n対応。|
 | `p/[userId].js` | Public profile page — **ベントーグリッド方式に全面リデザイン済み**。`profile_blocks` テーブルからブロックを取得し、グリッド最上段に固定ヘッダーブロック（Lサイズ全幅・アバター左＋テキスト右の横並びレイアウト）を配置。以降のブロックは S（1列×120px固定）/ M（1列×180px+）/ L（全幅）/ **XL（1列×300px縦長）** の4サイズ。ブロックタイプ: photo（画像＋グラデーションキャプション）/ text（下寄せ配置・背景色自動判定文字色）/ link（↗アイコン付きリンクカード）/ sns（ブランドカラー背景・左上アイコン・左下ラベル＋caption・右上↗・上詰めレイアウト）。6種テーマ（profile_theme）に対応。border-radius 20px統一。バナーはシンプルなフッターリンク（「名刺から、SNSでつながる。meishi-mailer ↗」）。No auth。`getServerSideProps` + `supabaseAdmin`。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
@@ -194,7 +194,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SITE_URL=https://www.meishi-mailer.com
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_PRO_PRICE_ID=price_...
+STRIPE_PRO_PRICE_ID_MONTHLY=price_...
+STRIPE_PRO_PRICE_ID_YEARLY=price_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
@@ -209,7 +210,7 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 
 ### Stripe (billing)
 - Live keys (`sk_live_`, `pk_live_`) are active in Vercel production as of 2026-04-25
-- `STRIPE_PRO_PRICE_ID` must be a Price ID (`price_...`), NOT a Product ID (`prod_...`)
+- `STRIPE_PRO_PRICE_ID_MONTHLY` / `STRIPE_PRO_PRICE_ID_YEARLY` must be Price IDs (`price_...`), NOT Product IDs (`prod_...`)
 - Webhook endpoint: `https://meishi-mailer-mu.vercel.app/api/billing/webhook`
 - Registered events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
 - Customer Portal business name: "node-bee"
@@ -230,4 +231,17 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 
 ## Current status
 
-ベントーグリッド型公開プロフィール実装済み（profile_blocksテーブル、4タイプ×4サイズ S/M/L/XL、SNSブロックひとことcaption、6種テーマ）。PWA化完了。Stripe課金はlive本番稼働中（¥980/mo Proプラン）。Google OAuth審査申請中（gmail.send スコープ）。**QRで繋がる機能実装済み**（ライブカメラQRスキャン、meishi-mailerユーザー自動検出、コンタクト詳細にライブプロフィールデータ表示）。次の候補: SEO対応（canonical）、リアルタイムプレビュー、Contact引き継ぎ機能。See `MEISHI_AI_SPEC.md` for roadmap.
+**2026-05-09 大規模リブランディング・機能整理完了。**
+
+- アプリ名: meishi-mailer → **Koryu（交流）**
+- ドメイン: meishi-mailer.com → **koryu.app**（Squarespace取得、Vercel接続済み）
+- チーム機能完全削除（settings/team.js、team API群、visibility、organization関連）
+- フリーミアム課金: Free（基本機能）/ Pro ¥500/月 or ¥5,000/年
+- Proゲート実装: ベントーグリッド編集、6種テーマ、QRコード発行
+- メール設定を `/settings/email` に独立ページ化
+- LP全面リデザイン（ブライトテーマ、日英併記、ベントーデモ付き）
+- Stripe live稼働中（月払い・年払い Price ID両方設定済み）
+- Google OAuth審査申請中（gmail.send スコープ）
+- PWA対応済み（koryu-icon.png追加）
+
+次の候補: LPの微調整・スクロールアニメーション、SEO（canonical/OGP）、公開プロフィールのSNSシェア最適化。See `MEISHI_AI_SPEC.md` for roadmap.
