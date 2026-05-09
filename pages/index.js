@@ -549,371 +549,492 @@ export default function Home() {
     </div>
   )
 
+  const isJa = i18n.language !== 'en'
+
   if (!user) return (
     <>
       <Head>
-        <title>{i18n.language === 'en' ? 'Koryu — Connect Beyond the Business Card' : 'Koryu — 名刺からSNSでつながる'}</title>
+        <title>{isJa ? 'Koryu — 名刺の裏面が、あなたのSNSハブになる。' : 'Koryu — Your card, reimagined.'}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content={isJa ? '名刺をスキャンするだけで、ベントーグリッドのプロフィールページが完成。SNSでつながる新しい名刺体験。' : 'Scan a business card, create a stunning bento-grid profile, and connect on SNS instantly.'} />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
       <div className="lp-shell">
-        {/* Header */}
+
+        {/* ── HEADER ── */}
         <header className="lp-header">
           <span className="lp-logo">Koryu</span>
           <div className="lp-header-actions">
             <button className="lp-lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
-            <a href="/login" className="lp-login-btn">{t('landing.login')}</a>
-            <a href="/login" className="lp-cta-btn-sm">{t('landing.cta')}</a>
+            <a href="/login" className="lp-login-btn">ログイン / Login</a>
+            <a href="/login" className="lp-cta-btn-sm">無料で始める</a>
           </div>
         </header>
 
-        {/* Hero */}
+        {/* ── HERO ── */}
         <section className="lp-hero">
-          <div className="lp-eyebrow">KORYU</div>
-          <h1 className="lp-hero-title">
-            {i18n.language === 'en'
-              ? <>Connect deeper with everyone you meet.</>
-              : <>名刺交換した人と、<br />最速で最深まで。</>
-            }
-          </h1>
-          <p className="lp-hero-sub">{t('landing.hero_sub')}</p>
-          <a href="/login" className="lp-cta-btn">{t('landing.cta')} →</a>
-        </section>
+          <div className="lp-hero-text">
+            <div className="lp-eyebrow">KORYU · 交流</div>
+            <h1 className="lp-hero-title">
+              名刺の裏面が、<br />
+              <span className="lp-hero-accent">あなたのSNSハブ</span>になる。
+            </h1>
+            <p className="lp-hero-en">Your card, reimagined as a living profile.</p>
+            <p className="lp-hero-sub">名刺をスキャンするだけで、ベントーグリッドのプロフィールページが自動生成。SNSリンクをまとめて、QRコードで即シェア。</p>
+            <div className="lp-hero-ctas">
+              <a href="/login" className="lp-cta-btn">無料で始める →</a>
+              <span className="lp-hero-note">クレジットカード不要</span>
+            </div>
+          </div>
 
-        {/* Features */}
-        <section className="lp-features">
-          <div className="lp-feat-grid">
-            <div className="lp-feat-card">
-              <div className="lp-feat-icon">📸</div>
-              <h3 className="lp-feat-title">{t('landing.feat1_title')}</h3>
-              <p className="lp-feat-body">{t('landing.feat1_body')}</p>
-            </div>
-            <div className="lp-feat-card">
-              <div className="lp-feat-icon">✍️</div>
-              <h3 className="lp-feat-title">{t('landing.feat2_title')}</h3>
-              <p className="lp-feat-body">{t('landing.feat2_body')}</p>
-            </div>
-            <div className="lp-feat-card">
-              <div className="lp-feat-icon">📧</div>
-              <h3 className="lp-feat-title">{t('landing.feat3_title')}</h3>
-              <p className="lp-feat-body">{t('landing.feat3_body')}</p>
+          {/* Bento Demo */}
+          <div className="lp-bento-wrap">
+            <div className="lp-bento-phone">
+              <div className="lp-bento-grid">
+                {/* Header block L */}
+                <div className="lp-block lp-block-L lp-block-header-demo">
+                  <div className="lp-demo-avatar">田</div>
+                  <div className="lp-demo-info">
+                    <div className="lp-demo-name">田中 大輝</div>
+                    <div className="lp-demo-title">Product Manager</div>
+                    <div className="lp-demo-company">Koryu株式会社</div>
+                  </div>
+                </div>
+                {/* SNS S blocks */}
+                <div className="lp-block lp-block-S" style={{background:'#000000'}}>
+                  <span className="lp-block-sns-icon">𝕏</span>
+                  <span className="lp-block-sns-label">@daiki_t</span>
+                </div>
+                <div className="lp-block lp-block-S" style={{background:'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)'}}>
+                  <span className="lp-block-sns-icon">📷</span>
+                  <span className="lp-block-sns-label">Instagram</span>
+                </div>
+                {/* Text M block */}
+                <div className="lp-block lp-block-M" style={{background:'#1a2e22', color:'#7b9e87'}}>
+                  <div className="lp-block-text-body">「プロダクトで、<br />世界を少し<br />良くしたい。」</div>
+                </div>
+                {/* LinkedIn S block */}
+                <div className="lp-block lp-block-S" style={{background:'#0077b5'}}>
+                  <span className="lp-block-sns-icon">in</span>
+                  <span className="lp-block-sns-label">LinkedIn</span>
+                </div>
+                {/* Link block S */}
+                <div className="lp-block lp-block-S" style={{background:'#f5f0e8', color:'#1a1a1a'}}>
+                  <span className="lp-block-link-title">Portfolio ↗</span>
+                </div>
+              </div>
+              <div className="lp-bento-url">koryu.app/p/daiki</div>
             </div>
           </div>
         </section>
 
-        {/* Pricing */}
+        {/* ── WOW SECTION ── */}
+        <section className="lp-wow">
+          <div className="lp-wow-inner">
+            <div className="lp-section-badge">Profile</div>
+            <h2 className="lp-section-title">
+              こんなプロフィールページが<br />作れます
+            </h2>
+            <p className="lp-section-en">Create a stunning bento-grid profile in minutes.</p>
+            <div className="lp-wow-grid">
+              <div className="lp-wow-card lp-wow-card-dark">
+                <div className="lp-wow-theme-label">Dark</div>
+                <div className="lp-mini-bento lp-mini-dark">
+                  <div className="lp-mini-header"></div>
+                  <div className="lp-mini-row">
+                    <div className="lp-mini-s" style={{background:'#111'}}></div>
+                    <div className="lp-mini-s" style={{background:'#1a3525'}}></div>
+                  </div>
+                  <div className="lp-mini-m" style={{background:'#0e0e16'}}></div>
+                </div>
+              </div>
+              <div className="lp-wow-card lp-wow-card-sakura">
+                <div className="lp-wow-theme-label">Sakura</div>
+                <div className="lp-mini-bento lp-mini-sakura">
+                  <div className="lp-mini-header" style={{background:'#f7d6d9'}}></div>
+                  <div className="lp-mini-row">
+                    <div className="lp-mini-s" style={{background:'#e8a0aa'}}></div>
+                    <div className="lp-mini-s" style={{background:'#f0c0c8'}}></div>
+                  </div>
+                  <div className="lp-mini-m" style={{background:'#fce8ea'}}></div>
+                </div>
+              </div>
+              <div className="lp-wow-card lp-wow-card-ocean">
+                <div className="lp-wow-theme-label">Ocean</div>
+                <div className="lp-mini-bento lp-mini-ocean">
+                  <div className="lp-mini-header" style={{background:'#1a3a5c'}}></div>
+                  <div className="lp-mini-row">
+                    <div className="lp-mini-s" style={{background:'#0d2a45'}}></div>
+                    <div className="lp-mini-s" style={{background:'#1e4060'}}></div>
+                  </div>
+                  <div className="lp-mini-m" style={{background:'#122233'}}></div>
+                </div>
+              </div>
+            </div>
+            <p className="lp-wow-note">6種のテーマ · ブロック自由配置 · QRコード即発行</p>
+          </div>
+        </section>
+
+        {/* ── HOW IT WORKS ── */}
+        <section className="lp-how">
+          <div className="lp-how-inner">
+            <div className="lp-section-badge">How it works</div>
+            <h2 className="lp-section-title">3ステップで完成</h2>
+            <p className="lp-section-en">From card to profile in under a minute.</p>
+            <div className="lp-steps">
+              <div className="lp-step">
+                <div className="lp-step-num">01</div>
+                <div className="lp-step-icon">📸</div>
+                <h3 className="lp-step-title">名刺をスキャン</h3>
+                <p className="lp-step-body">AIが名前・会社・SNSを自動で読み取り</p>
+              </div>
+              <div className="lp-step-arrow">→</div>
+              <div className="lp-step">
+                <div className="lp-step-num">02</div>
+                <div className="lp-step-icon">✨</div>
+                <h3 className="lp-step-title">プロフィール生成</h3>
+                <p className="lp-step-body">ベントーグリッドで自分らしいページを作成</p>
+              </div>
+              <div className="lp-step-arrow">→</div>
+              <div className="lp-step">
+                <div className="lp-step-num">03</div>
+                <div className="lp-step-icon">🔗</div>
+                <h3 className="lp-step-title">QRでシェア</h3>
+                <p className="lp-step-body">次の名刺交換でQRを見せるだけでSNSでつながれる</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── PRICING ── */}
         <section className="lp-pricing">
-          <h2 className="lp-section-title">{t('landing.pricing_title')}</h2>
-          <div className="lp-pricing-grid">
-            <div className="lp-plan-card">
-              <div className="lp-plan-name">{t('landing.free_plan')}</div>
-              <div className="lp-plan-price">¥0</div>
-              <ul className="lp-plan-features">
-                <li>{t('landing.free_scans')}</li>
-                <li>{t('landing.free_features')}</li>
-              </ul>
-              <a href="/login" className="lp-plan-btn lp-plan-btn-ghost">{t('landing.cta')}</a>
-            </div>
-            <div className="lp-plan-card lp-plan-card-pro">
-              <div className="lp-plan-badge">Pro</div>
-              <div className="lp-plan-name">{t('landing.pro_plan')}</div>
-              <div className="lp-plan-price">{t('landing.pro_price')}</div>
-              <ul className="lp-plan-features">
-                <li>{t('landing.pro_scans')}</li>
-                <li>{t('landing.pro_features')}</li>
-              </ul>
-              <a href="/login" className="lp-plan-btn lp-plan-btn-primary">{t('landing.cta')}</a>
+          <div className="lp-pricing-inner">
+            <div className="lp-section-badge">Pricing</div>
+            <h2 className="lp-section-title">シンプルな料金体系</h2>
+            <p className="lp-section-en">Start free. Upgrade when you're ready.</p>
+            <div className="lp-pricing-grid">
+              <div className="lp-plan-card">
+                <div className="lp-plan-name">FREE</div>
+                <div className="lp-plan-price">¥0</div>
+                <div className="lp-plan-period">ずっと無料</div>
+                <ul className="lp-plan-features">
+                  <li>名刺スキャン</li>
+                  <li>プロフィール作成</li>
+                  <li>SNSリンク管理</li>
+                  <li>出会い記録</li>
+                </ul>
+                <a href="/login" className="lp-plan-btn lp-plan-btn-ghost">無料で始める</a>
+              </div>
+              <div className="lp-plan-card lp-plan-card-pro">
+                <div className="lp-plan-badge">Pro</div>
+                <div className="lp-plan-name">PRO</div>
+                <div className="lp-plan-price">¥500</div>
+                <div className="lp-plan-period">/ 月（年払い ¥5,000）</div>
+                <ul className="lp-plan-features">
+                  <li>ベントーグリッド編集</li>
+                  <li>6種テーマ選択</li>
+                  <li>QRコード発行</li>
+                  <li>Free の全機能</li>
+                </ul>
+                <a href="/login" className="lp-plan-btn lp-plan-btn-primary">Proで始める</a>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Footer */}
+        {/* ── FINAL CTA ── */}
+        <section className="lp-final-cta">
+          <h2 className="lp-final-title">あなたの名刺、<br />もっとリッチに。</h2>
+          <p className="lp-final-en">Your next connection deserves more than a paper card.</p>
+          <a href="/login" className="lp-cta-btn lp-cta-btn-light">今すぐ無料で始める →</a>
+        </section>
+
+        {/* ── FOOTER ── */}
         <footer className="lp-footer">
-          <p className="lp-footer-copy">{t('landing.footer_copy')}</p>
+          <span className="lp-footer-logo">Koryu</span>
           <div className="lp-footer-links">
-            <a href="/privacy" className="lp-footer-link">
-              {i18n.language === 'en' ? 'Privacy Policy' : 'プライバシーポリシー'}
-            </a>
+            <a href="/privacy" className="lp-footer-link">プライバシーポリシー</a>
             <span className="lp-footer-sep">·</span>
-            <a href="/terms" className="lp-footer-link">
-              {i18n.language === 'en' ? 'Terms of Service' : '利用規約'}
-            </a>
+            <a href="/terms" className="lp-footer-link">利用規約</a>
           </div>
+          <p className="lp-footer-copy">© 2026 Koryu / node-bee LLC</p>
         </footer>
       </div>
 
       <style jsx global>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { background: #0a0a0f; color: #f0ede8; font-family: 'Noto Sans JP', sans-serif; }
+        html, body { background: #f8f7f4; color: #1a1a1a; font-family: 'Noto Sans JP', sans-serif; }
       `}</style>
       <style jsx>{`
-        .lp-shell {
-          min-height: 100svh;
-          display: flex;
-          flex-direction: column;
-        }
-        /* Header */
+        .lp-shell { min-height: 100svh; display: flex; flex-direction: column; }
+
+        /* ── HEADER ── */
         .lp-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 1.25rem 1.5rem;
-          border-bottom: 1px solid #1e1e2a;
-          position: sticky;
-          top: 0;
-          background: #0a0a0f;
-          z-index: 10;
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 1rem 1.5rem;
+          background: rgba(248,247,244,0.9);
+          backdrop-filter: blur(12px);
+          border-bottom: 1px solid #e8e4de;
+          position: sticky; top: 0; z-index: 100;
         }
         .lp-logo {
-          font-family: 'DM Mono', monospace;
-          font-size: 15px;
-          font-weight: 500;
-          color: #7b9e87;
-          letter-spacing: .04em;
+          font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500;
+          color: #7b9e87; letter-spacing: .06em;
         }
-        .lp-header-actions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+        .lp-header-actions { display: flex; align-items: center; gap: 8px; }
         .lp-lang-btn {
-          background: none;
-          border: 1px solid #2a2a3a;
-          border-radius: 4px;
-          color: #5a5650;
-          font-size: 10px;
-          font-family: 'DM Mono', monospace;
-          cursor: pointer;
-          padding: 2px 6px;
-          letter-spacing: .06em;
+          background: none; border: 1px solid #d0ccc6; border-radius: 4px;
+          color: #8a8680; font-size: 10px; font-family: 'DM Mono', monospace;
+          cursor: pointer; padding: 3px 7px; letter-spacing: .06em;
         }
-        .lp-lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
-        .lp-login-btn {
-          font-size: 13px;
-          color: #8a8680;
-          text-decoration: none;
-          padding: 6px 12px;
-        }
-        .lp-login-btn:hover { color: #f0ede8; }
+        .lp-lang-btn:hover { border-color: #7b9e87; color: #7b9e87; }
+        .lp-login-btn { font-size: 13px; color: #6b6660; text-decoration: none; padding: 6px 10px; }
+        .lp-login-btn:hover { color: #1a1a1a; }
         .lp-cta-btn-sm {
-          font-size: 12px;
-          font-weight: 700;
-          color: #0a0a0f;
-          background: #7b9e87;
-          text-decoration: none;
-          padding: 7px 14px;
-          border-radius: 8px;
+          font-size: 12px; font-weight: 700; color: #fff;
+          background: #7b9e87; text-decoration: none;
+          padding: 8px 16px; border-radius: 8px;
           font-family: 'Noto Sans JP', sans-serif;
         }
-        .lp-cta-btn-sm:hover { opacity: .9; }
-        /* Hero */
+        .lp-cta-btn-sm:hover { background: #6a8d76; }
+
+        /* ── HERO ── */
         .lp-hero {
-          flex: 0 0 auto;
-          padding: 5rem 1.5rem 4rem;
-          max-width: 680px;
-          margin: 0 auto;
-          width: 100%;
-          text-align: center;
+          display: flex; flex-direction: column; align-items: center;
+          gap: 3rem; padding: 4rem 1.5rem 3rem; max-width: 900px;
+          margin: 0 auto; width: 100%;
         }
+        .lp-hero-text { text-align: center; }
         .lp-eyebrow {
-          font-family: 'DM Mono', monospace;
-          font-size: 10px;
-          letter-spacing: .18em;
-          color: #7b9e87;
-          text-transform: uppercase;
-          margin-bottom: 1.5rem;
+          font-family: 'DM Mono', monospace; font-size: 11px;
+          letter-spacing: .2em; color: #7b9e87; margin-bottom: 1.25rem;
         }
         .lp-hero-title {
-          font-size: clamp(28px, 7vw, 48px);
-          font-weight: 700;
-          line-height: 1.3;
-          color: #f0ede8;
-          margin-bottom: 1.25rem;
+          font-size: clamp(26px, 7vw, 44px); font-weight: 700;
+          line-height: 1.35; color: #1a1a1a; margin-bottom: .75rem;
+        }
+        .lp-hero-accent {
+          color: #7b9e87;
+          background: linear-gradient(135deg, #7b9e87, #5a8070);
+          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        .lp-hero-en {
+          font-size: 13px; color: #9a9690; letter-spacing: .04em;
+          font-family: 'DM Mono', monospace; margin-bottom: 1.25rem;
         }
         .lp-hero-sub {
-          font-size: 15px;
-          color: #8a8680;
-          line-height: 1.8;
-          margin-bottom: 2.5rem;
-          max-width: 480px;
-          margin-left: auto;
-          margin-right: auto;
+          font-size: 14px; color: #6b6660; line-height: 1.9;
+          margin-bottom: 2rem; max-width: 400px; margin-left: auto; margin-right: auto;
         }
+        .lp-hero-ctas { display: flex; flex-direction: column; align-items: center; gap: 12px; }
         .lp-cta-btn {
-          display: inline-block;
-          background: #7b9e87;
-          color: #0a0a0f;
-          font-size: 16px;
-          font-weight: 700;
-          font-family: 'Noto Sans JP', sans-serif;
-          text-decoration: none;
-          padding: 16px 36px;
-          border-radius: 14px;
-          transition: opacity .15s;
+          display: inline-block; background: #7b9e87; color: #fff;
+          font-size: 15px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
+          text-decoration: none; padding: 15px 34px; border-radius: 14px;
+          transition: background .15s;
         }
-        .lp-cta-btn:hover { opacity: .9; }
-        /* Features */
-        .lp-features {
-          padding: 3rem 1.5rem;
-          max-width: 720px;
-          margin: 0 auto;
-          width: 100%;
+        .lp-cta-btn:hover { background: #6a8d76; }
+        .lp-cta-btn-light {
+          background: #fff; color: #1a1a1a;
         }
-        .lp-feat-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 1rem;
+        .lp-cta-btn-light:hover { background: #f0ede8; }
+        .lp-hero-note { font-size: 12px; color: #aaa9a6; }
+
+        /* ── BENTO DEMO ── */
+        .lp-bento-wrap { width: 100%; display: flex; justify-content: center; }
+        .lp-bento-phone {
+          width: 280px;
+          background: #0a0a0f;
+          border-radius: 28px;
+          padding: 20px 16px 16px;
+          box-shadow: 0 30px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.08);
         }
-        .lp-feat-card {
-          background: #0e0e16;
-          border: 1px solid #1e1e2a;
-          border-radius: 14px;
-          padding: 1.75rem 1.25rem;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .lp-feat-icon { font-size: 28px; }
-        .lp-feat-title {
-          font-size: 15px;
-          font-weight: 700;
-          color: #f0ede8;
-        }
-        .lp-feat-body {
-          font-size: 13px;
-          color: #7a7470;
-          line-height: 1.7;
-        }
-        /* Pricing */
-        .lp-pricing {
-          padding: 3rem 1.5rem 4rem;
-          max-width: 560px;
-          margin: 0 auto;
-          width: 100%;
-          text-align: center;
-        }
-        .lp-section-title {
-          font-size: 20px;
-          font-weight: 700;
-          color: #f0ede8;
-          margin-bottom: 2rem;
-        }
-        .lp-pricing-grid {
+        .lp-bento-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 1rem;
+          gap: 8px;
         }
-        .lp-plan-card {
-          background: #0e0e16;
-          border: 1px solid #1e1e2a;
-          border-radius: 14px;
-          padding: 1.75rem 1.25rem;
+        .lp-block {
+          border-radius: 16px;
+          overflow: hidden;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          padding: 12px;
           position: relative;
-          text-align: left;
+          min-height: 80px;
         }
-        .lp-plan-card-pro {
-          border-color: #2a3e30;
-          background: #0d1610;
+        .lp-block-L { grid-column: span 2; flex-direction: row; align-items: center; gap: 12px; background: #12121e; min-height: 90px; }
+        .lp-block-S { min-height: 80px; justify-content: space-between; }
+        .lp-block-M { min-height: 110px; grid-column: span 1; background: #1a2e22; }
+        .lp-block-header-demo { background: #12121e; }
+        .lp-demo-avatar {
+          width: 48px; height: 48px; border-radius: 50%;
+          background: #7b9e87; color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 18px; font-weight: 700; flex-shrink: 0;
         }
-        .lp-plan-badge {
-          position: absolute;
-          top: -10px;
-          right: 14px;
-          background: #7b9e87;
-          color: #0a0a0f;
-          font-size: 10px;
-          font-weight: 700;
+        .lp-demo-info { flex: 1; min-width: 0; }
+        .lp-demo-name { font-size: 13px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; }
+        .lp-demo-title { font-size: 10px; color: #7b9e87; }
+        .lp-demo-company { font-size: 10px; color: #5a5650; margin-top: 1px; }
+        .lp-block-sns-icon {
+          font-size: 16px; font-weight: 700; color: #fff;
           font-family: 'DM Mono', monospace;
-          padding: 2px 8px;
-          border-radius: 4px;
+        }
+        .lp-block-sns-label { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: auto; }
+        .lp-block-text-body {
+          font-size: 11px; line-height: 1.7; color: #7b9e87; font-weight: 700;
+        }
+        .lp-block-link-title { font-size: 11px; font-weight: 700; color: #1a1a1a; }
+        .lp-bento-url {
+          margin-top: 12px; text-align: center;
+          font-family: 'DM Mono', monospace; font-size: 10px; color: #3a3a4a;
+        }
+
+        /* ── WOW SECTION ── */
+        .lp-wow { background: #1a1a22; padding: 4rem 1.5rem; }
+        .lp-wow-inner { max-width: 680px; margin: 0 auto; text-align: center; }
+        .lp-section-badge {
+          display: inline-block; background: rgba(123,158,135,0.15);
+          color: #7b9e87; font-family: 'DM Mono', monospace;
+          font-size: 10px; letter-spacing: .14em; padding: 4px 12px;
+          border-radius: 999px; border: 1px solid rgba(123,158,135,0.3);
+          margin-bottom: 1rem;
+        }
+        .lp-section-title {
+          font-size: clamp(20px, 5vw, 28px); font-weight: 700;
+          color: #f0ede8; margin-bottom: .5rem; line-height: 1.4;
+        }
+        .lp-section-en {
+          font-size: 12px; color: #5a5650; font-family: 'DM Mono', monospace;
+          letter-spacing: .04em; margin-bottom: 2rem;
+        }
+        .lp-wow-grid {
+          display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+          margin-bottom: 1.5rem;
+        }
+        .lp-wow-card {
+          border-radius: 16px; overflow: hidden; padding: 12px;
+          border: 1px solid #2a2a3a;
+        }
+        .lp-wow-card-dark { background: #0e0e16; }
+        .lp-wow-card-sakura { background: #fce8ea; border-color: #f0c0c8; }
+        .lp-wow-card-ocean { background: #0d2a45; border-color: #1e4060; }
+        .lp-wow-theme-label {
+          font-size: 9px; font-family: 'DM Mono', monospace;
+          color: #5a5650; margin-bottom: 8px; letter-spacing: .08em;
+        }
+        .lp-wow-card-sakura .lp-wow-theme-label { color: #c06070; }
+        .lp-wow-card-ocean .lp-wow-theme-label { color: #4a90b8; }
+        .lp-mini-bento { display: flex; flex-direction: column; gap: 5px; }
+        .lp-mini-header { height: 28px; border-radius: 8px; background: #1e1e2a; }
+        .lp-mini-row { display: flex; gap: 5px; }
+        .lp-mini-s { flex: 1; height: 24px; border-radius: 6px; }
+        .lp-mini-m { height: 32px; border-radius: 8px; }
+        .lp-wow-note {
+          font-size: 12px; color: #5a5650; font-family: 'DM Mono', monospace;
           letter-spacing: .06em;
         }
+
+        /* ── HOW IT WORKS ── */
+        .lp-how { background: #f8f7f4; padding: 4rem 1.5rem; }
+        .lp-how-inner { max-width: 680px; margin: 0 auto; text-align: center; }
+        .lp-how .lp-section-title { color: #1a1a1a; }
+        .lp-how .lp-section-en { color: #9a9690; }
+        .lp-steps {
+          display: flex; flex-direction: column; gap: 0; align-items: center;
+          margin-top: 2rem;
+        }
+        .lp-step {
+          background: #fff; border: 1px solid #e8e4de; border-radius: 16px;
+          padding: 1.5rem; width: 100%; text-align: center;
+          display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .lp-step-num {
+          font-family: 'DM Mono', monospace; font-size: 10px;
+          color: #7b9e87; letter-spacing: .1em;
+        }
+        .lp-step-icon { font-size: 28px; }
+        .lp-step-title { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+        .lp-step-body { font-size: 13px; color: #6b6660; line-height: 1.7; }
+        .lp-step-arrow {
+          font-size: 20px; color: #7b9e87; padding: 8px; transform: rotate(90deg);
+        }
+
+        /* ── PRICING ── */
+        .lp-pricing { background: #fff; padding: 4rem 1.5rem; }
+        .lp-pricing-inner { max-width: 560px; margin: 0 auto; text-align: center; }
+        .lp-pricing .lp-section-title { color: #1a1a1a; }
+        .lp-pricing .lp-section-en { color: #9a9690; }
+        .lp-pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 2rem; }
+        .lp-plan-card {
+          background: #f8f7f4; border: 1px solid #e8e4de; border-radius: 16px;
+          padding: 1.5rem 1.25rem; display: flex; flex-direction: column;
+          gap: 8px; position: relative; text-align: left;
+        }
+        .lp-plan-card-pro { background: #0d1610; border-color: #2a3e30; }
+        .lp-plan-badge {
+          position: absolute; top: -10px; right: 14px;
+          background: #7b9e87; color: #fff;
+          font-size: 10px; font-weight: 700; font-family: 'DM Mono', monospace;
+          padding: 2px 10px; border-radius: 4px; letter-spacing: .06em;
+        }
         .lp-plan-name {
-          font-family: 'DM Mono', monospace;
-          font-size: 12px;
-          letter-spacing: .08em;
-          color: #5a5650;
-          text-transform: uppercase;
+          font-family: 'DM Mono', monospace; font-size: 11px;
+          letter-spacing: .1em; color: #9a9690;
         }
-        .lp-plan-price {
-          font-size: 24px;
-          font-weight: 700;
-          color: #f0ede8;
-        }
-        .lp-plan-features {
-          list-style: none;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          flex: 1;
-        }
-        .lp-plan-features li {
-          font-size: 12px;
-          color: #7a7470;
-        }
-        .lp-plan-features li::before {
-          content: '✓ ';
-          color: #7b9e87;
-        }
+        .lp-plan-card-pro .lp-plan-name { color: #5a7a65; }
+        .lp-plan-price { font-size: 28px; font-weight: 700; color: #1a1a1a; }
+        .lp-plan-card-pro .lp-plan-price { color: #f0ede8; }
+        .lp-plan-period { font-size: 11px; color: #9a9690; }
+        .lp-plan-card-pro .lp-plan-period { color: #5a7a65; }
+        .lp-plan-features { list-style: none; display: flex; flex-direction: column; gap: 6px; flex: 1; margin: 4px 0; }
+        .lp-plan-features li { font-size: 12px; color: #6b6660; }
+        .lp-plan-card-pro .lp-plan-features li { color: #7b9e87; }
+        .lp-plan-features li::before { content: '✓ '; color: #7b9e87; }
         .lp-plan-btn {
-          display: block;
-          text-align: center;
-          text-decoration: none;
-          padding: 11px;
-          border-radius: 10px;
-          font-size: 13px;
-          font-weight: 700;
-          font-family: 'Noto Sans JP', sans-serif;
-          margin-top: 6px;
-          transition: opacity .15s;
+          display: block; text-align: center; text-decoration: none;
+          padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif; margin-top: 4px; transition: opacity .15s;
         }
-        .lp-plan-btn-ghost {
-          border: 1px solid #2a2a3a;
-          color: #7a7470;
-        }
+        .lp-plan-btn-ghost { border: 1px solid #d0ccc6; color: #6b6660; }
         .lp-plan-btn-ghost:hover { border-color: #7b9e87; color: #7b9e87; }
-        .lp-plan-btn-primary {
-          background: #7b9e87;
-          color: #0a0a0f;
+        .lp-plan-btn-primary { background: #7b9e87; color: #fff; }
+        .lp-plan-btn-primary:hover { background: #6a8d76; }
+
+        /* ── FINAL CTA ── */
+        .lp-final-cta {
+          background: linear-gradient(135deg, #1a2e22 0%, #0a1a10 100%);
+          padding: 5rem 1.5rem; text-align: center;
         }
-        .lp-plan-btn-primary:hover { opacity: .9; }
-        /* Footer */
+        .lp-final-title {
+          font-size: clamp(22px, 6vw, 36px); font-weight: 700;
+          color: #f0ede8; margin-bottom: .75rem; line-height: 1.4;
+        }
+        .lp-final-en {
+          font-size: 12px; color: #5a7a65; font-family: 'DM Mono', monospace;
+          letter-spacing: .04em; margin-bottom: 2rem;
+        }
+
+        /* ── FOOTER ── */
         .lp-footer {
-          margin-top: auto;
-          padding: 2rem 1.5rem;
-          border-top: 1px solid #1e1e2a;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 10px;
+          background: #f0ede8; padding: 2rem 1.5rem;
+          display: flex; flex-direction: column; align-items: center; gap: 10px;
+          border-top: 1px solid #e0dcd6;
         }
-        .lp-footer-copy {
-          font-family: 'DM Mono', monospace;
-          font-size: 11px;
-          color: #3a3a4a;
+        .lp-footer-logo {
+          font-family: 'DM Mono', monospace; font-size: 14px;
+          font-weight: 500; color: #7b9e87; letter-spacing: .06em;
         }
-        .lp-footer-links {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+        .lp-footer-links { display: flex; align-items: center; gap: 10px; }
         .lp-footer-link {
-          font-family: 'DM Mono', monospace;
-          font-size: 11px;
-          color: #3a3a4a;
-          text-decoration: none;
-          letter-spacing: .04em;
+          font-size: 11px; color: #8a8680; text-decoration: none;
         }
-        .lp-footer-link:hover { color: #5a5650; }
-        .lp-footer-sep {
-          font-size: 11px;
-          color: #2a2a3a;
-          font-family: 'DM Mono', monospace;
-        }
+        .lp-footer-link:hover { color: #1a1a1a; }
+        .lp-footer-sep { font-size: 11px; color: #c0bcb8; }
+        .lp-footer-copy { font-size: 11px; color: #b0aca8; font-family: 'DM Mono', monospace; }
       `}</style>
     </>
   )
