@@ -148,6 +148,7 @@ export default function ProfileSettings() {
   const [gmailDisconnecting, setGmailDisconnecting] = useState(false)
   const [billingLoading, setBillingLoading] = useState(false)
   const [upgradeMsg, setUpgradeMsg] = useState(null)
+  const [planType, setPlanType] = useState('yearly')
   const [snsValues, setSnsValues] = useState({})
   const [snsSaving, setSnsSaving] = useState(false)
   const [snsMsg, setSnsMsg] = useState(null)
@@ -1408,7 +1409,6 @@ export default function ProfileSettings() {
 
           {activeTab === 'subscription' && (() => {
             const isPro = profile?.plan === 'pro'
-            const [planType, setPlanType] = React.useState('yearly')
             return (
               <div className="section">
                 <div className="section-header">
