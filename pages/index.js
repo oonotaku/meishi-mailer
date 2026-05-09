@@ -121,7 +121,8 @@ export default function Home() {
 
       if (qr) {
         const url = qr.data
-        const match = url.match(/meishi-mailer\.com\/p\/([0-9a-f-]{36})/i)
+        const match = url.match(/koryu\.app\/p\/([0-9a-f-]{36})/i)
+          || url.match(/meishi-mailer\.com\/p\/([0-9a-f-]{36})/i)
           || url.match(/meishi-mailer-mu\.vercel\.app\/p\/([0-9a-f-]{36})/i)
 
         if (match) {
@@ -551,7 +552,7 @@ export default function Home() {
   if (!user) return (
     <>
       <Head>
-        <title>{i18n.language === 'en' ? 'Card Mailer — AI Business Card Scanner' : '名刺メーラー — AI名刺スキャナー'}</title>
+        <title>{i18n.language === 'en' ? 'Koryu — Connect Beyond the Business Card' : 'Koryu — 名刺からSNSでつながる'}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
@@ -559,7 +560,7 @@ export default function Home() {
       <div className="lp-shell">
         {/* Header */}
         <header className="lp-header">
-          <span className="lp-logo">MeishiMailer</span>
+          <span className="lp-logo">Koryu</span>
           <div className="lp-header-actions">
             <button className="lp-lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
             <a href="/login" className="lp-login-btn">{t('landing.login')}</a>
@@ -1039,12 +1040,12 @@ export default function Home() {
                 {profile?.plan === 'pro' ? (
                   <>
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
                       alt="My profile QR"
                       style={{ width: 120, height: 120, borderRadius: 8 }}
                     />
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
-                      meishi-mailer.com/p/{user.id.slice(0, 8)}...
+                      koryu.app/p/{user.id.slice(0, 8)}...
                     </div>
                   </>
                 ) : (
@@ -1119,7 +1120,7 @@ export default function Home() {
                 background: 'rgba(0,0,0,0.4)', padding: '8px 16px',
                 borderRadius: 20, backdropFilter: 'blur(8px)',
               }}>
-                meishi-mailerのQRに向けてください
+                KoryuのQRに向けてください
               </div>
               <div style={{
                 width: 220, height: 220,
@@ -1172,7 +1173,7 @@ export default function Home() {
                 <div style={{ fontSize: 13, opacity: 0.5, textAlign: 'center' }}>{scannedProfile.bio}</div>
               )}
               <div style={{ fontSize: 11, color: '#22c55e', fontFamily: 'monospace', marginTop: 4 }}>
-                ✓ meishi-mailerユーザー
+                ✓ Koryuユーザー
               </div>
             </div>
 
@@ -1186,7 +1187,7 @@ export default function Home() {
                 email: scannedProfile.email || '',
                 phone: scannedProfile.phone || '',
                 extracted_sns: scannedProfile.extracted_sns || {},
-                memo: `meishi-mailerプロフィール: ${scannedProfile.profile_url}`,
+                memo: `Koryuプロフィール: ${scannedProfile.profile_url}`,
                 met_at: new Date().toISOString(),
                 visibility: 'private',
               }
@@ -1375,7 +1376,7 @@ export default function Home() {
                 )}
                 <div>
                   <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700 }}>
-                    ✓ meishi-mailerユーザーです
+                    ✓ Koryuユーザーです
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
                     プロフィールを見る →

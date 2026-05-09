@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_BASE_URL ||
-    'https://meishi-mailer-mu.vercel.app'
+    'https://koryu.app'
   ).trim()
 
   if (error || !code || !token) {

@@ -185,7 +185,7 @@ export default function Terms() {
   return (
     <>
       <Head>
-        <title>{c.title} — {lang === 'ja' ? '名刺メーラー' : 'Card Mailer'}</title>
+        <title>{c.title} — Koryu</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>

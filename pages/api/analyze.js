@@ -170,7 +170,7 @@ ${qrContext}`
           user_id: profileMatch.id,
           name: profileMatch.name,
           avatar_url: profileMatch.avatar_url,
-          profile_url: `https://www.meishi-mailer.com/p/${profileMatch.id}`,
+          profile_url: `https://koryu.app/p/${profileMatch.id}`,
         }
       }
     }

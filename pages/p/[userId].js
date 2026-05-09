@@ -286,7 +286,7 @@ export default function PublicProfile({ profile, blocks }) {
 
         {/* App banner */}
         <a
-          href="https://www.meishi-mailer.com"
+          href="https://koryu.app"
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -310,15 +310,15 @@ export default function PublicProfile({ profile, blocks }) {
             fontFamily: 'DM Mono, monospace',
             opacity: 0.8,
           }}>
-            meishi-mailer ↗
+            Koryu ↗
           </span>
         </a>
 
         <div className="footer" style={{ color: theme.text }}>
           このページは{' '}
-          <a href="https://www.meishi-mailer.com" target="_blank" rel="noopener noreferrer"
+          <a href="https://koryu.app" target="_blank" rel="noopener noreferrer"
             style={{ color: theme.text, opacity: 0.4, textDecoration: 'none' }}>
-            meishi-mailer
+            Koryu
           </a>
           {' '}で作成されました
         </div>

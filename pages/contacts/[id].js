@@ -781,7 +781,7 @@ export default function ContactDetail() {
   return (
     <>
       <Head>
-        <title>{displayName || t('contact.page_title_fallback')} — meishi-mailer</title>
+        <title>{displayName || t('contact.page_title_fallback')} — Koryu</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
@@ -1000,7 +1000,7 @@ export default function ContactDetail() {
                 marginBottom: 12,
               }}
             >
-              ✓ meishi-mailerユーザー　プロフィールを見る →
+              ✓ Koryuユーザー　プロフィールを見る →
             </a>
           )}
 

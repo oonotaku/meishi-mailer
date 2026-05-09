@@ -1300,7 +1300,7 @@ export default function ProfileSettings() {
                         <td style={{ paddingRight: '16px', verticalAlign: 'top' }}>
                           <button type="button" onClick={() => setShowPreview(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}>
                             <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://www.meishi-mailer.com/p/${user?.id}`)}&bgcolor=ffffff&color=000000&margin=2`}
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://koryu.app/p/${user?.id}`)}&bgcolor=ffffff&color=000000&margin=2`}
                               width="100" height="100"
                               alt="Profile QR"
                               style={{ display: 'block', border: 0 }}
@@ -1320,7 +1320,7 @@ export default function ProfileSettings() {
                           )}
                           <div style={{ marginTop: '6px', fontSize: '11px' }}>
                             <button type="button" onClick={() => setShowPreview(true)} style={{ color: '#aaa', textDecoration: 'none', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit' }}>
-                              {`https://www.meishi-mailer.com/p/${user?.id}`}
+                              {`https://koryu.app/p/${user?.id}`}
                             </button>
                           </div>
                         </td>

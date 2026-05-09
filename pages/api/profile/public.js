@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     title: aff?.title || '',
     email: aff?.show_email ? aff.contact_email : null,
     phone: aff?.show_phone ? aff.phone : null,
-    profile_url: `https://www.meishi-mailer.com/p/${profile.id}`,
+    profile_url: `https://koryu.app/p/${profile.id}`,
     profile_theme: profile.profile_theme || 'dark',
     blocks: blocksRes.data || [],
     extracted_sns,
