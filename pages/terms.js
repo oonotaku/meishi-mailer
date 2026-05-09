@@ -40,7 +40,7 @@ const CONTENT = {
         body: `本サービスは以下のプランを提供します。
 
 • Freeプラン：月10回までのスキャン
-• Proプラン（¥980/月）：月100回までのスキャン
+• Proプラン（¥500/月）：月100回までのスキャン
 
 サービスの内容・料金・スキャン上限は、ユーザーへの事前通知のうえ変更される場合があります。また、メンテナンスや障害等によりサービスが一時的に利用できない場合があります。`,
       },
@@ -122,7 +122,7 @@ If you are a minor, you must have your parent or guardian's consent.`,
         body: `The Service offers the following plans:
 
 • Free plan: up to 10 scans per month
-• Pro plan (¥980/month): up to 100 scans per month
+• Pro plan (¥500/month): up to 100 scans per month
 
 Plan features, pricing, and scan limits may change with advance notice to users. The Service may also be temporarily unavailable due to maintenance or outages.`,
       },

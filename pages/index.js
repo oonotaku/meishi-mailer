@@ -570,7 +570,7 @@ export default function Home() {
 
         {/* Hero */}
         <section className="lp-hero">
-          <div className="lp-eyebrow">MEISHI-MAILER</div>
+          <div className="lp-eyebrow">KORYU</div>
           <h1 className="lp-hero-title">
             {i18n.language === 'en'
               ? <>Connect deeper with everyone you meet.</>

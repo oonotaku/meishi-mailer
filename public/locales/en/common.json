@@ -298,7 +298,7 @@
     "scan_count": "{{used}} / {{limit}} scans",
     "limit_note_free": "Free plan: up to 10 scans/month. Upgrade to Pro for more.",
     "limit_note_pro": "Pro plan: up to 100 scans/month.",
-    "upgrade_btn": "Upgrade to Pro (¥980/month)",
+    "upgrade_btn": "Upgrade to Pro (¥500/month)",
     "manage_btn": "Manage subscription",
     "upgrade_success": "You've successfully upgraded to Pro!",
     "redirecting": "Redirecting to Stripe...",
@@ -320,9 +320,9 @@
     "free_features": "Core features",
     "pro_plan": "Pro",
     "pro_scans": "100 scans / month",
-    "pro_price": "¥980 / month",
+    "pro_price": "¥500 / month",
     "pro_features": "All features",
-    "footer_copy": "© 2026 MeishiMailer"
+    "footer_copy": "© 2026 Koryu"
   },
   "auth_confirm": {
     "page_title": "Set Password — Card Mailer",
