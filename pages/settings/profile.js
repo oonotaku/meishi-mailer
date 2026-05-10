@@ -1358,13 +1358,13 @@ export default function ProfileSettings() {
 
           <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('blocks')}>
-              <span className="acc-title">ベントーブロック</span>
+              <span className="acc-title">{t('profile.tab_blocks')}</span>
               <span className="acc-chevron">{openSections.blocks ? '▲' : '▼'}</span>
             </div>
             {openSections.blocks && (
             <div className="acc-body">
               <div className="section-header">
-                <div className="section-label">ベントーブロック</div>
+                <div className="section-label">{t('profile.tab_blocks')}</div>
                 <span className={`config-badge ${blocks.length > 0 ? 'configured' : 'unconfigured'}`}>
                   {blocks.length > 0 ? `${blocks.length}件` : '未設定'}
                 </span>
