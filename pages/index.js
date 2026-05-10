@@ -1072,6 +1072,7 @@ export default function Home() {
 
             {cardImages.length === 0 ? (
               <>
+                <div className="upload-content">
                 <div className="scan-hero">
                   <button className="upload-btn" onClick={() => fileRef.current.click()}>
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1131,6 +1132,7 @@ export default function Home() {
                       </button>
                     )
                   )}
+                </div>
                 </div>
               </>
             ) : (
@@ -1202,7 +1204,7 @@ export default function Home() {
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                   </svg>
                 </div>
-                <span className="bn-label">{t('nav.contacts')}</span>
+                <span className="bn-label">{i18n.language === 'en' ? 'Contacts' : 'つながり'}</span>
               </button>
               <button className="bn-item" onClick={() => router.push('/settings/profile')}>
                 <div className="bn-icon">
@@ -1211,7 +1213,7 @@ export default function Home() {
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
                 </div>
-                <span className="bn-label">{t('nav.profile')}</span>
+                <span className="bn-label">{i18n.language === 'en' ? 'Profile' : 'プロフィール'}</span>
               </button>
             </nav>
           </div>
@@ -2626,19 +2628,22 @@ export default function Home() {
         .upload-page {
           padding-bottom: 90px !important;
         }
-        .scan-hero {
+        .upload-content {
           flex: 1;
           display: flex;
           flex-direction: column;
           justify-content: center;
+          gap: 16px;
+        }
+        .scan-hero {
+          display: flex;
+          flex-direction: column;
           gap: 8px;
-          min-height: 160px;
         }
         .secondary-actions {
           display: flex;
           flex-direction: column;
           gap: 8px;
-          margin-top: 16px;
         }
         .action-card {
           display: flex;
