@@ -85,14 +85,13 @@ export default function Contacts() {
       </Head>
 
       <div className="shell">
-        <div className="header">
-          <button className="back-btn" onClick={() => router.push('/')}>{t('nav.back')}</button>
-          <div className="header-title">{t('contacts.header')}</div>
-          <div className="header-right">
-            {user?.email && <span className="header-email">{user.email}</span>}
+        <div className="top-bar">
+          <span className="top-logo">交流</span>
+          <div className="top-right">
             <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
           </div>
         </div>
+        <div className="page-title">{t('contacts.header')}</div>
 
         <div className="search-wrap">
           <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -149,6 +148,20 @@ export default function Contacts() {
             </div>
           )
         })()}
+        <nav className="bottom-nav">
+          <button className="bn-item" onClick={() => router.push('/?scan=1')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <span>{t('nav.scan')}</span>
+          </button>
+          <button className="bn-item bn-active">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>{t('nav.contacts')}</span>
+          </button>
+          <button className="bn-item" onClick={() => router.push('/settings/profile')}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>{t('nav.profile')}</span>
+          </button>
+        </nav>
       </div>
 
       <style jsx global>{`
@@ -163,28 +176,24 @@ export default function Contacts() {
           margin: 0 auto;
           display: flex;
           flex-direction: column;
+          padding-bottom: 72px;
         }
-        .header {
+        .top-bar {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 1.25rem 1.5rem;
-          border-bottom: 1px solid #1e1e2a;
+          justify-content: space-between;
+          padding: 1rem 1.5rem 0.75rem;
         }
-        .header-right {
-          margin-left: auto;
+        .top-logo {
+          font-size: 18px;
+          font-weight: 700;
+          color: #7b9e87;
+          letter-spacing: .04em;
+        }
+        .top-right {
           display: flex;
           align-items: center;
           gap: 8px;
-        }
-        .header-email {
-          font-size: 11px;
-          color: #3a3a4a;
-          font-family: 'DM Mono', monospace;
-          max-width: 120px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
         .lang-btn {
           background: none;
@@ -199,20 +208,43 @@ export default function Contacts() {
           flex-shrink: 0;
         }
         .lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
-        .back-btn {
-          background: none;
-          border: none;
-          color: #7b9e87;
-          font-size: 14px;
-          font-family: 'Noto Sans JP', sans-serif;
-          cursor: pointer;
-          padding: 0;
-        }
-        .header-title {
-          font-size: 16px;
+        .page-title {
+          font-size: 22px;
           font-weight: 700;
           color: #f0ede8;
+          padding: 0.25rem 1.5rem 1rem;
         }
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          display: flex;
+          background: rgba(10,10,15,0.92);
+          backdrop-filter: blur(12px);
+          border-top: 1px solid #1e1e2a;
+          padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+          z-index: 100;
+        }
+        .bn-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+          background: none;
+          border: none;
+          color: #3a3a4a;
+          font-size: 10px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          padding: 4px 0;
+          transition: color .15s;
+        }
+        .bn-item:hover { color: #5a5a6a; }
+        .bn-item.bn-active { color: #7b9e87; }
         .center {
           flex: 1;
           display: flex;
