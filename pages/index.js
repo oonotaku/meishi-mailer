@@ -59,6 +59,7 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false)
   const [interimText, setInterimText] = useState('')
   const [showQrSheet, setShowQrSheet] = useState(false)
+  const [showMyQr, setShowMyQr] = useState(false)
   const fileRef = useRef()
   const contextFileRef = useRef()
   const recognitionRef = useRef(null)
@@ -1112,7 +1113,7 @@ export default function Home() {
 
                 {/* QR底シート */}
                 {showQrSheet && (
-                  <div className="qr-sheet-overlay" onClick={() => setShowQrSheet(false)}>
+                  <div className="qr-sheet-overlay" onClick={() => { setShowQrSheet(false); setShowMyQr(false) }}>
                     <div className="qr-sheet" onClick={e => e.stopPropagation()}>
                       <div className="qr-sheet-title">
                         {i18n.language === 'en' ? 'Connect via QR' : 'QRで繋がる'}
@@ -1132,7 +1133,7 @@ export default function Home() {
                           <path d="M9 18l6-6-6-6"/>
                         </svg>
                       </button>
-                      <div className="qr-sheet-option qr-sheet-myqr">
+                      <button className="qr-sheet-option" onClick={() => { setShowMyQr(true) }}>
                         <div className="qr-sheet-option-icon">
                           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -1140,20 +1141,40 @@ export default function Home() {
                             <path d="M14 14h3v3m0 4h4v-4m-4 0h-3"/>
                           </svg>
                         </div>
-                        <div className="qr-sheet-option-text" style={{flex:1}}>
+                        <div className="qr-sheet-option-text">
                           <div className="qr-sheet-option-title">{i18n.language === 'en' ? 'Show my QR' : '自分のQRを表示'}</div>
-                          <div className="qr-sheet-option-sub" style={{fontFamily:'monospace'}}>koryu.app/p/{user?.id?.slice(0,8)}...</div>
+                          <div className="qr-sheet-option-sub">{i18n.language === 'en' ? 'Show full-screen QR code' : '大きなQRコードを表示'}</div>
                         </div>
-                        {user && (
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
-                            alt="My QR"
-                            style={{width:72,height:72,borderRadius:8,flexShrink:0}}
-                          />
-                        )}
-                      </div>
-                      <button className="qr-sheet-cancel" onClick={() => setShowQrSheet(false)}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{color:'#3a3a4a',flexShrink:0}}>
+                          <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                      </button>
+                      <button className="qr-sheet-cancel" onClick={() => { setShowQrSheet(false); setShowMyQr(false) }}>
                         {i18n.language === 'en' ? 'Cancel' : 'キャンセル'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 大きなQRコード表示 */}
+                {showMyQr && user && (
+                  <div className="qr-sheet-overlay" onClick={() => { setShowMyQr(false); setShowQrSheet(false) }}>
+                    <div className="qr-sheet" onClick={e => e.stopPropagation()} style={{alignItems:'center', gap:20, paddingTop:28}}>
+                      <div style={{fontSize:15, fontWeight:700, color:'#f0ede8'}}>
+                        {i18n.language === 'en' ? 'My QR Code' : '自分のQRコード'}
+                      </div>
+                      <div style={{background:'#fff', borderRadius:16, padding:14, display:'inline-block'}}>
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
+                          alt="My QR"
+                          style={{width:220, height:220, display:'block'}}
+                        />
+                      </div>
+                      <div style={{fontSize:11, color:'#5a5a7a', fontFamily:'DM Mono, monospace', textAlign:'center'}}>
+                        koryu.app/p/{user.id.slice(0,16)}...
+                      </div>
+                      <button className="qr-sheet-cancel" style={{width:'100%'}} onClick={() => { setShowMyQr(false); setShowQrSheet(false) }}>
+                        {i18n.language === 'en' ? 'Close' : '閉じる'}
                       </button>
                     </div>
                   </div>
