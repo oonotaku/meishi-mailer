@@ -1,6 +1,5 @@
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
 import { sendEmail } from '../../lib/sendEmail'
-import { SNS_CONFIG, PRESET_CATEGORIES } from '../../lib/snsConfig'
 
 function escapeHtml(str) {
   if (!str) return ''
@@ -13,7 +12,7 @@ function escapeHtml(str) {
 }
 
 
-function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl, snsLinks) {
+function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
   const htmlBody = body
     .split('\n')
     .map(line => `<p style="margin:0 0 8px 0">${escapeHtml(line)}</p>`)
@@ -23,12 +22,6 @@ function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl, sns
   const companyHtml = company ? `<div style="color:#555;font-size:12px">${escapeHtml(company)}</div>` : ''
   const titleHtml = title ? `<div style="color:#777;font-size:12px">${escapeHtml(title)}</div>` : ''
 
-  const snsHtml = snsLinks && snsLinks.length > 0
-    ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">${snsLinks.map(s => {
-        const bg = s.color || '#555'
-        return `<a href="${s.url}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:${bg};color:#ffffff;font-size:12px;font-weight:600;font-family:sans-serif;text-decoration:none;border-radius:20px;line-height:1">${escapeHtml(s.label)}</a>`
-      }).join('')}</div>`
-    : ''
 
   return `
 <div style="font-family:sans-serif;font-size:13px;line-height:1.7;color:#333;max-width:600px">
@@ -49,7 +42,6 @@ function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl, sns
         <div style="margin-top:6px;font-size:11px;color:#aaa">
           <a href="${profileUrl}" style="color:#aaa;text-decoration:none">${escapeHtml(profileUrl)}</a>
         </div>
-        ${snsHtml}
       </td>
     </tr>
   </table>
@@ -89,17 +81,12 @@ export default async function handler(req, res) {
   const profileUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/p/${user.id}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(profileUrl)}&bgcolor=ffffff&color=000000&margin=2`
 
-  const allowedCategories = PRESET_CATEGORIES[selected_preset] || PRESET_CATEGORIES.business
-  const snsLinks = SNS_CONFIG
-    .filter(f => allowedCategories.includes(f.category) && profile?.[f.key])
-    .map(f => ({ label: f.label, url: profile[f.key], color: f.color }))
-
   try {
     await sendEmail(profile, {
       to,
       subject,
       text: body,
-      html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl, snsLinks),
+      html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
     })
     return res.json({ ok: true })
   } catch (e) {

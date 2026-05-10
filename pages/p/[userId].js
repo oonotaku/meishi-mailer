@@ -202,7 +202,7 @@ function SnsBlock({ block, profile }) {
   )
 }
 
-export default function PublicProfile({ profile, blocks }) {
+export default function PublicProfile({ profile, blocks, affil }) {
   const theme = THEMES.find(t => t.id === profile.profile_theme) || THEMES[0]
 
   return (
@@ -256,6 +256,21 @@ export default function PublicProfile({ profile, blocks }) {
                     {profile.bio}
                   </div>
                 )}
+                {affil?.company && (
+                  <div style={{ color: theme.text, opacity: 0.75, fontSize: 12, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
+                    {affil.company}{affil.title ? ` · ${affil.title}` : ''}
+                  </div>
+                )}
+                {affil?.email && (
+                  <a href={`mailto:${affil.email}`} style={{ display: 'block', color: theme.accent, fontSize: 11, marginTop: 4, textDecoration: 'none', opacity: 0.85 }}>
+                    {affil.email}
+                  </a>
+                )}
+                {affil?.phone && (
+                  <a href={`tel:${affil.phone}`} style={{ display: 'block', color: theme.text, fontSize: 11, marginTop: 2, opacity: 0.5, textDecoration: 'none' }}>
+                    {affil.phone}
+                  </a>
+                )}
                 <div style={{ marginTop: 8, width: 28, height: 3, borderRadius: 2, background: theme.accent }} />
               </div>
             </div>
@@ -284,31 +299,6 @@ export default function PublicProfile({ profile, blocks }) {
           </div>
         </div>
 
-        {/* Free plan nudge */}
-        {profile.plan !== 'pro' && (
-          <div style={{
-            background: 'rgba(123,158,135,0.08)',
-            border: '1px solid rgba(123,158,135,0.2)',
-            borderRadius: 14,
-            padding: '14px 16px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 12, color: '#7b9e87', fontWeight: 700, marginBottom: 4 }}>
-              ✦ プロフィールをカスタマイズ
-            </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-              写真・テーマ・ベントーブロックを追加して<br />あなたらしいプロフィールを作ろう
-            </div>
-            <a
-              href="https://koryu.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'inline-block', marginTop: 10, fontSize: 12, color: '#7b9e87', fontWeight: 700, textDecoration: 'none' }}
-            >
-              Koryu Pro を見る →
-            </a>
-          </div>
-        )}
 
         {/* App banner */}
         <a
@@ -430,13 +420,16 @@ export default function PublicProfile({ profile, blocks }) {
 export async function getServerSideProps({ params }) {
   const { userId } = params
 
-  const [profileRes, blocksRes] = await Promise.all([
+  const [profileRes, blocksRes, affiliationsRes] = await Promise.all([
     supabaseAdmin.from('profiles')
       .select('name, bio, avatar_url, profile_theme, plan, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_blocks')
       .select('id, type, size, content, order_index')
       .eq('user_id', userId).order('order_index'),
+    supabaseAdmin.from('profile_affiliations')
+      .select('company_name, title, phone, contact_email, show_phone, show_email')
+      .eq('user_id', userId).order('order_index').limit(1),
   ])
 
   if (profileRes.error || !profileRes.data) return { notFound: true }
@@ -450,5 +443,16 @@ export async function getServerSideProps({ params }) {
     profile.profile_theme = 'dark'
   }
 
-  return { props: { profile, blocks: isPro ? (blocksRes.data || []) : [] } }
+  const primaryAffil = affiliationsRes.data?.[0] || null
+
+  return { props: {
+    profile,
+    blocks: isPro ? (blocksRes.data || []) : [],
+    affil: primaryAffil ? {
+      company: primaryAffil.company_name || null,
+      title: primaryAffil.title || null,
+      phone: primaryAffil.show_phone ? (primaryAffil.phone || null) : null,
+      email: primaryAffil.show_email ? (primaryAffil.contact_email || null) : null,
+    } : null,
+  } }
 }
