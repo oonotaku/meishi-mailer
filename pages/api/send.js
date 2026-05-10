@@ -24,9 +24,10 @@ function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl, sns
   const titleHtml = title ? `<div style="color:#777;font-size:12px">${escapeHtml(title)}</div>` : ''
 
   const snsHtml = snsLinks && snsLinks.length > 0
-    ? `<div style="margin-top:10px;line-height:2">${snsLinks.map(s =>
-        `<a href="${s.url}" target="_blank" style="font-size:12px;color:${s.color};text-decoration:none;margin-right:12px">${escapeHtml(s.label)}</a>`
-      ).join('')}</div>`
+    ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">${snsLinks.map(s => {
+        const bg = s.color || '#555'
+        return `<a href="${s.url}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:${bg};color:#ffffff;font-size:12px;font-weight:600;font-family:sans-serif;text-decoration:none;border-radius:20px;line-height:1">${escapeHtml(s.label)}</a>`
+      }).join('')}</div>`
     : ''
 
   return `
