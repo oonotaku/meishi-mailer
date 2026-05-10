@@ -317,4 +317,28 @@
     "pricing_title": "Simple pricing",
     "free_plan": "Free",
     "free_scans": "10 scans / month",
-    "free_features": "Core feature
+    "free_features": "Core features",
+    "pro_plan": "Pro",
+    "pro_scans": "100 scans / month",
+    "pro_price": "¥500 / month",
+    "pro_features": "All features",
+    "footer_copy": "© 2026 Koryu"
+  },
+  "auth_confirm": {
+    "page_title": "Set Password — Card Mailer",
+    "loading_hint": "Verifying invitation…",
+    "invalid_link": "The invitation link is invalid or expired. Please request a new invitation.",
+    "to_login": "Go to login",
+    "logo": "Card Mailer",
+    "title": "Set your password",
+    "desc": "Set a password to complete joining the team.",
+    "password_label": "Password",
+    "password_placeholder": "8+ characters",
+    "password_confirm_label": "Confirm password",
+    "password_confirm_placeholder": "Enter again",
+    "submit": "Set password & join team",
+    "submitting": "Setting up...",
+    "err_too_short": "Password must be at least 8 characters",
+    "err_mismatch": "Passwords do not match"
+  }
+}

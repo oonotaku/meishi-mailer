@@ -317,4 +317,28 @@
     "pricing_title": "シンプルな料金体系",
     "free_plan": "Free",
     "free_scans": "月10回まで",
- 
+    "free_features": "基本機能",
+    "pro_plan": "Pro",
+    "pro_scans": "月100回まで",
+    "pro_price": "¥500 / 月",
+    "pro_features": "全機能",
+    "footer_copy": "© 2026 Koryu"
+  },
+  "auth_confirm": {
+    "page_title": "パスワード設定 — 名刺メーラー",
+    "loading_hint": "招待を確認しています…",
+    "invalid_link": "招待リンクが無効か期限切れです。再度招待を依頼してください。",
+    "to_login": "ログインへ",
+    "logo": "名刺メーラー",
+    "title": "パスワードを設定",
+    "desc": "チームへの参加を完了するため、パスワードを設定してください。",
+    "password_label": "パスワード",
+    "password_placeholder": "8文字以上",
+    "password_confirm_label": "パスワード（確認）",
+    "password_confirm_placeholder": "もう一度入力",
+    "submit": "パスワードを設定してチームに参加",
+    "submitting": "設定中...",
+    "err_too_short": "パスワードは8文字以上で入力してください",
+    "err_mismatch": "パスワードが一致しません"
+  }
+}
