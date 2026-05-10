@@ -454,6 +454,7 @@ export default function PublicProfile({ profile, blocks, affil, showAsPro, activ
         .bento-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
+          grid-auto-rows: 144px;
           gap: 12px;
         }
         .bento-block {
@@ -464,28 +465,23 @@ export default function PublicProfile({ profile, blocks, affil, showAsPro, activ
         }
         .block-S {
           grid-column: span 1;
-          height: 120px;
+          grid-row: span 1;
         }
         .block-M {
           grid-column: span 1;
+          grid-row: span 1;
           min-height: 180px;
         }
         .block-L {
           grid-column: span 2;
+          grid-row: span 1;
           min-height: 120px;
         }
         .block-XL {
           grid-column: span 1;
-          height: 300px;
-        }
-        .block-sns.block-S,
-        .block-sns.block-M,
-        .block-sns.block-XL {
-          height: 150px;
-          min-height: unset;
+          grid-row: span 2;
         }
         .block-sns.block-L {
-          height: 100px;
           min-height: unset;
         }
         .bento-empty {
