@@ -1051,7 +1051,7 @@ export default function Home() {
 
         {/* ── UPLOAD ── */}
         {step === STEPS.UPLOAD && (
-          <div className="page">
+          <div className="page upload-page">
             <input
               ref={fileRef}
               type="file"
@@ -1064,26 +1064,74 @@ export default function Home() {
               onChange={onContextFile} style={{ display: 'none' }} />
 
             <div className="top-bar">
-              <div className="eyebrow">{t('app.tagline')}</div>
+              <div className="top-logo">Koryu</div>
               <div className="top-right">
                 <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
-                {user?.email && <span className="user-email">{user.email}</span>}
-                <button className="logout-btn" onClick={handleLogout}>{t('nav.logout')}</button>
               </div>
             </div>
 
             {cardImages.length === 0 ? (
               <>
-                <h1 className="title">{t('home.title_line1')}<br/>{t('home.title_line2')}</h1>
-                <p className="sub">{t('home.sub_line1')}<br/>{t('home.sub_line2')}</p>
-                <button className="upload-btn" onClick={() => fileRef.current.click()}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
-                  {t('home.capture')}
-                </button>
-                <p className="hint">{t('home.gallery_hint')}</p>
+                <div className="scan-hero">
+                  <button className="upload-btn" onClick={() => fileRef.current.click()}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    {t('home.capture')}
+                  </button>
+                  <p className="hint">{t('home.gallery_hint')}</p>
+                </div>
+
+                <div className="secondary-actions">
+                  <button className="action-card" onClick={() => setStep(STEPS.USER_QR_SCAN)}>
+                    <div className="action-card-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                        <path d="M14 14h3v3m0 4h4v-4m-4 0h-3"/>
+                      </svg>
+                    </div>
+                    <div className="action-card-text">
+                      <div className="action-card-title">{i18n.language === 'en' ? 'Connect via QR' : 'QRで繋がる'}</div>
+                      <div className="action-card-sub">{i18n.language === 'en' ? 'Scan a Koryu QR to add contact' : '相手のQRを読み取ってコンタクト追加'}</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{flexShrink:0,color:'#3a3a4a'}}>
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+
+                  {user && (
+                    profile?.plan === 'pro' ? (
+                      <div className="action-card my-qr-static">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
+                          alt="My QR"
+                          className="my-qr-img"
+                        />
+                        <div className="action-card-text">
+                          <div className="action-card-title">{i18n.language === 'en' ? 'My QR code' : '自分のQRコード'}</div>
+                          <div className="action-card-sub" style={{fontFamily:'monospace'}}>koryu.app/p/{user.id.slice(0,8)}...</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <button className="action-card" onClick={() => router.push('/settings/profile?tab=subscription')}>
+                        <div className="action-card-icon" style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',color:'#3a3a4a'}}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg>
+                        </div>
+                        <div className="action-card-text">
+                          <div className="action-card-title">{i18n.language === 'en' ? 'Get your QR code' : '自分のQRを発行する'}</div>
+                          <div className="action-card-sub">Pro · ¥500/月</div>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{flexShrink:0,color:'#3a3a4a'}}>
+                          <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                      </button>
+                    )
+                  )}
+                </div>
               </>
             ) : (
               <>
@@ -1134,68 +1182,38 @@ export default function Home() {
               </>
             )}
 
-            <button className="list-btn" onClick={() => router.push('/contacts')}>
-              {t('nav.contacts')} →
-            </button>
-            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => setStep(STEPS.USER_QR_SCAN)}>
-              🔗 QRで繋がる →
-            </button>
-            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/email')}>
-              ✉️ メール設定 →
-            </button>
-            <button className="list-btn" style={{ marginTop: 8 }} onClick={() => router.push('/settings/profile')}>
-              {t('nav.profile')} →
-            </button>
-
-            {/* 自分のプロフィールQR */}
-            {user && (
-              <div style={{
-                marginTop: 20, padding: '16px', borderRadius: 16,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-              }}>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.5px' }}>
-                  自分のプロフィールQR
+            {/* ── BOTTOM NAV ── */}
+            <nav className="bottom-nav">
+              <div className="bn-item bn-active">
+                <div className="bn-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
                 </div>
-                {profile?.plan === 'pro' ? (
-                  <>
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
-                      alt="My profile QR"
-                      style={{ width: 120, height: 120, borderRadius: 8 }}
-                    />
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
-                      koryu.app/p/{user.id.slice(0, 8)}...
-                    </div>
-                  </>
-                ) : (
-                  <div
-                    onClick={() => router.push('/settings/profile?tab=subscription')}
-                    style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
-                  >
-                    <div style={{
-                      width: 120, height: 120, borderRadius: 8,
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px dashed rgba(255,255,255,0.15)',
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', justifyContent: 'center', gap: 6,
-                    }}>
-                      <div style={{ fontSize: 28 }}>🔒</div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 1.4 }}>
-                        Proで発行
-                      </div>
-                    </div>
-                    <div style={{
-                      fontSize: 11, color: '#7b9e87',
-                      fontFamily: 'Noto Sans JP, sans-serif',
-                    }}>
-                      ¥500/月 → QRを発行する
-                    </div>
-                  </div>
-                )}
+                <span className="bn-label">{i18n.language === 'en' ? 'Scan' : 'スキャン'}</span>
               </div>
-            )}
+              <button className="bn-item" onClick={() => router.push('/contacts')}>
+                <div className="bn-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <span className="bn-label">{t('nav.contacts')}</span>
+              </button>
+              <button className="bn-item" onClick={() => router.push('/settings/profile')}>
+                <div className="bn-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
+                <span className="bn-label">{t('nav.profile')}</span>
+              </button>
+            </nav>
           </div>
         )}
 
@@ -2594,6 +2612,108 @@ export default function Home() {
           transition: color .15s, border-color .15s;
         }
         .context-add-btn:hover { color: #7b9e87; border-color: #7b9e87; }
+
+        /* ── TOP LOGO ── */
+        .top-logo {
+          font-family: 'DM Mono', monospace;
+          font-size: 14px;
+          font-weight: 500;
+          color: #7b9e87;
+          letter-spacing: .08em;
+        }
+
+        /* ── UPLOAD PAGE ── */
+        .upload-page {
+          padding-bottom: 90px !important;
+        }
+        .scan-hero {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 8px;
+          min-height: 160px;
+        }
+        .secondary-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 16px;
+        }
+        .action-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 14px;
+          cursor: pointer;
+          width: 100%;
+          text-align: left;
+          transition: background .15s;
+          color: #f0ede8;
+          font-family: 'Noto Sans JP', sans-serif;
+        }
+        .action-card:active { background: rgba(255,255,255,0.06); }
+        .my-qr-static { cursor: default; }
+        .action-card-icon {
+          width: 44px; height: 44px;
+          border-radius: 10px;
+          background: #1a2e22;
+          border: 1px solid #2a3e30;
+          display: flex; align-items: center; justify-content: center;
+          color: #7b9e87; flex-shrink: 0;
+        }
+        .action-card-text { flex: 1; min-width: 0; }
+        .action-card-title { font-size: 14px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; }
+        .action-card-sub { font-size: 11px; color: #5a5650; }
+        .my-qr-img {
+          width: 48px; height: 48px;
+          border-radius: 6px; flex-shrink: 0;
+        }
+
+        /* ── BOTTOM NAV ── */
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          display: flex;
+          align-items: stretch;
+          background: rgba(10,10,15,0.94);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(255,255,255,0.07);
+          padding: 8px 0;
+          padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+          z-index: 50;
+        }
+        .bn-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+          padding: 4px 0;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #3a3a4a;
+          font-family: 'Noto Sans JP', sans-serif;
+          transition: color .15s;
+        }
+        .bn-item:active { opacity: .7; }
+        .bn-icon {
+          display: flex; align-items: center; justify-content: center;
+        }
+        .bn-label {
+          font-size: 10px;
+          letter-spacing: .02em;
+        }
+        .bn-active { color: #7b9e87; cursor: default; }
       `}</style>
     </>
   )
