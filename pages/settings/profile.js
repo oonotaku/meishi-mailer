@@ -156,7 +156,7 @@ export default function ProfileSettings() {
   const [expandedSns, setExpandedSns] = useState({})
   const [openSections, setOpenSections] = useState({
     profile: false,
-    affil: true,
+    affil: false,
     theme: false,
     blocks: false,
     sns: false,
@@ -210,6 +210,7 @@ export default function ProfileSettings() {
   const router = useRouter()
 
   const isDirtyAny = snsDirty || affilDirty || blocksDirty
+  const isDirty = snsDirty || affilDirty || blocksDirty
 
   useEffect(() => {
     if (profile !== null && localName === null) {
@@ -1429,6 +1430,25 @@ export default function ProfileSettings() {
           </div>
 
           <div className="acc-section">
+            <div className="acc-header" onClick={() => toggleSection('email')}>
+              <span className="acc-title">メール設定</span>
+              <span className="acc-chevron">{openSections.email ? '▲' : '▼'}</span>
+            </div>
+            {openSections.email && (
+            <div className="acc-body">
+              <button
+                type="button"
+                className="save-btn"
+                style={{ width: '100%' }}
+                onClick={() => router.push('/settings/email')}
+              >
+                メール設定ページへ →
+              </button>
+            </div>
+            )}
+          </div>
+
+          <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('plan')}>
               <span className="acc-title">プラン・サブスクリプション</span>
               <span className="acc-chevron">{openSections.plan ? '▲' : '▼'}</span>
@@ -1513,21 +1533,6 @@ export default function ProfileSettings() {
               </div>
             )
           })()}
-          </div>
-
-          <div className="acc-section">
-            <div className="acc-header" onClick={() => toggleSection('email')}>
-              <span className="acc-title">メール設定</span>
-              <span className="acc-chevron">{openSections.email ? '▲' : '▼'}</span>
-            </div>
-            {openSections.email && (
-            <div className="acc-body">
-              <p className="desc" style={{ marginBottom: 12 }}>SendGrid / Gmail / SMTP の送信設定はメール設定ページで行えます。</p>
-              <button type="button" className="save-btn" onClick={() => router.push('/settings/email')}>
-                メール設定を開く →
-              </button>
-            </div>
-            )}
           </div>
         </div>
 
@@ -1729,15 +1734,15 @@ export default function ProfileSettings() {
         </div>
       )}
 
-      {isDirtyAny && (
+      {isDirty && (
         <div className="sticky-save-bar">
           <button
             type="button"
             className="sticky-save-btn"
             onClick={() => {
               if (snsDirty) handleSnsSave({ preventDefault: () => {} })
-              if (blocksDirty) handleBlocksSave()
-              if (affilDirty) handleAffilSave()
+              else if (blocksDirty) handleBlocksSave()
+              else handleAffilSave()
             }}
             disabled={snsSaving || blocksSaving || affilSaving}
           >
@@ -2805,7 +2810,7 @@ export default function ProfileSettings() {
           color: #2a2a3a;
           font-family: 'DM Mono', monospace;
         }
-        .acc-section { border-bottom: 1px solid #1e1e2a; padding: 0; }
+        .acc-section { border-bottom: 1px solid #1e1e2a; }
         .acc-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; cursor: pointer; user-select: none; }
         .acc-title { font-size: 14px; font-weight: 700; color: #f0ede8; }
         .acc-chevron { font-size: 10px; color: #3a3a4a; }
