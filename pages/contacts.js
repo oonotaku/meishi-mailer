@@ -86,7 +86,7 @@ export default function Contacts() {
 
       <div className="shell">
         <div className="top-bar">
-          <span className="top-logo">交流</span>
+          <span className="top-logo">Koryu</span>
           <div className="top-right">
             <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
           </div>
