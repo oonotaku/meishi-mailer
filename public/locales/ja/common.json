@@ -4,11 +4,12 @@
     "tagline": "名刺交換 → SNSでつながる"
   },
   "nav": {
-    "contacts": "つながりを管理する",
+    "contacts": "つながり",
     "team": "チームで使う",
-    "profile": "自分のプロフィールを整える",
+    "profile": "プロフィール",
     "logout": "ログアウト",
-    "back": "← 戻る"
+    "back": "← 戻る",
+    "scan": "スキャン"
   },
   "lang": {
     "switch": "EN"
@@ -126,7 +127,7 @@
   },
   "contacts": {
     "page_title": "あなたのつながり一覧 — 名刺メーラー",
-    "header": "あなたのつながり一覧",
+    "header": "つながり一覧",
     "empty": "保存された名刺はありません",
     "capture": "名刺を撮影する",
     "search_placeholder": "名前・会社・メール・イベントで検索",

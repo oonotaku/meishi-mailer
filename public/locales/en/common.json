@@ -4,11 +4,12 @@
     "tagline": "Business card → SNS connection"
   },
   "nav": {
-    "contacts": "Manage connections",
+    "contacts": "Contacts",
     "team": "Use with team",
-    "profile": "Set up your profile",
+    "profile": "Profile",
     "logout": "Logout",
-    "back": "← Back"
+    "back": "← Back",
+    "scan": "Scan"
   },
   "lang": {
     "switch": "JA"
@@ -126,7 +127,7 @@
   },
   "contacts": {
     "page_title": "Your Connections — Card Mailer",
-    "header": "Your Connections",
+    "header": "Connections",
     "empty": "No saved contacts",
     "capture": "Capture a card",
     "search_placeholder": "Search by name, company, email or event",
