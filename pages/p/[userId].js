@@ -284,6 +284,32 @@ export default function PublicProfile({ profile, blocks }) {
           </div>
         </div>
 
+        {/* Free plan nudge */}
+        {profile.plan !== 'pro' && (
+          <div style={{
+            background: 'rgba(123,158,135,0.08)',
+            border: '1px solid rgba(123,158,135,0.2)',
+            borderRadius: 14,
+            padding: '14px 16px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 12, color: '#7b9e87', fontWeight: 700, marginBottom: 4 }}>
+              ✦ プロフィールをカスタマイズ
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
+              写真・テーマ・ベントーブロックを追加して<br />あなたらしいプロフィールを作ろう
+            </div>
+            <a
+              href="https://koryu.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-block', marginTop: 10, fontSize: 12, color: '#7b9e87', fontWeight: 700, textDecoration: 'none' }}
+            >
+              Koryu Pro を見る →
+            </a>
+          </div>
+        )}
+
         {/* App banner */}
         <a
           href="https://koryu.app"
@@ -406,7 +432,7 @@ export async function getServerSideProps({ params }) {
 
   const [profileRes, blocksRes] = await Promise.all([
     supabaseAdmin.from('profiles')
-      .select('name, bio, avatar_url, profile_theme, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
+      .select('name, bio, avatar_url, profile_theme, plan, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_blocks')
       .select('id, type, size, content, order_index')
@@ -414,5 +440,15 @@ export async function getServerSideProps({ params }) {
   ])
 
   if (profileRes.error || !profileRes.data) return { notFound: true }
-  return { props: { profile: profileRes.data, blocks: blocksRes.data || [] } }
+
+  const isPro = profileRes.data.plan === 'pro'
+  const profile = { ...profileRes.data }
+
+  // Free plan: public profile shows name/bio/SNS only — no avatar, no custom theme, no bento blocks
+  if (!isPro) {
+    profile.avatar_url = null
+    profile.profile_theme = 'dark'
+  }
+
+  return { props: { profile, blocks: isPro ? (blocksRes.data || []) : [] } }
 }
