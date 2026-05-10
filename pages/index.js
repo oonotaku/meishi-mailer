@@ -273,7 +273,6 @@ export default function Home() {
         setSubject(data.subject)
         setBody(data.body)
         setMatchedSns(data.matched_sns || [])
-        setSelectedPreset(data.recommended_preset || 'business')
         setNameDuplicates(data.name_duplicates)
         setDuplicateType('name')
         setStep(STEPS.DUPLICATE_NAME)
@@ -285,7 +284,6 @@ export default function Home() {
       setSubject(data.subject)
       setBody(data.body)
       setMatchedSns(data.matched_sns || [])
-      setSelectedPreset(data.recommended_preset || 'business')
       setMeishiUser(data.meishi_user || null)
       setStep(STEPS.CONFIRM)
     } catch (err) {
