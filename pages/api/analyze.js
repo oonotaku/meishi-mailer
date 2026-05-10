@@ -47,10 +47,10 @@ export default async function handler(req, res) {
   const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
   if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
 
-  // プランチェック＋スキャン数管理
+  // SNSマッチングのためプロフィール取得（スキャン制限なし・課金ゲートはbento編集のみ）
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select(`plan, scan_count_month, scan_count_reset_at, name,
+    .select(`name,
       sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook,
       sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram,
       sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
@@ -59,31 +59,6 @@ export default async function handler(req, res) {
     .single()
 
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const needsReset = !profile?.scan_count_reset_at ||
-    new Date(profile.scan_count_reset_at) < startOfMonth
-
-  let currentCount = profile?.scan_count_month || 0
-  if (needsReset) {
-    currentCount = 0
-    await supabaseAdmin.from('profiles')
-      .update({ scan_count_month: 0, scan_count_reset_at: now.toISOString() })
-      .eq('id', user.id)
-  }
-
-  const plan = profile?.plan || 'free'
-  const limit = plan === 'pro' ? 100 : 10
-  if (currentCount >= limit) {
-    const msg = locale === 'en'
-      ? (plan === 'pro'
-          ? 'Monthly scan limit (100) reached.'
-          : 'Monthly scan limit reached. Please upgrade to Pro.')
-      : (plan === 'pro'
-          ? '月のスキャン上限（100回）に達しました。'
-          : '月のスキャン上限に達しました。Proプランにアップグレードしてください。')
-    return res.status(403).json({ error: msg })
-  }
-
   const captured = capturedAt ? new Date(capturedAt) : now
   const sameDay = now.toDateString() === captured.toDateString()
 
@@ -220,11 +195,6 @@ Rules:
     const lines = mailText.split('\n')
     const subject = lines[0].replace(/^(件名|subject)[:：]\s*/i, '').trim()
     const body = lines.slice(1).join('\n').trim()
-
-    // スキャン数をインクリメント
-    await supabaseAdmin.from('profiles')
-      .update({ scan_count_month: currentCount + 1 })
-      .eq('id', user.id)
 
     // SNSマッチング
     const cardSns = contact.sns || {}
