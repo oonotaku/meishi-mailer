@@ -149,17 +149,34 @@ export default function Contacts() {
           )
         })()}
         <nav className="bottom-nav">
-          <button className="bn-item" onClick={() => router.push('/?scan=1')}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-            <span>{t('nav.scan')}</span>
+          <button className="bn-item" onClick={() => router.push('/')}>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <span className="bn-label">{t('nav.scan')}</span>
           </button>
-          <button className="bn-item bn-active">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>{t('nav.contacts')}</span>
-          </button>
+          <div className="bn-item bn-active">
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <span className="bn-label">{t('nav.contacts')}</span>
+          </div>
           <button className="bn-item" onClick={() => router.push('/settings/profile')}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span>{t('nav.profile')}</span>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <span className="bn-label">{t('nav.profile')}</span>
           </button>
         </nav>
       </div>
@@ -222,11 +239,14 @@ export default function Contacts() {
           width: 100%;
           max-width: 430px;
           display: flex;
-          background: rgba(10,10,15,0.92);
-          backdrop-filter: blur(12px);
-          border-top: 1px solid #1e1e2a;
-          padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-          z-index: 100;
+          align-items: stretch;
+          background: rgba(10,10,15,0.94);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(255,255,255,0.07);
+          padding: 8px 0;
+          padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+          z-index: 50;
         }
         .bn-item {
           flex: 1;
@@ -234,17 +254,23 @@ export default function Contacts() {
           flex-direction: column;
           align-items: center;
           gap: 3px;
+          padding: 4px 0;
           background: none;
           border: none;
-          color: #3a3a4a;
-          font-size: 10px;
-          font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
-          padding: 4px 0;
+          color: #3a3a4a;
+          font-family: 'Noto Sans JP', sans-serif;
           transition: color .15s;
         }
-        .bn-item:hover { color: #5a5a6a; }
-        .bn-item.bn-active { color: #7b9e87; }
+        .bn-item:active { opacity: .7; }
+        .bn-icon {
+          display: flex; align-items: center; justify-content: center;
+        }
+        .bn-label {
+          font-size: 10px;
+          letter-spacing: .02em;
+        }
+        .bn-active { color: #7b9e87; cursor: default; }
         .center {
           flex: 1;
           display: flex;
