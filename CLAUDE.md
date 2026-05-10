@@ -28,15 +28,15 @@ No test framework is configured.
 
 | File | Purpose |
 |------|---------|
-| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7)/USER_QR_SCAN/USER_QR_CONFIRM(10). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。**QRで繋がる**: UPLOAD画面の「🔗 QRで繋がる →」からUSER_QR_SCANへ遷移、`getUserMedia` ライブカメラ＋`requestAnimationFrame`で毎フレームjsQR解析、meishi-mailerプロフィールURL検出後 `/api/profile/public` でプロフィール取得→USER_QR_CONFIRMで確認→`/api/contacts/save`で `extracted_sns` を含めて保存→コンタクト詳細へ遷移。**自分のプロフィールQR**: UPLOAD画面下部に `api.qrserver.com` を使ったQRコードを常時表示。**meishi-mailerユーザー検出**: `/api/analyze` が `meishi_user` フィールドを返すようになり、CONFIRM画面でバッジ（✓ meishi-mailerユーザーです）＋プロフィールリンクを表示。 |
-| `contacts.js` | 「あなたのつながり一覧」（旧: 保存済み名刺一覧）。Own + team-shared contacts. Shows team name badge for contacts from other orgs. |
+| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7)/USER_QR_SCAN/USER_QR_CONFIRM(10). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。**QRで繋がる**: UPLOAD画面の「🔗 QRで繋がる →」からUSER_QR_SCANへ遷移、`getUserMedia` ライブカメラ＋`requestAnimationFrame`で毎フレームjsQR解析、meishi-mailerプロフィールURL検出後 `/api/profile/public` でプロフィール取得→USER_QR_CONFIRMで確認→`/api/contacts/save`で `extracted_sns` を含めて保存→コンタクト詳細へ遷移。**自分のプロフィールQR**: UPLOAD画面下部に `api.qrserver.com` を使ったQRコードを常時表示。**meishi-mailerユーザー検出**: `/api/analyze` が `meishi_user` フィールドを返すようになり、CONFIRM画面でバッジ（✓ meishi-mailerユーザーです）＋プロフィールリンクを表示。**統一 top-bar**: Koryuロゴ左・言語切替＋ユーザーメール＋ログアウト右（旧 user-info-row 廃止）。**統一 bottom-nav**: スキャン（`/`・active）/ つながり（`/contacts`）/ プロフィール（`/settings/profile`）を position:fixed で中央固定（max-width:430px）。 |
+| `contacts.js` | 「あなたのつながり一覧」（旧: 保存済み名刺一覧）。Own + team-shared contacts. Shows team name badge for contacts from other orgs. **統一 top-bar**（旧 `<div className="header">` with back-btn を廃止）＋**統一 bottom-nav**（つながり=active）。スキャンタブはカメラ起動ではなく `/` へのリンク。`contacts.header` i18nキー使用。 |
 | `contacts/[id].js` | Contact detail — 繋がりハブ。**meishi-mailerユーザー検出**: contact.emailで `/api/profile/find-by-email` を呼び、meishi-mailerユーザーであれば name/company/title/email/phone/avatar/extracted_sns/blocks/profile_theme をライブデータで上書き表示。`displayName`/`displayCompany`/`displayEmail` 等の表示変数は meishiProfile → activeCard → contact の優先順で導出。`displayAvatar` がある場合は丸いアバター画像を表示（名刺サムネイルの代わり）。`MiniBlock` コンポーネントと `THEMES` 定数をファイル冒頭に定義し、meishiProfile.blocks があればベントーグリッドをインライン表示（「今すぐ繋がる」とメールセクションの間）。SNSも meishiProfile.extracted_sns のライブデータを優先。**複数名刺対応**: チップバーで名刺切替（`activeCardIdx` state）。「🔄 再スキャン」は複数枚時にカード選択シートを経由。「＋ 名刺を追加」はOCR（preview_only）→確認シート→`add-card` API追記。出会い履歴は `/api/encounters/list` から取得し `met_at` 降順表示。Send/rescan/add-card buttons shown only to `owner_id === user.id`。i18nはrequire()でJSONをバンドル（Vercel serverless cwd対応）。 |
 | `login.js` | Email/password login + signup + password reset (forgot mode). signUp に `emailRedirectTo` を指定して現在のロケールURLへリダイレクト。 |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/email.js` | メール設定（SendGrid/Gmail/SMTP）— プロフィール設定から独立した無料メニュー |
-| `settings/profile.js` | Profile settings — **5タブ UI**（プロフィール / ブロック / SNS / メール設定 / サブスクリプション）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、**テーマ選択（6種: dark/light/midnight/warm/sakura/ocean）**、**プロフィール完成度バー（6項目、100%でゴールドアニメーション）**、**プレビューモーダル（iframeボトムシート）**、**ブロック管理タブ（追加・編集・削除・↑↓並び替え、4タイプ×3サイズ）**、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、SendGrid/Gmail/SMTP 設定、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）、SNS/所属/ブロックタブで変更時に画面下部に固定保存ボタン表示。完全i18n対応。|
-| `p/[userId].js` | Public profile page — **ベントーグリッド方式に全面リデザイン済み**。`profile_blocks` テーブルからブロックを取得し、グリッド最上段に固定ヘッダーブロック（Lサイズ全幅・アバター左＋テキスト右の横並びレイアウト）を配置。以降のブロックは S（1列×120px固定）/ M（1列×180px+）/ L（全幅）/ **XL（1列×300px縦長）** の4サイズ。ブロックタイプ: photo（画像＋グラデーションキャプション）/ text（下寄せ配置・背景色自動判定文字色）/ link（↗アイコン付きリンクカード）/ sns（ブランドカラー背景・左上アイコン・左下ラベル＋caption・右上↗・上詰めレイアウト）。6種テーマ（profile_theme）に対応。border-radius 20px統一。バナーはシンプルなフッターリンク（「名刺から、SNSでつながる。meishi-mailer ↗」）。No auth。`getServerSideProps` + `supabaseAdmin`。|
+| `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / ベントーブロック / メール設定 / プラン・サブスクリプション。**常時表示プレビューボタン**（アコーディオン上部に固定、タップで iframeボトムシート）。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能（`?simulate_free=1` を iframe URL に付与）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、**テーマ選択（6種: dark/light/midnight/warm/sakura/ocean）**、**プロフィール完成度バー（6項目、100%でゴールドアニメーション）**、**ブロック管理（追加・編集・削除・↑↓並び替え、4タイプ×3サイズ）**、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
+| `p/[userId].js` | Public profile page — **ベントーグリッド方式に全面リデザイン済み**。`profile_blocks` テーブルからブロックを取得し、グリッド最上段に固定ヘッダーブロック（Lサイズ全幅・アバター左＋テキスト右の横並びレイアウト）を配置。以降のブロックは S（1列×1行=144px）/ M（1列・min-height 180px）/ L（全幅）/ **XL（1列×2行=300px+、`grid-row: span 2`）** の4サイズ（`grid-auto-rows: 144px`）。ブロックタイプ: photo / text / link / sns。6種テーマ対応。**無課金ユーザー表示**: ベントーグリッドの代わりに SNSアイコンバー（48×48 角丸アイコン）＋「✦ ベントーグリッドで魅せる」アップグレード誘導を表示。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -244,4 +244,13 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - Google OAuth審査申請中（gmail.send スコープ）
 - PWA対応済み（koryu-icon.png追加）
 
-次の候補: LPの微調整・スクロールアニメーション、SEO（canonical/OGP）、公開プロフィールのSNSシェア最適化。See `MEISHI_AI_SPEC.md` for roadmap.
+**2026-05-11 UI統一・プロフィール画面大幅改善完了。**
+
+- 全3ページ（index/contacts/profile設定）で top-bar + bottom-nav を統一
+- プロフィール設定: タブUI廃止 → アコーディオン1スクロール化（全セクションデフォルト閉じ）
+- プロフィール設定に常時表示のプレビューボタン追加（Pro/無課金プレビュー比較対応）
+- 公開プロフィール: 無課金ユーザー向けSNSアイコンバー表示 + `simulate_free=1` クエリ対応
+- ベントーグリッドCSS修正: `grid-auto-rows:144px`、XLブロック=`grid-row: span 2`、SNS高さオーバーライド削除
+- i18n: `nav.scan` / `nav.contacts` / `nav.profile` / `contacts.header` キー追加（ja/en両方）
+
+次の候補: LP微調整・スクロールアニメーション、SEO（canonical/OGP）、公開プロフィールのSNSシェア最適化、プロフィール設定UIの細部調整。See `MEISHI_AI_SPEC.md` for roadmap.

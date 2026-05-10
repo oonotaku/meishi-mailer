@@ -89,13 +89,14 @@
 
 ### 3. プロフィール・送信設定・課金 ✅ 完了
 
-**`/settings/profile`**（タブUI: メール設定 / SNS / 所属）
+**`/settings/profile`**（アコーディオンUI: SNSリンク / 所属・連絡先 / ベントーブロック / メール設定 / プラン、旧タブUI廃止）
 - ログイン中のメールアドレス・表示名 + 一言コメント（bio）を表示（インライン編集可）
-- **メール設定タブ**: SendGrid / Gmail OAuth2 / カスタムSMTP を選択して設定。送信プロバイダーごとに設定フォームを切替表示。メール署名プレビュー（QRコード付き）を表示。未設定の場合、メール送信時に設定を促すエラーを返す
-- **SNSタブ**: LINE / WhatsApp / X / Instagram / Facebook / LinkedIn / TikTok / YouTube / Threads / Telegram / WeChat / Discord / GitHub / Bluesky / Pinterest の15種のSNSリンクを登録。入力モードは3種：QRスキャン（LINE/WhatsApp）・ユーザー名入力（X/Instagram等）・URLフル入力（Facebook/Discord/WeChat）。各SNSにhelpリンクあり。
-- **所属タブ**: 会社名・役職を最大5件登録（ドラッグ&ドロップ並び替え対応）。先頭1件がメール署名・プロフィールページの主所属として使われる
-- プランバッジ（Free / Pro）と今月のスキャン使用数バーを表示
-- Stripe Checkout（アップグレード）・Stripe Customer Portal（管理）へのボタン
+- **常時表示プレビューボタン**: アコーディオン上部に「公開プロフィールを確認する →」ボタンを固定配置。`previewMode`（`'pro'`\|`'free'`）でPro/無課金プレビューを切り替え可能
+- **SNSセクション**: 21種のSNSリンクを登録。入力モードは3種（QR/ユーザー名/URL）
+- **所属セクション**: 会社名・役職を最大5件登録（↑↓並び替え対応）。先頭1件がメール署名の主所属
+- **ベントーブロックセクション**: ブロック追加・編集・削除・並び替え（4タイプ×4サイズ）
+- **メール設定セクション**: `/settings/email` への導線ボタン
+- **プランセクション**: Stripe Checkout（アップグレード）・Customer Portal（管理）
 - 全テキストi18n対応（日本語/英語）
 
 **公開プロフィールページ（`/p/[userId]`）**
@@ -406,6 +407,12 @@ reminders (id, contact_id, user_id, remind_at, done, created_at)
 - [x] コンタクト詳細のmeishi-mailerユーザーライブ表示（name/company/email/avatar/SNS/profileBlocksをAPIから毎回取得、displayAvatar時は丸アバター表示）（2026-05-08）
 - [x] コンタクト詳細にベントーグリッドMiniBlock表示（meishi-mailerユーザーのprofile_blocksをインライン描画）（2026-05-08）
 - [x] つながり一覧タイトル変更（「保存済み名刺一覧」→「あなたのつながり一覧」/「Your Connections」）（2026-05-08）
+- [x] 全ページ統一 top-bar + bottom-nav（index/contacts/profile設定の3ページ、Koryuロゴ左・言語切替＋メール＋ログアウト右）（2026-05-11）
+- [x] プロフィール設定アコーディオン化（タブUI廃止、`openSections` state、全セクションデフォルト閉じ）（2026-05-11）
+- [x] プロフィール設定に常時表示プレビューボタン追加（アコーディオン上部固定、Pro/無課金プレビュー比較対応、`previewMode` state）（2026-05-11）
+- [x] 公開プロフィール無課金表示（SNSアイコンバー＋アップグレード誘導）と `simulate_free=1` クエリ対応（2026-05-11）
+- [x] ベントーグリッドCSSサイズ修正（`grid-auto-rows:144px`、XL=`grid-row: span 2`、SNS高さオーバーライド削除）（2026-05-11）
+- [x] i18nキー追加: `nav.scan` / `nav.contacts` / `nav.profile` / `contacts.header`（ja/en）（2026-05-11）
 - [ ] Contact引き継ぎ機能（アサイン + AIサマリー生成）
 - [ ] AIフォローアップ提案
 - [ ] フォローリマインダー（Vercel Cron）
