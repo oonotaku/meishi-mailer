@@ -1,7 +1,8 @@
 {
   "app": {
-    "name": "名刺メーラー",
-    "tagline": "名刺交換 → SNSでつながる"
+    "name": "Koryu",
+    "tagline": "名刺より、プロフィールで魅せる。",
+    "description": "名刺を撮って、自分のページを相手に届けよう。"
   },
   "nav": {
     "contacts": "つながり",
@@ -107,7 +108,7 @@
     "latest": "最新"
   },
   "login": {
-    "page_title": "ログイン — 名刺メーラー",
+    "page_title": "ログイン — Koryu",
     "sub_line1": "出会いを記録し、",
     "sub_line2": "関係を動かす",
     "tab_login": "ログイン",
@@ -126,7 +127,7 @@
     "back_to_login": "← ログインに戻る"
   },
   "contacts": {
-    "page_title": "あなたのつながり一覧 — 名刺メーラー",
+    "page_title": "あなたのつながり一覧 — Koryu",
     "header": "つながり一覧",
     "empty": "保存された名刺はありません",
     "capture": "名刺を撮影する",
@@ -191,7 +192,7 @@
     "detecting": "SNSを検出中..."
   },
   "team": {
-    "page_title": "チーム管理 — 名刺メーラー",
+    "page_title": "チーム管理 — Koryu",
     "header": "チーム管理",
     "own_team": "自分のチーム",
     "owner_badge": "オーナー",
@@ -215,7 +216,7 @@
     "my_team_default": "マイチーム"
   },
   "profile": {
-    "page_title": "プロフィール設定 — 名刺メーラー",
+    "page_title": "プロフィール設定 — Koryu",
     "header": "プロフィール設定",
     "email_settings_label": "メール送信設定",
     "configured": "設定済み",
@@ -326,11 +327,11 @@
     "footer_copy": "© 2026 Koryu"
   },
   "auth_confirm": {
-    "page_title": "パスワード設定 — 名刺メーラー",
+    "page_title": "パスワード設定 — Koryu",
     "loading_hint": "招待を確認しています…",
     "invalid_link": "招待リンクが無効か期限切れです。再度招待を依頼してください。",
     "to_login": "ログインへ",
-    "logo": "名刺メーラー",
+    "logo": "Koryu",
     "title": "パスワードを設定",
     "desc": "チームへの参加を完了するため、パスワードを設定してください。",
     "password_label": "パスワード",

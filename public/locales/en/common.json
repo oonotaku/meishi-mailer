@@ -1,7 +1,8 @@
 {
   "app": {
-    "name": "Card Mailer",
-    "tagline": "Business card → SNS connection"
+    "name": "Koryu",
+    "tagline": "Your profile, not just a business card.",
+    "description": "Scan a card, then share your page."
   },
   "nav": {
     "contacts": "Contacts",
@@ -107,7 +108,7 @@
     "latest": "Latest"
   },
   "login": {
-    "page_title": "Login — Card Mailer",
+    "page_title": "Login — Koryu",
     "sub_line1": "Record connections,",
     "sub_line2": "build relationships.",
     "tab_login": "Sign In",
@@ -126,7 +127,7 @@
     "back_to_login": "← Back to login"
   },
   "contacts": {
-    "page_title": "Your Connections — Card Mailer",
+    "page_title": "Your Connections — Koryu",
     "header": "Connections",
     "empty": "No saved contacts",
     "capture": "Capture a card",
@@ -191,7 +192,7 @@
     "detecting": "Detecting SNS..."
   },
   "team": {
-    "page_title": "Team Management — Card Mailer",
+    "page_title": "Team Management — Koryu",
     "header": "Team Management",
     "own_team": "My Team",
     "owner_badge": "Owner",
@@ -215,7 +216,7 @@
     "my_team_default": "My Team"
   },
   "profile": {
-    "page_title": "Profile Settings — Card Mailer",
+    "page_title": "Profile Settings — Koryu",
     "header": "Profile Settings",
     "email_settings_label": "Email Settings",
     "configured": "Configured",
@@ -326,11 +327,11 @@
     "footer_copy": "© 2026 Koryu"
   },
   "auth_confirm": {
-    "page_title": "Set Password — Card Mailer",
+    "page_title": "Set Password — Koryu",
     "loading_hint": "Verifying invitation…",
     "invalid_link": "The invitation link is invalid or expired. Please request a new invitation.",
     "to_login": "Go to login",
-    "logo": "Card Mailer",
+    "logo": "Koryu",
     "title": "Set your password",
     "desc": "Set a password to complete joining the team.",
     "password_label": "Password",
