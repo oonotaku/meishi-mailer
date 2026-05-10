@@ -982,6 +982,14 @@ export default function ProfileSettings() {
 
           <div className="divider" />
 
+          <button
+            type="button"
+            className="profile-preview-btn"
+            onClick={() => setShowPreview(true)}
+          >
+            公開プロフィールを確認する →
+          </button>
+
           <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('sns')}>
               <span className="acc-title">SNS リンク</span>
@@ -2809,6 +2817,24 @@ export default function ProfileSettings() {
           font-size: 11px;
           color: #2a2a3a;
           font-family: 'DM Mono', monospace;
+        }
+        .profile-preview-btn {
+          width: 100%;
+          padding: 12px;
+          background: none;
+          border: 1px solid #2a2a3a;
+          border-radius: 10px;
+          color: #7b9e87;
+          font-size: 13px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          text-align: center;
+          margin-bottom: 1rem;
+          transition: border-color .15s, background .15s;
+        }
+        .profile-preview-btn:hover {
+          border-color: #7b9e87;
+          background: #0d1f15;
         }
         .acc-section { border-bottom: 1px solid #1e1e2a; }
         .acc-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; cursor: pointer; user-select: none; }
