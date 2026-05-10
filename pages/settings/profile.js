@@ -154,7 +154,17 @@ export default function ProfileSettings() {
   const [snsMsg, setSnsMsg] = useState(null)
   const [presetTab, setPresetTab] = useState('business')
   const [expandedSns, setExpandedSns] = useState({})
-  const [activeTab, setActiveTab] = useState('profile_tab')
+  const [openSections, setOpenSections] = useState({
+    profile: false,
+    affil: true,
+    theme: false,
+    blocks: false,
+    sns: false,
+    email: false,
+    plan: false,
+  })
+  const toggleSection = (key) =>
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
   const qrFileRef = useRef(null)
@@ -200,7 +210,6 @@ export default function ProfileSettings() {
   const router = useRouter()
 
   const isDirtyAny = snsDirty || affilDirty || blocksDirty
-  const isDirtyCurrent = (activeTab === 'sns' && snsDirty) || (activeTab === 'profile_tab' && affilDirty) || (activeTab === 'blocks' && blocksDirty)
 
   useEffect(() => {
     if (profile !== null && localName === null) {
@@ -972,26 +981,13 @@ export default function ProfileSettings() {
 
           <div className="divider" />
 
-          <div className="tab-bar">
-            {[
-              { key: 'profile_tab', label: t('profile.tab_profile') },
-              { key: 'blocks',       label: 'ブロック' },
-              { key: 'sns',          label: 'SNS' },
-              { key: 'subscription', label: t('profile.tab_subscription') },
-            ].map(tab => (
-              <button
-                key={tab.key}
-                type="button"
-                className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === 'sns' && (
-            <div className="section">
+          <div className="acc-section">
+            <div className="acc-header" onClick={() => toggleSection('sns')}>
+              <span className="acc-title">SNS リンク</span>
+              <span className="acc-chevron">{openSections.sns ? '▲' : '▼'}</span>
+            </div>
+            {openSections.sns && (
+            <div className="acc-body">
               {/* プリセットプレビューパネル */}
               <div className="preset-panel">
                 <div className="preset-panel-header">
@@ -1166,10 +1162,16 @@ export default function ProfileSettings() {
                 {snsSaving ? t('profile.saving') : t('profile.save')}
               </button>
             </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === 'profile_tab' && (
-            <div className="section">
+          <div className="acc-section">
+            <div className="acc-header" onClick={() => toggleSection('affil')}>
+              <span className="acc-title">所属・連絡先</span>
+              <span className="acc-chevron">{openSections.affil ? '▲' : '▼'}</span>
+            </div>
+            {openSections.affil && (
+            <div className="acc-body">
 
               {/* ── プロフィール完成度バー ── */}
               {(() => {
@@ -1200,7 +1202,8 @@ export default function ProfileSettings() {
                         {incomplete.map(s => (
                           <button key={s.id} type="button" className="completion-chip"
                             onClick={() => {
-                              setActiveTab(s.tab)
+                              const key = s.tab === 'profile_tab' ? 'affil' : s.tab
+                              setOpenSections(prev => ({ ...prev, [key]: true }))
                               if (s.id === 'bio') {
                                 setNameEdit(true)
                                 setTimeout(() => {
@@ -1240,7 +1243,7 @@ export default function ProfileSettings() {
                             background: `linear-gradient(135deg, ${th.bg} 60%, ${th.card})`,
                             ['--swatch-accent']: th.accent,
                           }}
-                          onClick={() => isLocked ? setActiveTab('subscription') : handleThemeChange(th.id)}
+                          onClick={() => isLocked ? setOpenSections(prev => ({ ...prev, plan: true })) : handleThemeChange(th.id)}
                         />
                         {isLocked && <div className="theme-lock-badge">🔒</div>}
                       </div>
@@ -1341,10 +1344,16 @@ export default function ProfileSettings() {
                 </div>
               </div>
             </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === 'blocks' && (
-            <div className="section">
+          <div className="acc-section">
+            <div className="acc-header" onClick={() => toggleSection('blocks')}>
+              <span className="acc-title">ベントーブロック</span>
+              <span className="acc-chevron">{openSections.blocks ? '▲' : '▼'}</span>
+            </div>
+            {openSections.blocks && (
+            <div className="acc-body">
               <div className="section-header">
                 <div className="section-label">ベントーブロック</div>
                 <span className={`config-badge ${blocks.length > 0 ? 'configured' : 'unconfigured'}`}>
@@ -1358,7 +1367,7 @@ export default function ProfileSettings() {
                     <div className="paywall-icon">⬡</div>
                     <div className="paywall-title">Proプランで使えます</div>
                     <div className="paywall-desc">ベントーグリッドのカスタマイズはProプランの機能です。</div>
-                    <button className="paywall-btn" onClick={() => setActiveTab('subscription')}>
+                    <button className="paywall-btn" onClick={() => setOpenSections(prev => ({ ...prev, plan: true }))}>
                       アップグレードする →
                     </button>
                   </div>
@@ -1416,12 +1425,18 @@ export default function ProfileSettings() {
                 </button>
               )}
             </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === 'subscription' && (() => {
+          <div className="acc-section">
+            <div className="acc-header" onClick={() => toggleSection('plan')}>
+              <span className="acc-title">プラン・サブスクリプション</span>
+              <span className="acc-chevron">{openSections.plan ? '▲' : '▼'}</span>
+            </div>
+            {openSections.plan && (() => {
             const isPro = profile?.plan === 'pro'
             return (
-              <div className="section">
+              <div className="acc-body">
                 <div className="section-header">
                   <div className="section-label">プラン</div>
                   <span className={`plan-badge ${isPro ? 'pro' : 'free'}`}>
@@ -1498,6 +1513,22 @@ export default function ProfileSettings() {
               </div>
             )
           })()}
+          </div>
+
+          <div className="acc-section">
+            <div className="acc-header" onClick={() => toggleSection('email')}>
+              <span className="acc-title">メール設定</span>
+              <span className="acc-chevron">{openSections.email ? '▲' : '▼'}</span>
+            </div>
+            {openSections.email && (
+            <div className="acc-body">
+              <p className="desc" style={{ marginBottom: 12 }}>SendGrid / Gmail / SMTP の送信設定はメール設定ページで行えます。</p>
+              <button type="button" className="save-btn" onClick={() => router.push('/settings/email')}>
+                メール設定を開く →
+              </button>
+            </div>
+            )}
+          </div>
         </div>
 
         <div className="page-footer">
@@ -1698,19 +1729,19 @@ export default function ProfileSettings() {
         </div>
       )}
 
-      {isDirtyCurrent && (
+      {isDirtyAny && (
         <div className="sticky-save-bar">
           <button
             type="button"
             className="sticky-save-btn"
             onClick={() => {
-              if (activeTab === 'sns') handleSnsSave({ preventDefault: () => {} })
-              else if (activeTab === 'blocks') handleBlocksSave()
-              else handleAffilSave()
+              if (snsDirty) handleSnsSave({ preventDefault: () => {} })
+              if (blocksDirty) handleBlocksSave()
+              if (affilDirty) handleAffilSave()
             }}
-            disabled={activeTab === 'sns' ? snsSaving : activeTab === 'blocks' ? blocksSaving : affilSaving}
+            disabled={snsSaving || blocksSaving || affilSaving}
           >
-            {(activeTab === 'sns' ? snsSaving : activeTab === 'blocks' ? blocksSaving : affilSaving) ? t('profile.saving') : t('profile.save')}
+            {(snsSaving || blocksSaving || affilSaving) ? t('profile.saving') : t('profile.save')}
           </button>
         </div>
       )}
@@ -2774,30 +2805,11 @@ export default function ProfileSettings() {
           color: #2a2a3a;
           font-family: 'DM Mono', monospace;
         }
-        .tab-bar {
-          display: flex;
-          gap: 6px;
-          padding: 1rem 1.5rem 0;
-          border-bottom: 1px solid #1e1e2a;
-          margin-bottom: 0;
-        }
-        .tab-btn {
-          padding: 8px 16px;
-          background: none;
-          border: none;
-          border-bottom: 2px solid transparent;
-          color: #5a5650;
-          font-size: 13px;
-          font-family: 'Noto Sans JP', sans-serif;
-          cursor: pointer;
-          transition: color .15s, border-color .15s;
-          margin-bottom: -1px;
-        }
-        .tab-btn:hover { color: #f0ede8; }
-        .tab-btn.active {
-          color: #7b9e87;
-          border-bottom-color: #7b9e87;
-        }
+        .acc-section { border-bottom: 1px solid #1e1e2a; padding: 0; }
+        .acc-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; cursor: pointer; user-select: none; }
+        .acc-title { font-size: 14px; font-weight: 700; color: #f0ede8; }
+        .acc-chevron { font-size: 10px; color: #3a3a4a; }
+        .acc-body { padding-bottom: 1.5rem; }
         .sns-registered-summary {
           display: flex;
           flex-wrap: wrap;
