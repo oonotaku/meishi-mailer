@@ -542,6 +542,15 @@ export default function Home() {
     if (contextFileRef.current) contextFileRef.current.value = ''
   }
 
+  function retakePhoto() {
+    setCardImages([])
+    setContextImages([])
+    setQrResults([])
+    if (fileRef.current) fileRef.current.value = ''
+    if (contextFileRef.current) contextFileRef.current.value = ''
+    setTimeout(() => fileRef.current?.click(), 80)
+  }
+
   if (authLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f' }}>
       <div style={{ width: 32, height: 32, border: '2px solid #1e1e2a', borderTopColor: '#7b9e87', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
@@ -1177,10 +1186,25 @@ export default function Home() {
                   </button>
                 </div>
 
+                <div className="quick-memo-wrap">
+                  <label className="quick-memo-label">
+                    {i18n.language === 'en' ? 'Quick note (optional)' : 'ひとこと（任意）'}
+                  </label>
+                  <textarea
+                    className="quick-memo-input"
+                    placeholder={i18n.language === 'en' ? 'e.g. Met at the conference, in charge of sales...' : '例：展示会で交換、営業担当…'}
+                    value={memo}
+                    onChange={e => setMemo(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+
                 <button className="upload-btn" onClick={onAnalyze}>
                   {t('home.analyze')}
                 </button>
-                <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
+                <button className="ghost-btn" onClick={retakePhoto}>
+                  {i18n.language === 'en' ? 'Retake' : '撮り直す'}
+                </button>
               </>
             )}
 
@@ -2719,6 +2743,35 @@ export default function Home() {
           letter-spacing: .02em;
         }
         .bn-active { color: #7b9e87; cursor: default; }
+
+        /* ── QUICK MEMO ── */
+        .quick-memo-wrap {
+          margin-bottom: 4px;
+        }
+        .quick-memo-label {
+          display: block;
+          font-size: 11px;
+          color: #5a5650;
+          letter-spacing: .06em;
+          font-family: 'DM Mono', monospace;
+          margin-bottom: 6px;
+        }
+        .quick-memo-input {
+          width: 100%;
+          padding: 10px 12px;
+          background: #0d0d14;
+          border: 1px solid #1e1e2a;
+          border-radius: 10px;
+          color: #f0ede8;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          line-height: 1.6;
+          resize: none;
+          outline: none;
+          transition: border-color .15s;
+        }
+        .quick-memo-input:focus { border-color: #7b9e87; }
+        .quick-memo-input::placeholder { color: #3a3a4a; }
       `}</style>
     </>
   )
