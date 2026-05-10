@@ -271,6 +271,11 @@ export default function PublicProfile({ profile, blocks, affil }) {
                     {affil.phone}
                   </a>
                 )}
+                {affil?.website && (
+                  <a href={affil.website} target="_blank" rel="noopener noreferrer" style={{ display: 'block', color: theme.text, fontSize: 11, marginTop: 2, opacity: 0.5, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {affil.website.replace(/^https?:\/\//, '')}
+                  </a>
+                )}
                 <div style={{ marginTop: 8, width: 28, height: 3, borderRadius: 2, background: theme.accent }} />
               </div>
             </div>
@@ -428,7 +433,7 @@ export async function getServerSideProps({ params }) {
       .select('id, type, size, content, order_index')
       .eq('user_id', userId).order('order_index'),
     supabaseAdmin.from('profile_affiliations')
-      .select('company_name, title, phone, contact_email, show_phone, show_email')
+      .select('company_name, title, phone, contact_email, website, show_phone, show_email, show_website')
       .eq('user_id', userId).order('order_index').limit(1),
   ])
 
@@ -453,6 +458,7 @@ export async function getServerSideProps({ params }) {
       title: primaryAffil.title || null,
       phone: primaryAffil.show_phone ? (primaryAffil.phone || null) : null,
       email: primaryAffil.show_email ? (primaryAffil.contact_email || null) : null,
+      website: primaryAffil.show_website !== false ? (primaryAffil.website || null) : null,
     } : null,
   } }
 }
