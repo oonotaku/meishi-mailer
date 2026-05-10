@@ -55,7 +55,6 @@ export default function Home() {
   const [duplicateContactId, setDuplicateContactId] = useState(null)
   const [duplicateType, setDuplicateType] = useState(null)
   const [matchedSns, setMatchedSns] = useState([])
-  const [selectedPreset, setSelectedPreset] = useState('business')
   const [speechSupported, setSpeechSupported] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [interimText, setInterimText] = useState('')
@@ -363,7 +362,7 @@ export default function Home() {
         const r = await fetch('/api/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ to: email, subject, body, selected_preset: selectedPreset }),
+          body: JSON.stringify({ to: email, subject, body, selected_preset: 'business' }),
         })
         const data = await r.json()
         if (!r.ok) throw new Error(data.error)
@@ -397,7 +396,7 @@ export default function Home() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ to: email, subject, body, selected_preset: selectedPreset })
+        body: JSON.stringify({ to: email, subject, body, selected_preset: 'business' })
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
@@ -537,7 +536,6 @@ export default function Home() {
     setDuplicateContactId(null)
     setDuplicateType(null)
     setMatchedSns([])
-    setSelectedPreset('business')
     if (fileRef.current) fileRef.current.value = ''
     if (contextFileRef.current) contextFileRef.current.value = ''
   }
@@ -1625,35 +1623,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* プリセット選択 */}
-            {SNS_CONFIG.some(f => profile?.[f.key]) && (
-              <div className="preset-sel-section">
-                <div className="preset-sel-heading">
-                  📤 {i18n.language === 'en' ? 'SNS to include in email' : '相手に送るSNSを選ぶ'}
-                </div>
-                <div className="preset-sel-tabs">
-                  {[
-                    { key: 'business', label: i18n.language === 'en' ? 'Business' : 'ビジネス' },
-                    { key: 'personal', label: i18n.language === 'en' ? 'Personal' : '個人' },
-                    { key: 'all',      label: i18n.language === 'en' ? 'All' : 'すべて' },
-                  ].map(p => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      className={`preset-sel-tab ${selectedPreset === p.key ? 'active' : ''}`}
-                      onClick={() => setSelectedPreset(p.key)}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="preset-sel-hint">
-                  {i18n.language === 'en'
-                    ? 'Selected SNS links will be included in the email'
-                    : '選択したプリセットのSNSリンクがメールに含まれます'}
-                </p>
-              </div>
-            )}
 
             {memo && (
               <div className="confirm-memo">
@@ -2578,48 +2547,7 @@ export default function Home() {
         }
 
         /* ── プリセット選択 ── */
-        .preset-sel-section {
-          background: #0d0f1a;
-          border: 1px solid #1e1e2a;
-          border-radius: 12px;
-          padding: 14px;
-          margin-bottom: 14px;
-        }
-        .preset-sel-heading {
-          font-size: 10px;
-          font-family: 'DM Mono', monospace;
-          letter-spacing: .08em;
-          color: #5a5650;
-          text-transform: uppercase;
-          margin-bottom: 10px;
-        }
-        .preset-sel-tabs {
-          display: flex;
-          gap: 6px;
-          margin-bottom: 8px;
-        }
-        .preset-sel-tab {
-          flex: 1;
-          padding: 8px 4px;
-          background: #12121a;
-          border: 1px solid #1e1e2a;
-          border-radius: 8px;
-          color: #5a5650;
-          font-size: 12px;
-          font-family: 'Noto Sans JP', sans-serif;
-          cursor: pointer;
-          transition: all .15s;
-        }
-        .preset-sel-tab.active {
-          background: #1a2e22;
-          border-color: #7b9e87;
-          color: #7b9e87;
-        }
-        .preset-sel-hint {
-          font-size: 11px;
-          color: #3a3a4a;
-          line-height: 1.5;
-        }
+
 
         .photo-zone {
           width: 100%;
