@@ -422,8 +422,9 @@ export default function PublicProfile({ profile, blocks, affil }) {
   )
 }
 
-export async function getServerSideProps({ params }) {
+export async function getServerSideProps({ params, query }) {
   const { userId } = params
+  const isPreview = query?.preview === '1'
 
   const [profileRes, blocksRes, affiliationsRes] = await Promise.all([
     supabaseAdmin.from('profiles')
@@ -443,7 +444,8 @@ export async function getServerSideProps({ params }) {
   const profile = { ...profileRes.data }
 
   // Free plan: public profile shows name/bio/SNS only — no avatar, no custom theme, no bento blocks
-  if (!isPro) {
+  // preview=1 bypasses gating so owners can see the Pro layout in settings preview
+  if (!isPro && !isPreview) {
     profile.avatar_url = null
     profile.profile_theme = 'dark'
   }
@@ -452,7 +454,7 @@ export async function getServerSideProps({ params }) {
 
   return { props: {
     profile,
-    blocks: isPro ? (blocksRes.data || []) : [],
+    blocks: (isPro || isPreview) ? (blocksRes.data || []) : [],
     affil: primaryAffil ? {
       company: primaryAffil.company_name || null,
       title: primaryAffil.title || null,
