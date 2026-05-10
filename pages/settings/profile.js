@@ -851,11 +851,20 @@ export default function ProfileSettings() {
       </Head>
 
       <div className="shell">
-        <div className="header">
-          <button className="back-btn" onClick={() => router.push('/')}>{t('nav.back')}</button>
-          <div className="header-title">{t('profile.header')}</div>
-          <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
+        <div className="top-bar">
+          <span className="top-logo">Koryu</span>
+          <div className="top-right">
+            {user && <span className="user-email">{user.email}</span>}
+            {user && (
+              <button className="logout-btn" onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.href = '/login'
+              }}>{i18n.language === 'en' ? 'Log out' : 'ログアウト'}</button>
+            )}
+            <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
+          </div>
         </div>
+        <div className="page-title">{t('profile.header')}</div>
 
         <div className="page">
 
@@ -1500,6 +1509,38 @@ export default function ProfileSettings() {
             {i18n.language === 'en' ? 'Terms of Service' : '利用規約'}
           </a>
         </div>
+
+        <nav className="bottom-nav">
+          <button className="bn-item" onClick={() => router.push('/')}>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <span className="bn-label">{i18n.language === 'en' ? 'Scan' : 'スキャン'}</span>
+          </button>
+          <button className="bn-item" onClick={() => router.push('/contacts')}>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <span className="bn-label">{i18n.language === 'en' ? 'Contacts' : 'つながり'}</span>
+          </button>
+          <div className="bn-item bn-active">
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <span className="bn-label">{i18n.language === 'en' ? 'Profile' : 'プロフィール'}</span>
+          </div>
+        </nav>
       </div>
 
       {/* ── 名刺スキャン確認オーバーレイ ── */}
@@ -2048,42 +2089,105 @@ export default function ProfileSettings() {
           margin: 0 auto;
           display: flex;
           flex-direction: column;
+          padding-bottom: 72px;
         }
-        .header {
+        .top-bar {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 1.25rem 1.5rem;
-          border-bottom: 1px solid #1e1e2a;
+          justify-content: space-between;
+          padding: 1rem 1.5rem 0.5rem;
         }
-        .back-btn {
+        .top-logo {
+          font-family: 'DM Mono', monospace;
+          font-size: 18px;
+          font-weight: 500;
+          color: #7b9e87;
+          letter-spacing: .06em;
+        }
+        .top-right {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .user-email {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          max-width: 130px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .logout-btn {
           background: none;
           border: none;
-          color: #7b9e87;
-          font-size: 14px;
+          color: #3a3a4a;
+          font-size: 11px;
           font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
           padding: 0;
+          flex-shrink: 0;
         }
-        .header-title {
-          font-size: 16px;
-          font-weight: 700;
-          color: #f0ede8;
-          flex: 1;
-        }
+        .logout-btn:active { color: #7b9e87; }
         .lang-btn {
           background: none;
           border: 1px solid #2a2a3a;
           border-radius: 4px;
           color: #5a5650;
-          font-size: 10px;
+          font-size: 12px;
           font-family: 'DM Mono', monospace;
           cursor: pointer;
-          padding: 2px 6px;
+          padding: 5px 10px;
           letter-spacing: .06em;
           flex-shrink: 0;
         }
         .lang-btn:hover { color: #7b9e87; border-color: #7b9e87; }
+        .page-title {
+          font-size: 22px;
+          font-weight: 700;
+          color: #f0ede8;
+          padding: 0.25rem 1.5rem 1rem;
+        }
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          display: flex;
+          align-items: stretch;
+          background: rgba(10,10,15,0.94);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(255,255,255,0.07);
+          padding: 8px 0;
+          padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+          z-index: 50;
+        }
+        .bn-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+          padding: 4px 0;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #3a3a4a;
+          font-family: 'Noto Sans JP', sans-serif;
+          transition: color .15s;
+        }
+        .bn-item:active { opacity: .7; }
+        .bn-icon {
+          display: flex; align-items: center; justify-content: center;
+        }
+        .bn-label {
+          font-size: 10px;
+          letter-spacing: .02em;
+        }
+        .bn-active { color: #7b9e87; cursor: default; }
         .page {
           flex: 1;
           display: flex;
