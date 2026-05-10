@@ -1516,9 +1516,25 @@ export default function Home() {
 
             <div className="contact-card">
               <div className="avatar">{initials(contact?.name)}</div>
-              <div>
-                <div className="contact-name">{contact?.name || '—'}</div>
-                <div className="contact-meta">{[contact?.company, contact?.title].filter(Boolean).join(' · ') || '—'}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <input
+                  className="confirm-edit-name"
+                  value={contact?.name || ''}
+                  onChange={e => setContact({ ...contact, name: e.target.value })}
+                  placeholder={i18n.language === 'en' ? 'Name' : '名前'}
+                />
+                <input
+                  className="confirm-edit-meta"
+                  value={contact?.company || ''}
+                  onChange={e => setContact({ ...contact, company: e.target.value })}
+                  placeholder={i18n.language === 'en' ? 'Company' : '会社名'}
+                />
+                <input
+                  className="confirm-edit-meta"
+                  value={contact?.title || ''}
+                  onChange={e => setContact({ ...contact, title: e.target.value })}
+                  placeholder={i18n.language === 'en' ? 'Title' : '役職'}
+                />
               </div>
             </div>
 
@@ -1636,6 +1652,15 @@ export default function Home() {
                     ? 'Selected SNS links will be included in the email'
                     : '選択したプリセットのSNSリンクがメールに含まれます'}
                 </p>
+              </div>
+            )}
+
+            {memo && (
+              <div className="confirm-memo">
+                <span className="confirm-memo-label">
+                  {i18n.language === 'en' ? '📝 Your note' : '📝 ひとこと'}
+                </span>
+                <span className="confirm-memo-text">{memo}</span>
               </div>
             )}
 
@@ -2772,6 +2797,62 @@ export default function Home() {
         }
         .quick-memo-input:focus { border-color: #7b9e87; }
         .quick-memo-input::placeholder { color: #3a3a4a; }
+
+        /* ── CONFIRM EDITABLE FIELDS ── */
+        .confirm-edit-name {
+          background: transparent;
+          border: none;
+          border-bottom: 1px solid #2a2a3a;
+          color: #f0ede8;
+          font-size: 17px;
+          font-weight: 700;
+          font-family: 'DM Sans', sans-serif;
+          width: 100%;
+          padding: 2px 0 4px;
+          margin-bottom: 6px;
+          outline: none;
+          display: block;
+        }
+        .confirm-edit-name:focus { border-bottom-color: #7b9e87; }
+        .confirm-edit-meta {
+          background: transparent;
+          border: none;
+          border-bottom: 1px solid #1e1e2a;
+          color: rgba(240,237,232,0.6);
+          font-size: 13px;
+          font-family: 'DM Sans', sans-serif;
+          width: 100%;
+          padding: 2px 0 3px;
+          margin-bottom: 4px;
+          outline: none;
+          display: block;
+        }
+        .confirm-edit-meta:focus { border-bottom-color: #7b9e87; color: #f0ede8; }
+        .confirm-edit-meta::placeholder { color: #3a3a4a; }
+        .confirm-edit-name::placeholder { color: #3a3a4a; }
+
+        /* ── CONFIRM MEMO ── */
+        .confirm-memo {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          background: rgba(123,158,135,0.08);
+          border: 1px solid rgba(123,158,135,0.2);
+          border-radius: 10px;
+          padding: 10px 14px;
+          margin-bottom: 4px;
+        }
+        .confirm-memo-label {
+          font-size: 11px;
+          color: #7b9e87;
+          font-family: 'DM Mono', monospace;
+          letter-spacing: .06em;
+        }
+        .confirm-memo-text {
+          font-size: 14px;
+          color: rgba(240,237,232,0.8);
+          line-height: 1.5;
+        }
       `}</style>
     </>
   )
