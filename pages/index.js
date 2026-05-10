@@ -58,6 +58,7 @@ export default function Home() {
   const [speechSupported, setSpeechSupported] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [interimText, setInterimText] = useState('')
+  const [showQrSheet, setShowQrSheet] = useState(false)
   const fileRef = useRef()
   const contextFileRef = useRef()
   const recognitionRef = useRef(null)
@@ -1090,7 +1091,7 @@ export default function Home() {
                 </div>
 
                 <div className="secondary-actions">
-                  <button className="action-card" onClick={() => setStep(STEPS.USER_QR_SCAN)}>
+                  <button className="action-card" onClick={() => setShowQrSheet(true)}>
                     <div className="action-card-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -1100,45 +1101,63 @@ export default function Home() {
                     </div>
                     <div className="action-card-text">
                       <div className="action-card-title">{i18n.language === 'en' ? 'Connect via QR' : 'QRで繋がる'}</div>
-                      <div className="action-card-sub">{i18n.language === 'en' ? 'Scan a Koryu QR to add contact' : '相手のQRを読み取ってコンタクト追加'}</div>
+                      <div className="action-card-sub">{i18n.language === 'en' ? 'Scan or show your QR code' : '読み取る・自分のQRを表示'}</div>
                     </div>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{flexShrink:0,color:'#3a3a4a'}}>
                       <path d="M9 18l6-6-6-6"/>
                     </svg>
                   </button>
+                </div>
+                </div>
 
-                  {user && (
-                    profile?.plan === 'pro' ? (
-                      <div className="action-card my-qr-static">
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
-                          alt="My QR"
-                          className="my-qr-img"
-                        />
-                        <div className="action-card-text">
-                          <div className="action-card-title">{i18n.language === 'en' ? 'My QR code' : '自分のQRコード'}</div>
-                          <div className="action-card-sub" style={{fontFamily:'monospace'}}>koryu.app/p/{user.id.slice(0,8)}...</div>
-                        </div>
+                {/* QR底シート */}
+                {showQrSheet && (
+                  <div className="qr-sheet-overlay" onClick={() => setShowQrSheet(false)}>
+                    <div className="qr-sheet" onClick={e => e.stopPropagation()}>
+                      <div className="qr-sheet-title">
+                        {i18n.language === 'en' ? 'Connect via QR' : 'QRで繋がる'}
                       </div>
-                    ) : (
-                      <button className="action-card pro-upsell-card" onClick={() => router.push('/settings/profile?tab=subscription')}>
-                        <div className="action-card-icon" style={{background:'rgba(123,158,135,0.1)',border:'1px solid rgba(123,158,135,0.25)',color:'#7b9e87'}}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      <button className="qr-sheet-option" onClick={() => { setShowQrSheet(false); setStep(STEPS.USER_QR_SCAN) }}>
+                        <div className="qr-sheet-option-icon">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
                           </svg>
                         </div>
-                        <div className="action-card-text">
-                          <div className="action-card-title" style={{color:'#7b9e87'}}>{i18n.language === 'en' ? 'Upgrade to Pro' : 'プロフィールを強化する'}</div>
-                          <div className="action-card-sub">{i18n.language === 'en' ? 'Photo · Themes · Bento blocks' : '写真・テーマ・ベントーブロック'}</div>
+                        <div className="qr-sheet-option-text">
+                          <div className="qr-sheet-option-title">{i18n.language === 'en' ? 'Scan their QR' : '相手のQRを読み取る'}</div>
+                          <div className="qr-sheet-option-sub">{i18n.language === 'en' ? 'Camera scan to add contact' : 'カメラでスキャンしてコンタクト追加'}</div>
                         </div>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{flexShrink:0,color:'#7b9e87'}}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{color:'#3a3a4a',flexShrink:0}}>
                           <path d="M9 18l6-6-6-6"/>
                         </svg>
                       </button>
-                    )
-                  )}
-                </div>
-                </div>
+                      <div className="qr-sheet-option qr-sheet-myqr">
+                        <div className="qr-sheet-option-icon">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                            <path d="M14 14h3v3m0 4h4v-4m-4 0h-3"/>
+                          </svg>
+                        </div>
+                        <div className="qr-sheet-option-text" style={{flex:1}}>
+                          <div className="qr-sheet-option-title">{i18n.language === 'en' ? 'Show my QR' : '自分のQRを表示'}</div>
+                          <div className="qr-sheet-option-sub" style={{fontFamily:'monospace'}}>koryu.app/p/{user?.id?.slice(0,8)}...</div>
+                        </div>
+                        {user && (
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
+                            alt="My QR"
+                            style={{width:72,height:72,borderRadius:8,flexShrink:0}}
+                          />
+                        )}
+                      </div>
+                      <button className="qr-sheet-cancel" onClick={() => setShowQrSheet(false)}>
+                        {i18n.language === 'en' ? 'Cancel' : 'キャンセル'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {user && (
                   <div className="user-info-row">
@@ -2708,6 +2727,51 @@ export default function Home() {
         .bn-active { color: #7b9e87; cursor: default; }
 
         /* ── QUICK MEMO ── */
+        /* ── QR SHEET ── */
+        .qr-sheet-overlay {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(0,0,0,0.6);
+          display: flex; align-items: flex-end; justify-content: center;
+        }
+        .qr-sheet {
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 20px 20px 0 0;
+          padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+          width: 100%; max-width: 430px;
+          display: flex; flex-direction: column; gap: 10px;
+        }
+        .qr-sheet-title {
+          font-size: 13px; color: #5a5a7a;
+          font-family: 'DM Mono', monospace;
+          letter-spacing: .06em; text-align: center;
+          margin-bottom: 4px;
+        }
+        .qr-sheet-option {
+          display: flex; align-items: center; gap: 14px;
+          background: #1a1a24; border: 1px solid #1e1e2a;
+          border-radius: 14px; padding: 14px 16px;
+          cursor: pointer; text-align: left; width: 100%;
+        }
+        .qr-sheet-option:active { background: #22222e; }
+        .qr-sheet-myqr { cursor: default; }
+        .qr-sheet-option-icon {
+          width: 44px; height: 44px; border-radius: 12px;
+          background: #0d0d14; border: 1px solid #2a2a3a;
+          display: flex; align-items: center; justify-content: center;
+          color: #7b9e87; flex-shrink: 0;
+        }
+        .qr-sheet-option-text { flex: 1; }
+        .qr-sheet-option-title { font-size: 15px; font-weight: 600; color: #f0ede8; margin-bottom: 2px; }
+        .qr-sheet-option-sub { font-size: 11px; color: #5a5a7a; }
+        .qr-sheet-cancel {
+          margin-top: 4px; padding: 14px;
+          background: #1a1a24; border: 1px solid #1e1e2a;
+          border-radius: 14px; color: #6a6a8a;
+          font-size: 15px; cursor: pointer; width: 100%;
+        }
+        .qr-sheet-cancel:active { background: #22222e; }
+
         /* ── USER INFO ROW ── */
         .user-info-row {
           display: flex;
