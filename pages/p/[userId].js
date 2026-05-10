@@ -202,7 +202,7 @@ function SnsBlock({ block, profile }) {
   )
 }
 
-export default function PublicProfile({ profile, blocks, affil }) {
+export default function PublicProfile({ profile, blocks, affil, showAsPro, activeSns }) {
   const theme = THEMES.find(t => t.id === profile.profile_theme) || THEMES[0]
 
   return (
@@ -304,6 +304,91 @@ export default function PublicProfile({ profile, blocks, affil }) {
           </div>
         </div>
 
+
+        {/* ── 無課金: SNSバー + アップグレード誘導 ── */}
+        {!showAsPro && activeSns.length > 0 && (
+          <div style={{
+            background: theme.card,
+            borderRadius: 20,
+            padding: '20px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+          }}>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 10,
+              justifyContent: 'center',
+            }}>
+              {activeSns.map(({ key, url }) => {
+                const cfg = SNS_CONFIG.find(s => s.key === key)
+                if (!cfg) return null
+                const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
+                const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
+                return (
+                  <a
+                    key={key}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={cfg.label}
+                    style={{
+                      width: 48, height: 48,
+                      borderRadius: 14,
+                      background: bgColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textDecoration: 'none',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {cfg.icon ? (
+                      <img
+                        src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+                        width={24} height={24}
+                        alt={cfg.label}
+                        style={{ display: 'block' }}
+                      />
+                    ) : (
+                      <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>
+                        {cfg.label[0]}
+                      </span>
+                    )}
+                  </a>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── 無課金: アップグレード誘導 ── */}
+        {!showAsPro && (
+          <a
+            href="https://koryu.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 6,
+              padding: '18px 20px',
+              background: `linear-gradient(135deg, #1a2e22, #0d1f15)`,
+              borderRadius: 20,
+              textDecoration: 'none',
+              border: '1px solid #2a4a34',
+            }}
+          >
+            <span style={{ fontSize: 13, color: '#7b9e87', fontWeight: 700, letterSpacing: '.02em' }}>
+              ✦ ベントーグリッドで魅せる
+            </span>
+            <span style={{ fontSize: 11, color: '#5a7a64', lineHeight: 1.6, textAlign: 'center' }}>
+              Koryu Pro にアップグレードして{`\n`}プロフィールを自由にデザインする
+            </span>
+          </a>
+        )}
 
         {/* App banner */}
         <a
@@ -425,6 +510,7 @@ export default function PublicProfile({ profile, blocks, affil }) {
 export async function getServerSideProps({ params, query }) {
   const { userId } = params
   const isPreview = query?.preview === '1'
+  const simulateFree = query?.simulate_free === '1'
 
   const [profileRes, blocksRes, affiliationsRes] = await Promise.all([
     supabaseAdmin.from('profiles')
@@ -441,20 +527,34 @@ export async function getServerSideProps({ params, query }) {
   if (profileRes.error || !profileRes.data) return { notFound: true }
 
   const isPro = profileRes.data.plan === 'pro'
+  // showAsPro: Proレイアウトで表示するか
+  // preview=1 → 所有者プレビュー（Proレイアウト表示）
+  // simulate_free=1 → 無課金表示を強制（プレビュー比較用）
+  const showAsPro = (isPro || isPreview) && !simulateFree
+
   const profile = { ...profileRes.data }
 
-  // Free plan: public profile shows name/bio/SNS only — no avatar, no custom theme, no bento blocks
-  // preview=1 bypasses gating so owners can see the Pro layout in settings preview
-  if (!isPro && !isPreview) {
+  if (!showAsPro) {
     profile.avatar_url = null
     profile.profile_theme = 'dark'
   }
+
+  // 有効なSNSリンクを抽出（無課金SNSバー用）
+  const SNS_KEYS = ['sns_line','sns_whatsapp','sns_x','sns_instagram','sns_facebook',
+    'sns_linkedin','sns_tiktok','sns_youtube','sns_threads','sns_telegram','sns_wechat',
+    'sns_discord','sns_github','sns_bluesky','sns_pinterest','sns_sansan','sns_eight',
+    'sns_mybridge','sns_vercel','sns_wantedly','sns_note']
+  const activeSns = SNS_KEYS
+    .filter(k => profile[k])
+    .map(k => ({ key: k, url: profile[k] }))
 
   const primaryAffil = affiliationsRes.data?.[0] || null
 
   return { props: {
     profile,
-    blocks: (isPro || isPreview) ? (blocksRes.data || []) : [],
+    blocks: showAsPro ? (blocksRes.data || []) : [],
+    showAsPro,
+    activeSns,
     affil: primaryAffil ? {
       company: primaryAffil.company_name || null,
       title: primaryAffil.title || null,

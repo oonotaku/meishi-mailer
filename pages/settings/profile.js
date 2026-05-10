@@ -187,6 +187,8 @@ export default function ProfileSettings() {
   const avatarFileRef = useRef(null)
   const [profileTheme, setProfileTheme] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [previewMode, setPreviewMode] = useState('pro') // 'pro' | 'free'
+
   const [blocks, setBlocks] = useState([])
   const [blocksDirty, setBlocksDirty] = useState(false)
   const [blocksSaving, setBlocksSaving] = useState(false)
@@ -1888,11 +1890,30 @@ export default function ProfileSettings() {
         <div className="preview-overlay" onClick={() => setShowPreview(false)}>
           <div className="preview-sheet" onClick={e => e.stopPropagation()}>
             <div className="preview-sheet-header">
-              <span className="preview-sheet-title">公開プロフィール プレビュー</span>
+              <span className="preview-sheet-title">プロフィール プレビュー</span>
               <button type="button" className="preview-close-btn" onClick={() => setShowPreview(false)}>✕ 閉じる</button>
             </div>
+            <div className="preview-toggle-bar">
+              <button
+                type="button"
+                className={`preview-toggle-btn${previewMode === 'pro' ? ' active' : ''}`}
+                onClick={() => setPreviewMode('pro')}
+              >
+                ✦ Pro
+              </button>
+              <button
+                type="button"
+                className={`preview-toggle-btn${previewMode === 'free' ? ' active' : ''}`}
+                onClick={() => setPreviewMode('free')}
+              >
+                無課金
+              </button>
+            </div>
             <iframe
-              src={`/p/${user?.id}?preview=1`}
+              key={previewMode}
+              src={previewMode === 'pro'
+                ? `/p/${user?.id}?preview=1`
+                : `/p/${user?.id}?preview=1&simulate_free=1`}
               className="preview-iframe"
               title="プロフィールプレビュー"
             />
@@ -3449,6 +3470,32 @@ export default function ProfileSettings() {
           transition: color .15s;
         }
         .preview-close-btn:hover { color: #fff; }
+        .preview-toggle-bar {
+          display: flex;
+          gap: 6px;
+          padding: 8px 16px;
+          background: #0d0d14;
+          border-bottom: 1px solid #1e1e2a;
+          flex-shrink: 0;
+        }
+        .preview-toggle-btn {
+          flex: 1;
+          padding: 7px 0;
+          border-radius: 8px;
+          border: 1px solid #2a2a3a;
+          background: none;
+          color: #5a5650;
+          font-size: 12px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          transition: all .15s;
+        }
+        .preview-toggle-btn.active {
+          background: #1a2e22;
+          border-color: #7b9e87;
+          color: #7b9e87;
+          font-weight: 700;
+        }
         .preview-iframe {
           flex: 1;
           border: none;
