@@ -1073,6 +1073,13 @@ export default function Home() {
             <div className="top-bar">
               <div className="top-logo">Koryu</div>
               <div className="top-right">
+                {user && <span className="user-email">{user.email}</span>}
+                {user && (
+                  <button className="logout-btn" onClick={async () => {
+                    await supabase.auth.signOut()
+                    window.location.href = '/login'
+                  }}>{i18n.language === 'en' ? 'Log out' : 'ログアウト'}</button>
+                )}
                 <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
               </div>
             </div>
@@ -1180,17 +1187,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {user && (
-                  <div className="user-info-row">
-                    <span className="user-info-email">{user.email}</span>
-                    <button className="user-info-logout" onClick={async () => {
-                      await supabase.auth.signOut()
-                      window.location.href = '/login'
-                    }}>
-                      {i18n.language === 'en' ? 'Log out' : 'ログアウト'}
-                    </button>
-                  </div>
-                )}
+
               </>
             ) : (
               <>
@@ -2793,36 +2790,7 @@ export default function Home() {
         }
         .qr-sheet-cancel:active { background: #22222e; }
 
-        /* ── USER INFO ROW ── */
-        .user-info-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 10px 4px 4px;
-          margin-top: 8px;
-          border-top: 1px solid #1a1a24;
-        }
-        .user-info-email {
-          font-size: 11px;
-          color: #3a3a4a;
-          font-family: 'DM Mono', monospace;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          flex: 1;
-          margin-right: 12px;
-        }
-        .user-info-logout {
-          font-size: 11px;
-          color: #4a4a5a;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 6px;
-          flex-shrink: 0;
-        }
-        .user-info-logout:active { background: #1a1a24; }
+
 
         /* ── QUICK MEMO ── */
         .quick-memo-wrap {

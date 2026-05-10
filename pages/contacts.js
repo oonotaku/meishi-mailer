@@ -88,6 +88,13 @@ export default function Contacts() {
         <div className="top-bar">
           <span className="top-logo">Koryu</span>
           <div className="top-right">
+            {user && <span className="user-email">{user.email}</span>}
+            {user && (
+              <button className="logout-btn" onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.href = '/login'
+              }}>{t('nav.logout')}</button>
+            )}
             <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
           </div>
         </div>
@@ -199,28 +206,49 @@ export default function Contacts() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 1rem 1.5rem 0.75rem;
+          padding: 1rem 1.5rem 0.5rem;
         }
         .top-logo {
+          font-family: 'DM Mono', monospace;
           font-size: 18px;
-          font-weight: 700;
+          font-weight: 500;
           color: #7b9e87;
-          letter-spacing: .04em;
+          letter-spacing: .06em;
         }
         .top-right {
           display: flex;
           align-items: center;
           gap: 8px;
         }
+        .user-email {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          max-width: 130px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .logout-btn {
+          background: none;
+          border: none;
+          color: #3a3a4a;
+          font-size: 11px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          padding: 0;
+          flex-shrink: 0;
+        }
+        .logout-btn:active { color: #7b9e87; }
         .lang-btn {
           background: none;
           border: 1px solid #2a2a3a;
           border-radius: 4px;
           color: #5a5650;
-          font-size: 10px;
+          font-size: 12px;
           font-family: 'DM Mono', monospace;
           cursor: pointer;
-          padding: 2px 6px;
+          padding: 5px 10px;
           letter-spacing: .06em;
           flex-shrink: 0;
         }
