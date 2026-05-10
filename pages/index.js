@@ -1855,10 +1855,10 @@ export default function Home() {
           border: 1px solid #2a2a3a;
           border-radius: 4px;
           color: #5a5650;
-          font-size: 10px;
+          font-size: 12px;
           font-family: 'DM Mono', monospace;
           cursor: pointer;
-          padding: 2px 6px;
+          padding: 5px 10px;
           letter-spacing: .06em;
           flex-shrink: 0;
         }
@@ -2618,10 +2618,10 @@ export default function Home() {
         /* ── TOP LOGO ── */
         .top-logo {
           font-family: 'DM Mono', monospace;
-          font-size: 14px;
+          font-size: 18px;
           font-weight: 500;
           color: #7b9e87;
-          letter-spacing: .08em;
+          letter-spacing: .06em;
         }
 
         /* ── UPLOAD PAGE ── */
