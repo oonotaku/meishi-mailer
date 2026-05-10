@@ -1139,6 +1139,18 @@ export default function Home() {
                   )}
                 </div>
                 </div>
+
+                {user && (
+                  <div className="user-info-row">
+                    <span className="user-info-email">{user.email}</span>
+                    <button className="user-info-logout" onClick={async () => {
+                      await supabase.auth.signOut()
+                      window.location.href = '/login'
+                    }}>
+                      {i18n.language === 'en' ? 'Log out' : 'ログアウト'}
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -2694,6 +2706,38 @@ export default function Home() {
           letter-spacing: .02em;
         }
         .bn-active { color: #7b9e87; cursor: default; }
+
+        /* ── QUICK MEMO ── */
+        /* ── USER INFO ROW ── */
+        .user-info-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 4px 4px;
+          margin-top: 8px;
+          border-top: 1px solid #1a1a24;
+        }
+        .user-info-email {
+          font-size: 11px;
+          color: #3a3a4a;
+          font-family: 'DM Mono', monospace;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+          margin-right: 12px;
+        }
+        .user-info-logout {
+          font-size: 11px;
+          color: #4a4a5a;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          flex-shrink: 0;
+        }
+        .user-info-logout:active { background: #1a1a24; }
 
         /* ── QUICK MEMO ── */
         .quick-memo-wrap {
