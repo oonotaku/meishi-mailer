@@ -36,7 +36,7 @@ No test framework is configured.
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/email.js` | メール設定（SendGrid/Gmail/SMTP）— プロフィール設定から独立した無料メニュー |
 | `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / ベントーブロック / メール設定 / プラン・サブスクリプション。**常時表示プレビューボタン**（アコーディオン上部に固定、タップで iframeボトムシート）。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能（`?simulate_free=1` を iframe URL に付与）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、**テーマ選択（6種: dark/light/midnight/warm/sakura/ocean）**、**プロフィール完成度バー（6項目、100%でゴールドアニメーション）**、**ブロック管理（追加・編集・削除・↑↓並び替え、4タイプ×3サイズ）**、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
-| `p/[userId].js` | Public profile page — **ベントーグリッド方式に全面リデザイン済み**。`profile_blocks` テーブルからブロックを取得し、グリッド最上段に固定ヘッダーブロック（Lサイズ全幅・アバター左＋テキスト右の横並びレイアウト）を配置。以降のブロックは S（1列×1行=144px）/ M（1列・min-height 180px）/ L（全幅）/ **XL（1列×2行=300px+、`grid-row: span 2`）** の4サイズ（`grid-auto-rows: 144px`）。ブロックタイプ: photo / text / link / sns。6種テーマ対応。**無課金ユーザー表示**: ベントーグリッドの代わりに SNSアイコンバー（48×48 角丸アイコン）＋「✦ ベントーグリッドで魅せる」アップグレード誘導を表示。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`。|
+| `p/[userId].js` | Public profile page — **ベントーグリッド方式**。`profile_blocks` テーブルからブロックを取得してグリッド表示。**ハードコードヘッダー廃止済み**（全要素がブロックとして管理。`profile_card` ブロックがヘッダーの役割を担う）。ブロックタイプ: photo / text / link / sns / profile_card / affiliation。サイズ: S / M / L / **XL**（`grid-row: span 2`）、`grid-auto-rows: minmax(144px, auto)`。6種テーマ対応。**背景画像**（`profile_bg_image_url`）はProユーザーのみ適用。**無課金ユーザー表示**: ベントーグリッドの代わりにプロフィールカード（アバター+名前+bio）＋所属一覧（`affiliations` prop）＋SNSアイコンバー＋アップグレード誘導を縦積みで表示。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`（profiles / profile_blocks / profile_affiliations を並列取得）。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 
 ### API Routes (`pages/api/`)
@@ -87,6 +87,7 @@ No test framework is configured.
 - `POST /api/profile/blocks` — Bearer auth。`profile_blocks` を delete-all + insert でバッチ更新。`{ blocks: [{ type, size, content, order_index }] }`
 - `POST /api/profile/upload-block-image` — Bearer auth。base64画像を `avatars` バケットに `{userId}/block_{timestamp}.jpg` としてアップロード。公開URLを返す
 - `POST /api/profile/update-theme` — Bearer auth。`profiles.profile_theme` を更新（楽観的更新用）
+- `POST /api/profile/update-bg-image` — Bearer auth。base64画像を `avatars/{userId}/profile_bg.jpg` にアップロードし `profiles.profile_bg_image_url` を更新。`null` を受け取った場合はファイル削除 + `profile_bg_image_url` を null に更新。Proユーザーの公開プロフィールページ背景画像設定に使用。
 - `GET /api/profile/public` — 認証不要。`?userId=` でプロフィールを取得。name/bio/avatar_url/company/title/email（show_email時）/phone（show_phone時）/profile_theme/blocks/extracted_sns（sns_* フィールドを `sns_` プレフィックス除去した形式）を返す。QRスキャンによるコンタクト追加フローで使用。
 - `GET /api/profile/find-by-email` — 認証不要。`?email=` でprofilesテーブルを検索しmeishi-mailerユーザー判定。name/avatar_url/bio/profile_theme/extracted_sns/blocks/company/title/email/phone/website（affiliations経由・show_*フラグ尊重）を返す。contacts/[id].js がコンタクト詳細表示時にライブデータ取得に使用。
 
@@ -102,7 +103,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 
 **`organizations`** — `id, name, created_at`
 
-**`profiles`** — `id, email, name, bio, avatar_url, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id, profile_theme`
+**`profiles`** — `id, email, name, bio, avatar_url, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id, profile_theme, profile_bg_image_url`
 - `current_organization_id` always points to the org where the user is `owner`
 - `sender_email` + `sendgrid_api_key` are set by the user via `/settings/profile`; `sendgrid_api_key` is never returned to the client
 - `smtp_provider`: `'sendgrid'` (default) | `'gmail'` | `'smtp'`
@@ -115,6 +116,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - `scan_count_month`: resets when `scan_count_reset_at < startOfMonth`; Free limit=10, Pro limit=100
 - `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
 - `profile_theme`: `'dark'` (default) | `'light'` | `'midnight'` | `'warm'` | `'sakura'` | `'ocean'`。`/p/[userId].js` の背景・カード・アクセント・テキスト色を決定
+- `profile_bg_image_url`: Supabase Storage `avatars` バケットの公開URL（`{userId}/profile_bg.jpg`）。Proユーザーの公開プロフィールページ背景画像。`null` when not set
 
 **`user_organizations`** — `user_id, organization_id, role (owner|member), created_at`
 - Junction table for many-to-many users ↔ orgs
@@ -139,20 +141,22 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 **`profile_affiliations`** — `id, user_id (FK → profiles.id), company_name, title, order_index, phone, website, contact_email, show_phone (DEFAULT false), show_website (DEFAULT true), show_email (DEFAULT false), created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
 - `order_index` で表示順管理（最大5件）
-- `/api/profile/affiliations` POST は delete-all + insert のバッチ更新
+- `/api/profile/affiliations` POST は delete-all + insert のバッチ更新。保存完了後に `profile_blocks` の affiliation ブロックを全削除→再insertで自動同期（`show_*` フラグを反映した contact 情報付き、`order_index: 100 + i`）
 - `send.js` がメール署名の所属として `order_index ASC` の先頭1件を参照
-- 公開プロフィール（`p/[userId].js`）はベントーグリッド方式に移行したため affiliations を参照しない（旧設計の名残として DB には存在）
+- 公開プロフィール（`p/[userId].js`）は `profile_blocks` 経由で表示（affiliations テーブルは直接参照しない）
 
 **`profile_blocks`** — `id, user_id (FK → profiles.id), type, size, content (jsonb), order_index, created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
-- `type`: `'photo'` | `'text'` | `'link'` | `'sns'`
+- `type`: `'photo'` | `'text'` | `'link'` | `'sns'` | `'profile_card'` | `'affiliation'`
 - `size`: `'S'`（1列・高さ固定120px）| `'M'`（1列・縦長180px+）| `'L'`（全幅）| `'XL'`（1列・縦長300px）
 - `content` JSONB スキーマ:
-  - photo: `{ image_url, caption }`
-  - text: `{ title, body, bg_color }`
-  - link: `{ title, url, description }`
-  - sns: `{ platform, caption? }` — `platform` は `SNS_CONFIG` の `key`（例: `'sns_x'`）、`caption` はひとこと（最大40文字、省略可）
-- `/api/profile/blocks` POST は delete-all + insert のバッチ更新
+  - photo: `{ image_url, caption, fit }` — `fit` は `'cover'`|`'contain'`、デフォルト `'cover'`
+  - text: `{ title, body, bg_color, bg_image_url }` — `bg_image_url` は背景画像URL（グラデーションオーバーレイ付き）
+  - link: `{ title, url, description, image_url }` — `image_url` はサムネイル画像URL
+  - sns: `{ platform, caption? }` — `platform` は `SNS_CONFIG` の `key`（例: `'sns_x'`）、`caption` はひとこと（最大80文字、省略可）
+  - profile_card: `{}` （空。アバター・名前・bioはprofilesテーブルから自動取得。各ユーザーに1つのみ）
+  - affiliation: `{ company_name, title, website, contact_email, phone }` — `profile_affiliations` 保存時に自動同期。手動追加不可
+- `/api/profile/blocks` POST は delete-all + insert のバッチ更新（affiliation ブロックは含まない。affiliations API 経由で管理）
 - `p/[userId].js` が `order_index ASC` で全件取得してベントーグリッドに表示
 
 Supabase Storage:
@@ -254,3 +258,19 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - i18n: `nav.scan` / `nav.contacts` / `nav.profile` / `contacts.header` キー追加（ja/en両方）
 
 次の候補: LP微調整・スクロールアニメーション、SEO（canonical/OGP）、公開プロフィールのSNSシェア最適化、プロフィール設定UIの細部調整。See `MEISHI_AI_SPEC.md` for roadmap.
+
+**2026-05-11 ベントーグリッド大幅強化完了。**
+
+- profile_card / affiliation の新ブロック型追加
+- ハードコードヘッダー廃止 → 全要素ブロック化
+- 所属ブロックは profile_affiliations 保存時に自動同期
+- 写真ブロックに cover/contain 表示モード追加
+- テキスト・リンクブロックに背景画像対応
+- リンクブロックにサムネイル画像対応
+- プロフィールページ背景画像（`profile_bg_image_url`、Proのみ）
+- SNS caption 文字数上限 40 → 80 文字に拡張
+- textarea auto-resize + white-space: pre-wrap 対応
+- CSS grid-auto-rows を `minmax(144px, auto)` に修正
+- 無課金ユーザービューを再設計（プロフィール + 所属一覧 + SNSバー + CTA）
+
+次の候補: 所属ブロックへのロゴ画像設定UI、ブロック背景色の拡充（LinkBlock/ProfileCardBlock）、テーマ選択のPro解放。
