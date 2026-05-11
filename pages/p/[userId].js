@@ -281,45 +281,48 @@ function ProfileCardBlock({ block, profile, theme }) {
 }
 
 function AffiliationBlock({ block, theme }) {
-  const { company_name, title, logo_url, bg_color } = block.content || {}
-  const hasLogo = !!logo_url
-  const bgColor = bg_color || theme.card
+  const { company_name, title, website, contact_email, phone } = block.content || {}
   return (
     <div style={{
-      background: hasLogo ? 'transparent' : bgColor,
-      backgroundImage: hasLogo ? `url(${logo_url})` : 'none',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
+      background: theme.card,
       width: '100%', height: '100%',
-      position: 'relative',
       display: 'flex', flexDirection: 'column',
-      justifyContent: 'flex-end', padding: 16,
+      justifyContent: 'flex-end', padding: 16, gap: 4,
+      overflow: 'hidden',
     }}>
-      {hasLogo && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 65%)',
-          borderRadius: 'inherit',
-        }} />
-      )}
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{
-          fontSize: 14, fontWeight: 800,
-          color: hasLogo ? '#fff' : theme.text,
-          lineHeight: 1.3,
-        }}>
-          {company_name || '会社名未設定'}
-        </div>
-        {title && (
-          <div style={{
-            fontSize: 11, marginTop: 3,
-            color: hasLogo ? 'rgba(255,255,255,0.65)' : theme.text,
-            opacity: hasLogo ? 1 : 0.6,
-          }}>
-            {title}
-          </div>
-        )}
+      <div style={{ fontSize: 14, fontWeight: 800, color: theme.text, lineHeight: 1.3 }}>
+        {company_name || '会社名未設定'}
       </div>
+      {title && (
+        <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, lineHeight: 1.4 }}>
+          {title}
+        </div>
+      )}
+      {website && (
+        <a href={website} target="_blank" rel="noopener noreferrer" style={{
+          fontSize: 11, color: theme.accent, marginTop: 4,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
+          textDecoration: 'none',
+        }}>
+          🔗 {website.replace(/^https?:\/\//, '')}
+        </a>
+      )}
+      {contact_email && (
+        <div style={{
+          fontSize: 11, color: theme.text, opacity: 0.5,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          ✉ {contact_email}
+        </div>
+      )}
+      {phone && (
+        <div style={{
+          fontSize: 11, color: theme.text, opacity: 0.5,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          📞 {phone}
+        </div>
+      )}
     </div>
   )
 }
@@ -609,26 +612,9 @@ export async function getServerSideProps({ params, query }) {
     .filter(k => profile[k])
     .map(k => ({ key: k, url: profile[k] }))
 
-  const baseBlocks = showAsPro ? (blocksRes.data || []) : []
-  const hasManualAffiliation = baseBlocks.some(b => b.type === 'affiliation')
-  const affiliationBlocks = hasManualAffiliation ? [] : (affiliationsRes.data || [])
-    .filter(a => a.company_name?.trim())
-    .map((aff, i) => ({
-      id: `aff-${i}`,
-      type: 'affiliation',
-      size: 'M',
-      order_index: 9999 + i,
-      content: {
-        company_name: aff.company_name,
-        title: aff.title || null,
-        logo_url: null,
-        bg_color: null,
-      },
-    }))
-
   return { props: {
     profile,
-    blocks: [...baseBlocks, ...affiliationBlocks],
+    blocks: showAsPro ? (blocksRes.data || []) : [],
     affiliations: affiliationsRes.data || [],
     showAsPro,
     activeSns,

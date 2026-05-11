@@ -47,6 +47,26 @@ export default async function handler(req, res) {
       if (insertError) return res.status(500).json({ error: insertError.message })
     }
 
+    // profile_blocks の affiliation ブロックを同期
+    await supabaseAdmin.from('profile_blocks').delete().eq('user_id', user.id).eq('type', 'affiliation')
+    const validAffiliations = affiliations.filter(a => a.company_name?.trim())
+    if (validAffiliations.length > 0) {
+      const blockRows = validAffiliations.map((a, i) => ({
+        user_id: user.id,
+        type: 'affiliation',
+        size: 'M',
+        order_index: 100 + i,
+        content: {
+          company_name: a.company_name,
+          title: a.title || null,
+          website: a.show_website ? (a.website || null) : null,
+          contact_email: a.show_email ? (a.contact_email || null) : null,
+          phone: a.show_phone ? (a.phone || null) : null,
+        },
+      }))
+      await supabaseAdmin.from('profile_blocks').insert(blockRows)
+    }
+
     return res.json({ ok: true })
   }
 
