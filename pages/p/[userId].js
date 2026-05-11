@@ -373,89 +373,155 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         </div>
 
 
-        {/* ── 無課金: SNSバー + アップグレード誘導 ── */}
-        {!showAsPro && activeSns.length > 0 && (
-          <div style={{
-            background: theme.card,
-            borderRadius: 20,
-            padding: '20px 16px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 10,
-              justifyContent: 'center',
-            }}>
-              {activeSns.map(({ key, url }) => {
-                const cfg = SNS_CONFIG.find(s => s.key === key)
-                if (!cfg) return null
-                const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
-                const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
-                return (
-                  <a
-                    key={key}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={cfg.label}
-                    style={{
-                      width: 48, height: 48,
-                      borderRadius: 14,
-                      background: bgColor,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textDecoration: 'none',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {cfg.icon ? (
-                      <img
-                        src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
-                        width={24} height={24}
-                        alt={cfg.label}
-                        style={{ display: 'block' }}
-                      />
-                    ) : (
-                      <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>
-                        {cfg.label[0]}
-                      </span>
-                    )}
-                  </a>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── 無課金: アップグレード誘導 ── */}
+        {/* ── 無課金ビュー ── */}
         {!showAsPro && (
-          <a
-            href="https://koryu.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 6,
-              padding: '18px 20px',
-              background: `linear-gradient(135deg, #1a2e22, #0d1f15)`,
-              borderRadius: 20,
-              textDecoration: 'none',
-              border: '1px solid #2a4a34',
-            }}
-          >
-            <span style={{ fontSize: 13, color: '#7b9e87', fontWeight: 700, letterSpacing: '.02em' }}>
-              ✦ ベントーグリッドで魅せる
-            </span>
-            <span style={{ fontSize: 11, color: '#5a7a64', lineHeight: 1.6, textAlign: 'center' }}>
-              Koryu Pro にアップグレードして{`\n`}プロフィールを自由にデザインする
-            </span>
-          </a>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            {/* 1. プロフィールカード */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 16,
+              padding: '24px 20px',
+              background: theme.card,
+              borderRadius: 18,
+            }}>
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="" style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  objectFit: 'cover', flexShrink: 0,
+                  border: `2px solid ${theme.accent}`,
+                }} />
+              ) : (
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: theme.accent, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, fontWeight: 800, color: '#fff',
+                }}>
+                  {initials(profile.name)}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 20, fontWeight: 800, color: theme.text,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {profile.name || '名前未設定'}
+                </div>
+                {profile.bio && (
+                  <div style={{
+                    fontSize: 13, color: theme.text, opacity: 0.65,
+                    marginTop: 4, lineHeight: 1.6,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}>
+                    {profile.bio}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 2. 所属一覧 */}
+            {affiliations.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {affiliations.map((aff, i) => (
+                  <div key={i} style={{
+                    background: theme.card,
+                    borderRadius: 14,
+                    padding: '14px 18px',
+                    borderLeft: `3px solid ${theme.accent}`,
+                  }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>
+                      {aff.company_name}
+                    </div>
+                    {aff.title && (
+                      <div style={{ fontSize: 12, color: theme.text, opacity: 0.55, marginTop: 2 }}>
+                        {aff.title}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {aff.show_website && aff.website && (
+                        <a href={aff.website} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize: 12, color: theme.accent, textDecoration: 'none',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          🔗 {aff.website.replace(/^https?:\/\//, '')}
+                        </a>
+                      )}
+                      {aff.show_email && aff.contact_email && (
+                        <div style={{ fontSize: 12, color: theme.text, opacity: 0.5,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          ✉ {aff.contact_email}
+                        </div>
+                      )}
+                      {aff.show_phone && aff.phone && (
+                        <div style={{ fontSize: 12, color: theme.text, opacity: 0.5 }}>
+                          📞 {aff.phone}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 3. SNSアイコンバー */}
+            {SNS_CONFIG.some(cfg => profile[cfg.key]) && (
+              <div style={{
+                background: theme.card, borderRadius: 14,
+                padding: '16px 20px',
+                display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center',
+              }}>
+                {SNS_CONFIG.filter(cfg => profile[cfg.key]).map(cfg => {
+                  const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
+                  const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
+                  return (
+                    <a key={cfg.key} href={profile[cfg.key]}
+                      target="_blank" rel="noopener noreferrer" title={cfg.label}
+                      style={{
+                        width: 48, height: 48, borderRadius: 12,
+                        background: bgColor, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        textDecoration: 'none',
+                      }}>
+                      {cfg.icon ? (
+                        <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+                          width={24} height={24} alt={cfg.label}
+                          style={{ display: 'block' }}
+                          onError={e => { e.target.style.display = 'none' }} />
+                      ) : (
+                        <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>
+                          {cfg.label[0]}
+                        </span>
+                      )}
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* 4. アップグレード誘導 */}
+            <a
+              href="https://koryu.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: 6, padding: '18px 20px',
+                background: 'linear-gradient(135deg, #1a2e22, #0d1f15)',
+                borderRadius: 20, textDecoration: 'none',
+                border: '1px solid #2a4a34',
+              }}
+            >
+              <span style={{ fontSize: 13, color: '#7b9e87', fontWeight: 700, letterSpacing: '.02em' }}>
+                ✦ ベントーグリッドで魅せる
+              </span>
+              <span style={{ fontSize: 11, color: '#5a7a64', lineHeight: 1.6, textAlign: 'center' }}>
+                Koryu Pro にアップグレードして{`\n`}プロフィールを自由にデザインする
+              </span>
+            </a>
+
+          </div>
         )}
 
         {/* App banner */}
@@ -599,7 +665,6 @@ export async function getServerSideProps({ params, query }) {
   const profile = { ...profileRes.data }
 
   if (!showAsPro) {
-    profile.avatar_url = null
     profile.profile_theme = 'dark'
   }
 
