@@ -1866,7 +1866,6 @@ export default function ProfileSettings() {
                 const hasProfileCard = blocks.some(b => b.type === 'profile_card')
                 return [
                   { type: 'profile_card', label: '👤 プロフィールカード', desc: '名前・bio・所属を表示', disabled: hasProfileCard },
-                  { type: 'affiliation',  label: '🏢 所属・会社',         desc: '会社名・ロゴを表示' },
                   { type: 'photo',        label: '📷 写真',               desc: '画像とキャプションを表示' },
                   { type: 'text',         label: '📝 テキスト',           desc: 'タイトルと本文を自由に記述' },
                   { type: 'link',         label: '🔗 リンク',             desc: 'URLへのリンクカード' },

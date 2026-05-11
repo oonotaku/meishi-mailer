@@ -209,6 +209,8 @@ function SnsBlock({ block, profile }) {
             lineHeight: 1.5,
             marginTop: 3,
             fontFamily: 'Noto Sans JP, sans-serif',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
           }}>
             {block.content.caption}
           </div>
@@ -607,9 +609,26 @@ export async function getServerSideProps({ params, query }) {
     .filter(k => profile[k])
     .map(k => ({ key: k, url: profile[k] }))
 
+  const baseBlocks = showAsPro ? (blocksRes.data || []) : []
+  const hasManualAffiliation = baseBlocks.some(b => b.type === 'affiliation')
+  const affiliationBlocks = hasManualAffiliation ? [] : (affiliationsRes.data || [])
+    .filter(a => a.company_name?.trim())
+    .map((aff, i) => ({
+      id: `aff-${i}`,
+      type: 'affiliation',
+      size: 'M',
+      order_index: 9999 + i,
+      content: {
+        company_name: aff.company_name,
+        title: aff.title || null,
+        logo_url: null,
+        bg_color: null,
+      },
+    }))
+
   return { props: {
     profile,
-    blocks: showAsPro ? (blocksRes.data || []) : [],
+    blocks: [...baseBlocks, ...affiliationBlocks],
     affiliations: affiliationsRes.data || [],
     showAsPro,
     activeSns,
