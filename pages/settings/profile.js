@@ -16,7 +16,7 @@ const THEMES = [
   { id: 'ocean',    label: 'オーシャン',   bg: '#0c1a2e', card: '#0f2744', accent: '#38bdf8', text: '#e0f2fe' },
 ]
 
-const BLOCK_TYPE_LABELS = { photo: '📷 写真', text: '📝 テキスト', link: '🔗 リンク', sns: '💬 SNS' }
+const BLOCK_TYPE_LABELS = { photo: '📷 写真', text: '📝 テキスト', link: '🔗 リンク', sns: '💬 SNS', profile_card: '👤 プロフィールカード', affiliation: '🏢 所属・会社' }
 const TEXT_BG_PRESETS = ['#0a0a0a', '#ffffff', '#0f172a', '#1c1410', '#fff0f3', '#0c1a2e']
 
 function getBlockTitle(block) {
@@ -28,6 +28,8 @@ function getBlockTitle(block) {
       const found = SNS_CONFIG.find(s => s.key === block.content?.platform)
       return found?.label || block.content?.platform || '(未設定)'
     }
+    case 'profile_card': return 'プロフィールカード'
+    case 'affiliation': return block.content?.company_name || '(会社名未設定)'
     default: return ''
   }
 }
@@ -1846,18 +1848,25 @@ export default function ProfileSettings() {
               <button type="button" className="scan-sheet-close" onClick={() => setShowTypeSheet(false)}>✕</button>
             </div>
             <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { type: 'photo', label: '📷 写真',    desc: '画像とキャプションを表示' },
-                { type: 'text',  label: '📝 テキスト', desc: 'タイトルと本文を自由に記述' },
-                { type: 'link',  label: '🔗 リンク',  desc: 'URLへのリンクカード' },
-                { type: 'sns',   label: '💬 SNS',     desc: 'SNSリンクを大きく表示' },
-              ].map(({ type, label, desc }) => (
-                <button key={type} type="button" className="type-select-btn"
-                  onClick={() => { setShowTypeSheet(false); setEditingBlock({ index: null, type, size: 'M', content: {} }) }}>
-                  <span className="type-select-label">{label}</span>
-                  <span className="type-select-desc">{desc}</span>
-                </button>
-              ))}
+              {(() => {
+                const hasProfileCard = blocks.some(b => b.type === 'profile_card')
+                return [
+                  { type: 'profile_card', label: '👤 プロフィールカード', desc: '名前・bio・所属を表示', disabled: hasProfileCard },
+                  { type: 'affiliation',  label: '🏢 所属・会社',         desc: '会社名・ロゴを表示' },
+                  { type: 'photo',        label: '📷 写真',               desc: '画像とキャプションを表示' },
+                  { type: 'text',         label: '📝 テキスト',           desc: 'タイトルと本文を自由に記述' },
+                  { type: 'link',         label: '🔗 リンク',             desc: 'URLへのリンクカード' },
+                  { type: 'sns',          label: '💬 SNS',                desc: 'SNSリンクを大きく表示' },
+                ].map(({ type, label, desc, disabled }) => (
+                  <button key={type} type="button" className="type-select-btn"
+                    disabled={!!disabled}
+                    style={disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                    onClick={() => { if (disabled) return; setShowTypeSheet(false); setEditingBlock({ index: null, type, size: 'L', content: {} }) }}>
+                    <span className="type-select-label">{label}{disabled ? ' (追加済み)' : ''}</span>
+                    <span className="type-select-desc">{desc}</span>
+                  </button>
+                ))
+              })()}
             </div>
           </div>
         </div>
@@ -2114,6 +2123,84 @@ export default function ProfileSettings() {
                   </div>
                 </div>
               )}
+
+              {/* profile_card */}
+              {editingBlock.type === 'profile_card' && (
+                <div style={{
+                  padding: '14px 16px',
+                  background: 'rgba(255,255,255,0.04)',
+                  borderRadius: 10,
+                  fontSize: 13,
+                  color: '#888',
+                  lineHeight: 1.7,
+                  textAlign: 'center',
+                }}>
+                  名前・bio・アバターは<br />
+                  「所属・連絡先」セクションで編集できます
+                </div>
+              )}
+
+              {/* affiliation */}
+              {editingBlock.type === 'affiliation' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>会社名（必須）</div>
+                    <input type="text"
+                      value={editingBlock.content.company_name || ''}
+                      maxLength={60}
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, company_name: e.target.value } }))}
+                      placeholder="node-bee合同会社"
+                      className="scan-field-input" />
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 4 }}>肩書き（任意）</div>
+                    <input type="text"
+                      value={editingBlock.content.title || ''}
+                      maxLength={40}
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, title: e.target.value } }))}
+                      placeholder="代表社員"
+                      className="scan-field-input" />
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>
+                      ロゴ・背景画像（任意）
+                      <span style={{ fontSize: 10, color: '#5a5650', marginLeft: 6 }}>設定すると背景色は無効</span>
+                    </div>
+                    {editingBlock.content.logo_url && (
+                      <div style={{ position: 'relative', marginBottom: 8 }}>
+                        <img src={editingBlock.content.logo_url} alt=""
+                          style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                        <button type="button"
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, logo_url: null } }))}
+                          style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,.6)', border: 'none', borderRadius: 16, color: '#fff', fontSize: 10, padding: '3px 8px', cursor: 'pointer' }}>
+                          削除
+                        </button>
+                      </div>
+                    )}
+                    <button type="button" className="qr-scan-btn"
+                      onClick={() => { blockImageTargetFieldRef.current = 'logo_url'; blockImageRef.current?.click() }}
+                      disabled={blockImageUploading}>
+                      {blockImageUploading ? 'アップロード中...' : editingBlock.content.logo_url ? '画像を変更' : '📷 ロゴ・背景画像を追加'}
+                    </button>
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>背景色</div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {TEXT_BG_PRESETS.map(color => (
+                        <button key={color} type="button"
+                          style={{
+                            width: 34, height: 34, borderRadius: '50%', background: color,
+                            border: editingBlock.content.bg_color === color ? '3px solid #ffffff' : '2px solid #2a2a3a',
+                            cursor: 'pointer',
+                            outline: editingBlock.content.bg_color === color ? '2px solid #7b9e87' : 'none',
+                            outlineOffset: 2, padding: 0,
+                          }}
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, bg_color: color } }))} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <input ref={blockImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBlockImageUpload} />
@@ -2126,6 +2213,9 @@ export default function ProfileSettings() {
                   }
                   if (editingBlock.type === 'sns' && !editingBlock.content.platform) {
                     return alert('プラットフォームを選択してください')
+                  }
+                  if (editingBlock.type === 'affiliation' && !editingBlock.content.company_name?.trim()) {
+                    return alert('会社名を入力してください')
                   }
                   const newBlock = {
                     id: editingBlock.index !== null ? (blocks[editingBlock.index]?.id || `new-${Date.now()}`) : `new-${Date.now()}`,

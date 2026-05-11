@@ -226,7 +226,105 @@ function SnsBlock({ block, profile }) {
   )
 }
 
-export default function PublicProfile({ profile, blocks, affil, showAsPro, activeSns }) {
+function ProfileCardBlock({ block, profile, affiliations, theme }) {
+  const mainAff = affiliations?.[0]
+  return (
+    <div style={{
+      background: theme.card,
+      width: '100%', height: '100%',
+      padding: '20px 18px',
+      display: 'flex', flexDirection: 'row',
+      gap: 14, alignItems: 'flex-start',
+      overflow: 'hidden',
+    }}>
+      {profile.avatar_url ? (
+        <img src={profile.avatar_url} style={{
+          width: 60, height: 60, borderRadius: '50%',
+          objectFit: 'cover', flexShrink: 0,
+          border: `2px solid ${theme.accent}`,
+        }} alt="" />
+      ) : (
+        <div style={{
+          width: 60, height: 60, borderRadius: '50%',
+          background: theme.accent, flexShrink: 0,
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 22, fontWeight: 800, color: '#fff',
+        }}>
+          {initials(profile.name)}
+        </div>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, lineHeight: 1.2 }}>
+          {profile.name || '名前未設定'}
+        </div>
+        {profile.bio && (
+          <div style={{ fontSize: 12, color: theme.text, opacity: 0.65, marginTop: 5, lineHeight: 1.65 }}>
+            {profile.bio}
+          </div>
+        )}
+        {mainAff && (
+          <div style={{ marginTop: 8, borderTop: `1px solid ${theme.accent}33`, paddingTop: 7 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: theme.accent }}>
+              {mainAff.company_name}
+            </div>
+            {mainAff.title && (
+              <div style={{ fontSize: 11, color: theme.text, opacity: 0.55, marginTop: 1 }}>
+                {mainAff.title}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AffiliationBlock({ block, theme }) {
+  const { company_name, title, logo_url, bg_color } = block.content || {}
+  const hasLogo = !!logo_url
+  const bgColor = bg_color || theme.card
+  return (
+    <div style={{
+      background: hasLogo ? 'transparent' : bgColor,
+      backgroundImage: hasLogo ? `url(${logo_url})` : 'none',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      width: '100%', height: '100%',
+      position: 'relative',
+      display: 'flex', flexDirection: 'column',
+      justifyContent: 'flex-end', padding: 16,
+    }}>
+      {hasLogo && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 65%)',
+          borderRadius: 'inherit',
+        }} />
+      )}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{
+          fontSize: 14, fontWeight: 800,
+          color: hasLogo ? '#fff' : theme.text,
+          lineHeight: 1.3,
+        }}>
+          {company_name || '会社名未設定'}
+        </div>
+        {title && (
+          <div style={{
+            fontSize: 11, marginTop: 3,
+            color: hasLogo ? 'rgba(255,255,255,0.65)' : theme.text,
+            opacity: hasLogo ? 1 : 0.6,
+          }}>
+            {title}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function PublicProfile({ profile, blocks, affiliations, showAsPro, activeSns }) {
   const theme = THEMES.find(t => t.id === profile.profile_theme) || THEMES[0]
 
   return (
@@ -245,70 +343,6 @@ export default function PublicProfile({ profile, blocks, affil, showAsPro, activ
       } : {}}>
         <div className="card">
           <div className="bento-grid">
-            {/* Hero block — 横並びレイアウト */}
-            <div className="bento-block block-L" style={{
-              background: theme.card,
-              padding: '20px',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 16,
-              minHeight: 'unset',
-              height: 'auto',
-            }}>
-              <div style={{
-                width: 68, height: 68, borderRadius: '50%',
-                overflow: 'hidden', flexShrink: 0,
-                border: `3px solid ${theme.accent}`,
-                boxShadow: `0 0 0 3px ${theme.bg}, 0 0 0 5px ${theme.accent}40`,
-              }}>
-                {profile.avatar_url
-                  ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                  : <div style={{ width: '100%', height: '100%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, fontWeight: 700, fontFamily: 'DM Mono, monospace' }}>{initials(profile.name)}</div>
-                }
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  color: theme.text, fontSize: 18, fontWeight: 800,
-                  lineHeight: 1.3, letterSpacing: '-0.3px',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {profile.name || '名前未設定'}
-                </div>
-                {profile.bio && (
-                  <div style={{
-                    color: theme.text, opacity: 0.6,
-                    fontSize: 12, lineHeight: 1.6, marginTop: 4,
-                    display: '-webkit-box', WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                  }}>
-                    {profile.bio}
-                  </div>
-                )}
-                {affil?.company && (
-                  <div style={{ color: theme.text, opacity: 0.75, fontSize: 12, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
-                    {affil.company}{affil.title ? ` · ${affil.title}` : ''}
-                  </div>
-                )}
-                {affil?.email && (
-                  <a href={`mailto:${affil.email}`} style={{ display: 'block', color: theme.accent, fontSize: 11, marginTop: 4, textDecoration: 'none', opacity: 0.85 }}>
-                    {affil.email}
-                  </a>
-                )}
-                {affil?.phone && (
-                  <a href={`tel:${affil.phone}`} style={{ display: 'block', color: theme.text, fontSize: 11, marginTop: 2, opacity: 0.5, textDecoration: 'none' }}>
-                    {affil.phone}
-                  </a>
-                )}
-                {affil?.website && (
-                  <a href={affil.website} target="_blank" rel="noopener noreferrer" style={{ display: 'block', color: theme.text, fontSize: 11, marginTop: 2, opacity: 0.5, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {affil.website.replace(/^https?:\/\//, '')}
-                  </a>
-                )}
-                <div style={{ marginTop: 8, width: 28, height: 3, borderRadius: 2, background: theme.accent }} />
-              </div>
-            </div>
-
             {blocks.map((block, i) => {
               const sizeClass =
                 block.size === 'L'  ? 'block-L'  :
@@ -323,10 +357,12 @@ export default function PublicProfile({ profile, blocks, affil, showAsPro, activ
                   onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)'; e.currentTarget.style.transition = 'transform 0.1s' }}
                   onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)' }}
                 >
-                  {block.type === 'photo' && <PhotoBlock block={block} theme={theme} />}
-                  {block.type === 'text'  && <TextBlock  block={block} theme={theme} />}
-                  {block.type === 'link'  && <LinkBlock  block={block} theme={theme} />}
-                  {block.type === 'sns'   && <SnsBlock   block={block} profile={profile} theme={theme} />}
+                  {block.type === 'photo'        && <PhotoBlock        block={block} theme={theme} />}
+                  {block.type === 'text'         && <TextBlock         block={block} theme={theme} />}
+                  {block.type === 'link'         && <LinkBlock         block={block} theme={theme} />}
+                  {block.type === 'sns'          && <SnsBlock          block={block} profile={profile} theme={theme} />}
+                  {block.type === 'profile_card' && <ProfileCardBlock  block={block} profile={profile} affiliations={affiliations} theme={theme} />}
+                  {block.type === 'affiliation'  && <AffiliationBlock  block={block} theme={theme} />}
                 </div>
               )
             })}
@@ -546,7 +582,7 @@ export async function getServerSideProps({ params, query }) {
       .eq('user_id', userId).order('order_index'),
     supabaseAdmin.from('profile_affiliations')
       .select('company_name, title, phone, contact_email, website, show_phone, show_email, show_website')
-      .eq('user_id', userId).order('order_index').limit(1),
+      .eq('user_id', userId).order('order_index'),
   ])
 
   if (profileRes.error || !profileRes.data) return { notFound: true }
@@ -573,19 +609,11 @@ export async function getServerSideProps({ params, query }) {
     .filter(k => profile[k])
     .map(k => ({ key: k, url: profile[k] }))
 
-  const primaryAffil = affiliationsRes.data?.[0] || null
-
   return { props: {
     profile,
     blocks: showAsPro ? (blocksRes.data || []) : [],
+    affiliations: affiliationsRes.data || [],
     showAsPro,
     activeSns,
-    affil: primaryAffil ? {
-      company: primaryAffil.company_name || null,
-      title: primaryAffil.title || null,
-      phone: primaryAffil.show_phone ? (primaryAffil.phone || null) : null,
-      email: primaryAffil.show_email ? (primaryAffil.contact_email || null) : null,
-      website: primaryAffil.show_website !== false ? (primaryAffil.website || null) : null,
-    } : null,
   } }
 }
