@@ -227,52 +227,95 @@ function SnsBlock({ block, profile }) {
 }
 
 function ProfileCardBlock({ block, profile, affiliations, theme }) {
-  const mainAff = affiliations?.[0]
+  const affs = affiliations || []
+  const contacts = affs.flatMap(a => [
+    a.show_email && a.contact_email ? { type: 'email', value: a.contact_email } : null,
+    a.show_phone && a.phone         ? { type: 'phone', value: a.phone }         : null,
+    a.show_website !== false && a.website ? { type: 'web', value: a.website }   : null,
+  ]).filter(Boolean).filter((c, i, arr) => arr.findIndex(x => x.value === c.value) === i)
+
   return (
     <div style={{
       background: theme.card,
-      width: '100%', height: '100%',
-      padding: '20px 18px',
+      width: '100%', minHeight: '100%',
+      padding: '18px 18px 14px',
       display: 'flex', flexDirection: 'row',
       gap: 14, alignItems: 'flex-start',
-      overflow: 'hidden',
     }}>
-      {profile.avatar_url ? (
-        <img src={profile.avatar_url} style={{
-          width: 60, height: 60, borderRadius: '50%',
-          objectFit: 'cover', flexShrink: 0,
-          border: `2px solid ${theme.accent}`,
-        }} alt="" />
-      ) : (
-        <div style={{
-          width: 60, height: 60, borderRadius: '50%',
-          background: theme.accent, flexShrink: 0,
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 22, fontWeight: 800, color: '#fff',
-        }}>
-          {initials(profile.name)}
-        </div>
-      )}
+      {/* アバター */}
+      <div style={{ flexShrink: 0 }}>
+        {profile.avatar_url ? (
+          <img src={profile.avatar_url} alt="" style={{
+            width: 56, height: 56, borderRadius: '50%',
+            objectFit: 'cover',
+            border: `2px solid ${theme.accent}`,
+          }} />
+        ) : (
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: theme.accent,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20, fontWeight: 800, color: '#fff',
+          }}>
+            {initials(profile.name)}
+          </div>
+        )}
+      </div>
+
+      {/* テキスト */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 19, fontWeight: 800, color: theme.text, lineHeight: 1.2 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: theme.text, lineHeight: 1.2 }}>
           {profile.name || '名前未設定'}
         </div>
         {profile.bio && (
-          <div style={{ fontSize: 12, color: theme.text, opacity: 0.65, marginTop: 5, lineHeight: 1.65 }}>
+          <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, marginTop: 5, lineHeight: 1.6 }}>
             {profile.bio}
           </div>
         )}
-        {mainAff && (
-          <div style={{ marginTop: 8, borderTop: `1px solid ${theme.accent}33`, paddingTop: 7 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: theme.accent }}>
-              {mainAff.company_name}
-            </div>
-            {mainAff.title && (
-              <div style={{ fontSize: 11, color: theme.text, opacity: 0.55, marginTop: 1 }}>
-                {mainAff.title}
+
+        {/* 所属リスト */}
+        {affs.length > 0 && (
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {affs.map((aff, idx) => (
+              <div key={idx} style={{
+                borderTop: `1px solid ${theme.accent}28`,
+                paddingTop: 6,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: theme.accent, lineHeight: 1.3 }}>
+                  {aff.company_name}
+                </div>
+                {aff.title && (
+                  <div style={{ fontSize: 11, color: theme.text, opacity: 0.5, marginTop: 1 }}>
+                    {aff.title}
+                  </div>
+                )}
               </div>
-            )}
+            ))}
+          </div>
+        )}
+
+        {/* 連絡先 */}
+        {contacts.length > 0 && (
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {contacts.map((c, idx) => {
+              const href = c.type === 'email' ? `mailto:${c.value}` : c.type === 'phone' ? `tel:${c.value}` : c.value
+              const icon  = c.type === 'email' ? '✉' : c.type === 'phone' ? '☎' : '🔗'
+              const label = c.type === 'web' ? c.value.replace(/^https?:\/\//, '').replace(/\/$/, '') : c.value
+              return (
+                <a key={idx} href={href} target={c.type === 'web' ? '_blank' : undefined}
+                  rel={c.type === 'web' ? 'noopener noreferrer' : undefined}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    fontSize: 11, color: c.type === 'email' ? theme.accent : theme.text,
+                    opacity: c.type === 'email' ? 0.85 : 0.45,
+                    textDecoration: 'none',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                  <span style={{ flexShrink: 0 }}>{icon}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+                </a>
+              )
+            })}
           </div>
         )}
       </div>
@@ -519,7 +562,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         .bento-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          grid-auto-rows: 144px;
+          grid-auto-rows: minmax(144px, auto);
           gap: 12px;
         }
         .bento-block {
