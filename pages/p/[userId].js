@@ -22,12 +22,13 @@ function PhotoBlock({ block }) {
       <span style={{ fontSize: 28, opacity: 0.3 }}>📷</span>
     </div>
   )
+  const fit = block.content?.fit || 'cover'
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: fit === 'contain' ? '#0a0a14' : 'transparent' }}>
       <img
         src={block.content.image_url}
         alt={block.content.caption || ''}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }}
       />
       {block.content.caption && (
         <div style={{

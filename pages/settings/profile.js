@@ -806,10 +806,8 @@ export default function ProfileSettings() {
     }
   }
 
-  async function handleBlockImageUpload(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
+  async function handleBlockImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) return
     setBlockImageUploading(true)
     try {
       const dataUrl = await compressImage(file)
@@ -827,6 +825,12 @@ export default function ProfileSettings() {
     } finally {
       setBlockImageUploading(false)
     }
+  }
+
+  function handleBlockImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (file) handleBlockImageFile(file)
+    e.target.value = ''
   }
 
   async function handleAvatarFile(e) {
@@ -1819,21 +1823,82 @@ export default function ProfileSettings() {
 
               {/* photo */}
               {editingBlock.type === 'photo' && (
-                <div>
+                <div
+                  onPaste={(e) => {
+                    const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith('image/'))
+                    if (item) { e.preventDefault(); handleBlockImageFile(item.getAsFile()) }
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'))
+                    if (file) handleBlockImageFile(file)
+                  }}
+                >
                   <div className="scan-field-label" style={{ marginBottom: 8 }}>画像</div>
                   {editingBlock.content.image_url && (
                     <img src={editingBlock.content.image_url} alt="block preview"
-                      style={{ width: '100%', borderRadius: 10, marginBottom: 8, maxHeight: 160, objectFit: 'cover', display: 'block' }} />
+                      style={{ width: '100%', borderRadius: 10, marginBottom: 8, maxHeight: 160, objectFit: editingBlock.content.fit || 'cover', display: 'block' }} />
                   )}
+                  <div
+                    style={{
+                      border: '1.5px dashed rgba(255,255,255,.2)',
+                      borderRadius: 10,
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      marginBottom: 10,
+                      cursor: 'pointer',
+                      background: 'rgba(255,255,255,.03)',
+                      fontSize: 12,
+                      color: 'rgba(255,255,255,.4)',
+                      lineHeight: 1.8,
+                    }}
+                    onClick={() => blockImageRef.current?.click()}
+                  >
+                    ここにドラッグ or ⌘V でペースト<br />
+                    <span style={{ fontSize: 10 }}>スクリーンショットもOK</span>
+                  </div>
                   <button type="button" className="qr-scan-btn" style={{ marginBottom: 10 }}
                     onClick={() => blockImageRef.current?.click()}>
                     {blockImageUploading ? 'アップロード中...' : editingBlock.content.image_url ? '画像を変更' : '📷 画像を選択'}
                   </button>
                   <input ref={blockImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBlockImageUpload} />
                   <div className="scan-field-label" style={{ marginBottom: 4 }}>キャプション（任意）</div>
-                  <input type="text" value={editingBlock.content.caption || ''} maxLength={60}
+                  <input type="text" value={editingBlock.content.caption || ''} maxLength={120}
                     onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, caption: e.target.value } }))}
                     placeholder="写真の説明" className="scan-field-input" />
+                  <div style={{ marginTop: 12 }}>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>表示モード</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { key: 'cover', label: 'カバー', desc: '全体を埋める' },
+                        { key: 'contain', label: 'フィット', desc: 'スクショ向き' },
+                      ].map(({ key, label, desc }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, fit: key } }))}
+                          style={{
+                            flex: 1,
+                            padding: '8px 0',
+                            borderRadius: 10,
+                            border: (editingBlock.content.fit || 'cover') === key
+                              ? '2px solid #22c55e'
+                              : '1px solid #2a2a3a',
+                            background: (editingBlock.content.fit || 'cover') === key ? '#0f2a1a' : '#111',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 2,
+                          }}
+                        >
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{label}</span>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.45)' }}>{desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1842,17 +1907,17 @@ export default function ProfileSettings() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div>
                     <div className="scan-field-label" style={{ marginBottom: 4 }}>タイトル（任意）</div>
-                    <input type="text" value={editingBlock.content.title || ''} maxLength={40}
+                    <input type="text" value={editingBlock.content.title || ''} maxLength={80}
                       onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, title: e.target.value } }))}
                       placeholder="見出し" className="scan-field-input" />
                   </div>
                   <div>
                     <div className="scan-field-label" style={{ marginBottom: 4 }}>本文</div>
-                    <textarea value={editingBlock.content.body || ''} maxLength={200} rows={4}
+                    <textarea value={editingBlock.content.body || ''} maxLength={600} rows={4}
                       onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, body: e.target.value } }))}
                       placeholder="テキストを入力..." className="scan-field-input"
                       style={{ resize: 'none', lineHeight: 1.6 }} />
-                    <div className="char-count">{(editingBlock.content.body || '').length} / 200</div>
+                    <div className="char-count">{(editingBlock.content.body || '').length} / 600</div>
                   </div>
                   <div>
                     <div className="scan-field-label" style={{ marginBottom: 8 }}>背景色</div>
@@ -1878,7 +1943,7 @@ export default function ProfileSettings() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div>
                     <div className="scan-field-label" style={{ marginBottom: 4 }}>タイトル（必須）</div>
-                    <input type="text" value={editingBlock.content.title || ''} maxLength={60}
+                    <input type="text" value={editingBlock.content.title || ''} maxLength={80}
                       onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, title: e.target.value } }))}
                       placeholder="リンクのタイトル" className="scan-field-input" />
                   </div>
@@ -1890,7 +1955,7 @@ export default function ProfileSettings() {
                   </div>
                   <div>
                     <div className="scan-field-label" style={{ marginBottom: 4 }}>説明（任意）</div>
-                    <input type="text" value={editingBlock.content.description || ''} maxLength={100}
+                    <input type="text" value={editingBlock.content.description || ''} maxLength={200}
                       onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, description: e.target.value } }))}
                       placeholder="リンクの説明文" className="scan-field-input" />
                   </div>
@@ -1921,7 +1986,7 @@ export default function ProfileSettings() {
                     <input
                       type="text"
                       value={editingBlock.content.caption || ''}
-                      maxLength={40}
+                      maxLength={80}
                       placeholder="例: 採用・ビジネス相談はこちら"
                       className="scan-field-input"
                       onChange={e => setEditingBlock(prev => ({
@@ -1930,7 +1995,7 @@ export default function ProfileSettings() {
                       }))}
                     />
                     <div style={{ fontSize: 11, color: '#5a5650', marginTop: 4, textAlign: 'right' }}>
-                      {(editingBlock.content.caption || '').length} / 40
+                      {(editingBlock.content.caption || '').length} / 80
                     </div>
                   </div>
                 </div>
