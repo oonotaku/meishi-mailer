@@ -45,27 +45,41 @@ function PhotoBlock({ block }) {
 }
 
 function TextBlock({ block, theme }) {
-  const bg = block.content?.bg_color || theme.card
+  const hasBgImage = !!block.content?.bg_image_url
+  const bg = hasBgImage ? 'transparent' : (block.content?.bg_color || theme.card)
   const lightBgs = ['#ffffff', '#fff0f3', '#f8f8f8', '#fef3c7', '#f0f9ff']
   const isLight = lightBgs.some(c => bg.toLowerCase() === c.toLowerCase())
-  const textColor = isLight ? '#111111' : '#ffffff'
+  const textColor = hasBgImage ? '#ffffff' : (isLight ? '#111111' : '#ffffff')
   return (
     <div style={{
       background: bg,
+      backgroundImage: hasBgImage ? `url(${block.content.bg_image_url})` : 'none',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
       padding: 18, gap: 6,
+      position: 'relative',
     }}>
-      {block.content?.title && (
-        <div style={{ fontSize: 15, fontWeight: 800, color: textColor, lineHeight: 1.35, letterSpacing: '-0.2px' }}>
-          {block.content.title}
-        </div>
+      {hasBgImage && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%)',
+          borderRadius: 'inherit',
+        }} />
       )}
-      {block.content?.body && (
-        <div style={{ fontSize: 13, color: textColor, opacity: 0.75, lineHeight: 1.75 }}>
-          {block.content.body}
-        </div>
-      )}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {block.content?.title && (
+          <div style={{ fontSize: 15, fontWeight: 800, color: textColor, lineHeight: 1.35, letterSpacing: '-0.2px' }}>
+            {block.content.title}
+          </div>
+        )}
+        {block.content?.body && (
+          <div style={{ fontSize: 13, color: textColor, opacity: hasBgImage ? 0.9 : 0.75, lineHeight: 1.75 }}>
+            {block.content.body}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -73,6 +87,7 @@ function TextBlock({ block, theme }) {
 function LinkBlock({ block, theme }) {
   if (!block.content?.url) return null
   const displayUrl = block.content.url.replace(/^https?:\/\//, '').replace(/\/$/, '')
+  const hasImage = !!block.content?.image_url
   return (
     <a
       href={block.content.url}
@@ -81,33 +96,41 @@ function LinkBlock({ block, theme }) {
       style={{
         display: 'flex', flexDirection: 'column',
         width: '100%', height: '100%',
-        padding: 16, gap: 6,
         background: theme.card,
         border: '1px solid rgba(255,255,255,0.1)',
         textDecoration: 'none',
         position: 'relative',
         transition: 'opacity .15s',
+        overflow: 'hidden',
       }}
     >
-      <span style={{
-        position: 'absolute', top: 12, right: 14,
-        fontSize: 14, color: theme.text, opacity: 0.35,
-      }}>↗</span>
-      <div style={{ fontSize: 16, fontWeight: 700, color: theme.text, lineHeight: 1.4, paddingRight: 20 }}>
-        {block.content.title || displayUrl}
-      </div>
-      {block.content.description && (
-        <div style={{ fontSize: 14, color: theme.text, opacity: 0.6, lineHeight: 1.6, flex: 1 }}>
-          {block.content.description}
+      {hasImage && (
+        <div style={{ width: '100%', height: 90, overflow: 'hidden', flexShrink: 0, borderRadius: '14px 14px 0 0' }}>
+          <img src={block.content.image_url} alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         </div>
       )}
-      <div style={{
-        fontSize: 12, color: theme.text, opacity: 0.4,
-        fontFamily: 'DM Mono, monospace',
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        marginTop: 'auto',
-      }}>
-        {displayUrl}
+      <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}>
+        <span style={{
+          position: 'absolute', top: 12, right: 14,
+          fontSize: 14, color: theme.text, opacity: 0.35,
+        }}>↗</span>
+        <div style={{ fontSize: 16, fontWeight: 700, color: theme.text, lineHeight: 1.4, paddingRight: 20 }}>
+          {block.content.title || displayUrl}
+        </div>
+        {block.content.description && (
+          <div style={{ fontSize: 14, color: theme.text, opacity: 0.6, lineHeight: 1.6, flex: 1 }}>
+            {block.content.description}
+          </div>
+        )}
+        <div style={{
+          fontSize: 12, color: theme.text, opacity: 0.4,
+          fontFamily: 'DM Mono, monospace',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          marginTop: 'auto',
+        }}>
+          {displayUrl}
+        </div>
       </div>
     </a>
   )
@@ -214,7 +237,12 @@ export default function PublicProfile({ profile, blocks, affil, showAsPro, activ
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
-      <div className="shell">
+      <div className="shell" style={profile.profile_bg_image_url ? {
+        backgroundImage: `url(${profile.profile_bg_image_url})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      } : {}}>
         <div className="card">
           <div className="bento-grid">
             {/* Hero block — 横並びレイアウト */}
@@ -511,7 +539,7 @@ export async function getServerSideProps({ params, query }) {
 
   const [profileRes, blocksRes, affiliationsRes] = await Promise.all([
     supabaseAdmin.from('profiles')
-      .select('name, bio, avatar_url, profile_theme, plan, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
+      .select('name, bio, avatar_url, profile_theme, plan, profile_bg_image_url, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note')
       .eq('id', userId).single(),
     supabaseAdmin.from('profile_blocks')
       .select('id, type, size, content, order_index')

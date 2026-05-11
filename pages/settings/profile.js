@@ -207,6 +207,10 @@ export default function ProfileSettings() {
   const [editingBlock, setEditingBlock] = useState(null)
   const [blockImageUploading, setBlockImageUploading] = useState(false)
   const blockImageRef = useRef(null)
+  const blockImageTargetFieldRef = useRef('image_url')
+  const bgImageRef = useRef(null)
+  const [bgImageUploading, setBgImageUploading] = useState(false)
+  const [bgImageUrl, setBgImageUrl] = useState(null)
   const router = useRouter()
 
   const isDirtyAny = snsDirty || affilDirty || blocksDirty
@@ -217,6 +221,7 @@ export default function ProfileSettings() {
       setLocalName(profile?.name || '')
       setBio(profile?.bio || '')
       if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
+      if (profile?.profile_bg_image_url) setBgImageUrl(profile.profile_bg_image_url)
       if (profileTheme === null) setProfileTheme(profile?.profile_theme || 'dark')
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
@@ -806,7 +811,7 @@ export default function ProfileSettings() {
     }
   }
 
-  async function handleBlockImageFile(file) {
+  async function handleBlockImageFile(file, targetField = 'image_url') {
     if (!file || !file.type.startsWith('image/')) return
     setBlockImageUploading(true)
     try {
@@ -819,7 +824,7 @@ export default function ProfileSettings() {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      setEditingBlock(prev => ({ ...prev, content: { ...prev.content, image_url: data.image_url } }))
+      setEditingBlock(prev => ({ ...prev, content: { ...prev.content, [targetField]: data.image_url } }))
     } catch {
       // silent fail
     } finally {
@@ -829,8 +834,9 @@ export default function ProfileSettings() {
 
   function handleBlockImageUpload(e) {
     const file = e.target.files?.[0]
-    if (file) handleBlockImageFile(file)
+    if (file) handleBlockImageFile(file, blockImageTargetFieldRef.current)
     e.target.value = ''
+    blockImageTargetFieldRef.current = 'image_url'
   }
 
   async function handleAvatarFile(e) {
@@ -854,6 +860,39 @@ export default function ProfileSettings() {
     } finally {
       setAvatarUploading(false)
     }
+  }
+
+  async function handleBgImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBgImageUploading(true)
+    try {
+      const dataUrl = await compressImage(file)
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/profile/update-bg-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ image: dataUrl.split(',')[1] }),
+      })
+      const data = await res.json()
+      if (data.url) setBgImageUrl(data.url)
+    } catch {
+      // silent fail
+    } finally {
+      setBgImageUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  async function handleRemoveBgImage() {
+    if (!confirm('背景画像を削除しますか？')) return
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/profile/update-bg-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ image: null }),
+    })
+    if (res.ok) setBgImageUrl(null)
   }
 
   return (
@@ -1374,6 +1413,41 @@ export default function ProfileSettings() {
                 </span>
               </div>
               <p className="desc">公開プロフィールに表示するブロックを追加・並び替えできます。</p>
+
+              {/* ページ背景画像 */}
+              <div style={{ marginBottom: 20 }}>
+                <div className="scan-field-label" style={{ marginBottom: 8 }}>ページ背景画像（任意）</div>
+                {bgImageUrl && (
+                  <div style={{ position: 'relative', marginBottom: 10 }}>
+                    <img
+                      src={bgImageUrl}
+                      alt="背景プレビュー"
+                      style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 10, display: 'block' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveBgImage}
+                      style={{
+                        position: 'absolute', top: 8, right: 8,
+                        background: 'rgba(0,0,0,.6)', border: 'none',
+                        borderRadius: 20, color: '#fff', fontSize: 11,
+                        padding: '4px 10px', cursor: 'pointer'
+                      }}
+                    >削除</button>
+                  </div>
+                )}
+                <button type="button" className="qr-scan-btn"
+                  onClick={() => bgImageRef.current?.click()}
+                  disabled={bgImageUploading}>
+                  {bgImageUploading ? 'アップロード中...' : bgImageUrl ? '背景を変更' : '📷 背景画像を設定'}
+                </button>
+                <input ref={bgImageRef} type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={handleBgImageUpload} />
+                <p style={{ fontSize: 11, color: '#5a5650', marginTop: 6, lineHeight: 1.6 }}>
+                  スマホのスクショもそのまま使えます
+                </p>
+              </div>
+
               {profile?.plan !== 'pro' && (
                 <div className="paywall-overlay">
                   <div className="paywall-box">
@@ -1935,6 +2009,28 @@ export default function ProfileSettings() {
                       ))}
                     </div>
                   </div>
+                  <div style={{ marginTop: 12 }}>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>
+                      背景画像（任意）
+                      <span style={{ fontSize: 10, color: '#5a5650', marginLeft: 6 }}>設定すると背景色は無効</span>
+                    </div>
+                    {editingBlock.content.bg_image_url && (
+                      <div style={{ position: 'relative', marginBottom: 8 }}>
+                        <img src={editingBlock.content.bg_image_url} alt=""
+                          style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                        <button type="button"
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, bg_image_url: null } }))}
+                          style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,.6)', border: 'none', borderRadius: 16, color: '#fff', fontSize: 10, padding: '3px 8px', cursor: 'pointer' }}>
+                          削除
+                        </button>
+                      </div>
+                    )}
+                    <button type="button" className="qr-scan-btn"
+                      onClick={() => { blockImageTargetFieldRef.current = 'bg_image_url'; blockImageRef.current?.click() }}
+                      disabled={blockImageUploading}>
+                      {blockImageUploading ? 'アップロード中...' : editingBlock.content.bg_image_url ? '画像を変更' : '📷 背景画像を追加'}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1958,6 +2054,25 @@ export default function ProfileSettings() {
                     <input type="text" value={editingBlock.content.description || ''} maxLength={200}
                       onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, description: e.target.value } }))}
                       placeholder="リンクの説明文" className="scan-field-input" />
+                  </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>サムネイル画像（任意）</div>
+                    {editingBlock.content.image_url && (
+                      <div style={{ position: 'relative', marginBottom: 8 }}>
+                        <img src={editingBlock.content.image_url} alt=""
+                          style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                        <button type="button"
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, image_url: null } }))}
+                          style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,.6)', border: 'none', borderRadius: 16, color: '#fff', fontSize: 10, padding: '3px 8px', cursor: 'pointer' }}>
+                          削除
+                        </button>
+                      </div>
+                    )}
+                    <button type="button" className="qr-scan-btn"
+                      onClick={() => { blockImageTargetFieldRef.current = 'image_url'; blockImageRef.current?.click() }}
+                      disabled={blockImageUploading}>
+                      {blockImageUploading ? 'アップロード中...' : '📷 サムネイルを追加'}
+                    </button>
                   </div>
                 </div>
               )}
