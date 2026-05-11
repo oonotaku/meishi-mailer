@@ -226,14 +226,7 @@ function SnsBlock({ block, profile }) {
   )
 }
 
-function ProfileCardBlock({ block, profile, affiliations, theme }) {
-  const affs = affiliations || []
-  const contacts = affs.flatMap(a => [
-    a.show_email && a.contact_email ? { type: 'email', value: a.contact_email } : null,
-    a.show_phone && a.phone         ? { type: 'phone', value: a.phone }         : null,
-    a.show_website !== false && a.website ? { type: 'web', value: a.website }   : null,
-  ]).filter(Boolean).filter((c, i, arr) => arr.findIndex(x => x.value === c.value) === i)
-
+function ProfileCardBlock({ block, profile, theme }) {
   return (
     <div style={{
       background: theme.card,
@@ -241,6 +234,7 @@ function ProfileCardBlock({ block, profile, affiliations, theme }) {
       padding: '18px 18px 14px',
       display: 'flex', flexDirection: 'row',
       gap: 14, alignItems: 'flex-start',
+      overflow: 'hidden',
     }}>
       {/* アバター */}
       <div style={{ flexShrink: 0 }}>
@@ -264,58 +258,19 @@ function ProfileCardBlock({ block, profile, affiliations, theme }) {
 
       {/* テキスト */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: theme.text, lineHeight: 1.2 }}>
+        <div style={{
+          fontSize: 18, fontWeight: 800, color: theme.text, lineHeight: 1.2,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
           {profile.name || '名前未設定'}
         </div>
         {profile.bio && (
-          <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, marginTop: 5, lineHeight: 1.6 }}>
+          <div style={{
+            fontSize: 12, color: theme.text, opacity: 0.6, marginTop: 5, lineHeight: 1.6,
+            display: '-webkit-box', WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
             {profile.bio}
-          </div>
-        )}
-
-        {/* 所属リスト */}
-        {affs.length > 0 && (
-          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {affs.map((aff, idx) => (
-              <div key={idx} style={{
-                borderTop: `1px solid ${theme.accent}28`,
-                paddingTop: 6,
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: theme.accent, lineHeight: 1.3 }}>
-                  {aff.company_name}
-                </div>
-                {aff.title && (
-                  <div style={{ fontSize: 11, color: theme.text, opacity: 0.5, marginTop: 1 }}>
-                    {aff.title}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 連絡先 */}
-        {contacts.length > 0 && (
-          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {contacts.map((c, idx) => {
-              const href = c.type === 'email' ? `mailto:${c.value}` : c.type === 'phone' ? `tel:${c.value}` : c.value
-              const icon  = c.type === 'email' ? '✉' : c.type === 'phone' ? '☎' : '🔗'
-              const label = c.type === 'web' ? c.value.replace(/^https?:\/\//, '').replace(/\/$/, '') : c.value
-              return (
-                <a key={idx} href={href} target={c.type === 'web' ? '_blank' : undefined}
-                  rel={c.type === 'web' ? 'noopener noreferrer' : undefined}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    fontSize: 11, color: c.type === 'email' ? theme.accent : theme.text,
-                    opacity: c.type === 'email' ? 0.85 : 0.45,
-                    textDecoration: 'none',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                  <span style={{ flexShrink: 0 }}>{icon}</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
-                </a>
-              )
-            })}
           </div>
         )}
       </div>

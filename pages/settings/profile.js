@@ -2121,8 +2121,7 @@ export default function ProfileSettings() {
                   {/* ひとこと */}
                   <div style={{ marginTop: 12 }}>
                     <div className="scan-field-label" style={{ marginBottom: 4 }}>ひとこと（任意）</div>
-                    <input
-                      type="text"
+                    <textarea
                       value={editingBlock.content.caption || ''}
                       maxLength={80}
                       placeholder="例: 採用・ビジネス相談はこちら"
@@ -2131,6 +2130,8 @@ export default function ProfileSettings() {
                         ...prev,
                         content: { ...prev.content, caption: e.target.value }
                       }))}
+                      onInput={e => autoResize(e.target)}
+                      style={{ resize: 'none', overflow: 'hidden', minHeight: '44px' }}
                     />
                     <div style={{ fontSize: 11, color: '#5a5650', marginTop: 4, textAlign: 'right' }}>
                       {(editingBlock.content.caption || '').length} / 80
