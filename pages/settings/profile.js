@@ -1936,7 +1936,6 @@ export default function ProfileSettings() {
                     onClick={() => blockImageRef.current?.click()}>
                     {blockImageUploading ? 'アップロード中...' : editingBlock.content.image_url ? '画像を変更' : '📷 画像を選択'}
                   </button>
-                  <input ref={blockImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBlockImageUpload} />
                   <div className="scan-field-label" style={{ marginBottom: 4 }}>キャプション（任意）</div>
                   <input type="text" value={editingBlock.content.caption || ''} maxLength={120}
                     onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, caption: e.target.value } }))}
@@ -2116,6 +2115,8 @@ export default function ProfileSettings() {
                 </div>
               )}
             </div>
+
+            <input ref={blockImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBlockImageUpload} />
 
             <div className="scan-sheet-actions">
               <button type="button" className="save-btn"
