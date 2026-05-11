@@ -319,6 +319,20 @@ export default function ProfileSettings() {
       .catch(() => {})
   }, [user])
 
+  const autoResize = (el) => {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }
+
+  useEffect(() => {
+    if (!editingBlock) return
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.scan-sheet textarea').forEach(autoResize)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingBlock?.type, editingBlock?.index])
+
   function startNameEdit() {
     setNameValue(localName ?? profile?.name ?? '')
     setNameMsg(null)
@@ -1995,10 +2009,11 @@ export default function ProfileSettings() {
                   </div>
                   <div>
                     <div className="scan-field-label" style={{ marginBottom: 4 }}>本文</div>
-                    <textarea value={editingBlock.content.body || ''} maxLength={600} rows={4}
+                    <textarea value={editingBlock.content.body || ''} maxLength={600}
                       onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, body: e.target.value } }))}
+                      onInput={e => autoResize(e.target)}
                       placeholder="テキストを入力..." className="scan-field-input"
-                      style={{ resize: 'none', lineHeight: 1.6 }} />
+                      style={{ resize: 'none', overflow: 'hidden', minHeight: 80, lineHeight: 1.6 }} />
                     <div className="char-count">{(editingBlock.content.body || '').length} / 600</div>
                   </div>
                   <div>

@@ -75,7 +75,7 @@ function TextBlock({ block, theme }) {
           </div>
         )}
         {block.content?.body && (
-          <div style={{ fontSize: 13, color: textColor, opacity: hasBgImage ? 0.9 : 0.75, lineHeight: 1.75 }}>
+          <div style={{ fontSize: 13, color: textColor, opacity: hasBgImage ? 0.9 : 0.75, lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {block.content.body}
           </div>
         )}
@@ -119,7 +119,7 @@ function LinkBlock({ block, theme }) {
           {block.content.title || displayUrl}
         </div>
         {block.content.description && (
-          <div style={{ fontSize: 14, color: theme.text, opacity: 0.6, lineHeight: 1.6, flex: 1 }}>
+          <div style={{ fontSize: 14, color: theme.text, opacity: 0.6, lineHeight: 1.6, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {block.content.description}
           </div>
         )}
