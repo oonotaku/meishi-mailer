@@ -338,7 +338,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
-      <div className="shell" style={profile.profile_bg_image_url ? {
+      <div className="shell" style={(showAsPro && profile.profile_bg_image_url) ? {
         backgroundImage: `url(${profile.profile_bg_image_url})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
