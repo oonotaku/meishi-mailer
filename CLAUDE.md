@@ -34,10 +34,11 @@ No test framework is configured.
 | `login.js` | Email/password login + signup + password reset (forgot mode). signUp に `emailRedirectTo` を指定して現在のロケールURLへリダイレクト。 |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
-| `settings/email.js` | メール設定（SendGrid/Gmail/SMTP）— プロフィール設定から独立した無料メニュー |
-| `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / ベントーブロック / メール設定 / プラン・サブスクリプション。**常時表示プレビューボタン**（アコーディオン上部に固定、タップで iframeボトムシート）。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能（`?simulate_free=1` を iframe URL に付与）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力、**テーマ選択（6種: dark/light/midnight/warm/sakura/ocean）**、**プロフィール完成度バー（6項目、100%でゴールドアニメーション）**、**ブロック管理（追加・編集・削除・↑↓並び替え、4タイプ×3サイズ）**、SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）、所属+連絡先一体化（最大5件、↑↓並び替え）、メール署名プレビュー、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
-| `p/[userId].js` | Public profile page — **ベントーグリッド方式**。`profile_blocks` テーブルからブロックを取得してグリッド表示。**ハードコードヘッダー廃止済み**（全要素がブロックとして管理。`profile_card` ブロックがヘッダーの役割を担う）。ブロックタイプ: photo / text / link / sns / profile_card / affiliation。サイズ: S / M / L / **XL**（`grid-row: span 2`）、`grid-auto-rows: minmax(144px, auto)`。6種テーマ対応。**背景画像**（`profile_bg_image_url`）はProユーザーのみ適用。**無課金ユーザー表示**: ベントーグリッドの代わりにプロフィールカード（アバター+名前+bio）＋所属一覧（`affiliations` prop）＋SNSアイコンバー＋アップグレード誘導を縦積みで表示。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`（profiles / profile_blocks / profile_affiliations を並列取得）。|
+| `settings/email.js` | メール設定（SendGrid/Gmail/SMTP）— プロフィール設定から独立した無料メニュー。戻るボタンは `/settings/profile` へ遷移。 |
+| `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / プロフィールページをデザイン / メール設定 / プラン・サブスクリプション。**FABプレビューボタン**（`position: fixed`、右下・ボトムナブ上）タップでプレビューモーダルを開く。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能。**プロフィール完成度バー**（`position: fixed`、ボトムナブ上部）: 7ステップ構成（顔写真15・表示名15・ひとこと10・所属15・SNS15・メール設定15・Proプラン15）合計100%。Proかつ全完了時に非表示。未完ステップをチップで表示しタップで該当セクションへジャンプ（Proチップはプランセクションを開く）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力。**「プロフィールページをデザイン」セクション**：**テーマ選択（6種: dark/light/midnight/sunset/sakura/grape）**全ユーザー選択可能（ロック廃止）・背景画像をテーマスウォッチ7枚目（📷スウォッチ）に統合・ベントーブロック管理（追加・編集・削除・↑↓並び替え、ペイウォール廃止・設定は全員可・表示はProのみ）。**所属・連絡先**：最大5件、ボタン（↑↓・削除）をカード上部横並びに変更、削除ボタンは「○件目を削除」と番号付き。SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）。**プランセクション（Free表示）**：ヘッドライン「Freeで作って、Proで魅せる」・Free/Proプレビューリンク（`previewMode='free'`でモーダルを開く）・機能リスト（ベントーグリッド・テーマ背景画像反映）・月/年トグル・アップグレードボタン。メール署名プレビュー、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
+| `p/[userId].js` | Public profile page — **ベントーグリッド方式**。`profile_blocks` テーブルからブロックを取得してグリッド表示。**ハードコードヘッダー廃止済み**（全要素がブロックとして管理。`profile_card` ブロックがヘッダーの役割を担う）。ブロックタイプ: photo / text / link / sns / profile_card / affiliation。サイズ: S / M / L / **XL**（`grid-row: span 2`）、`grid-auto-rows: minmax(144px, auto)`。**テーマ定数**: dark / light / midnight / sunset / sakura / grape の6種（warm / ocean 廃止）。**テーマ・背景画像**: `isPro` の場合のみ適用（`activeTheme` / `activeBgImage` 変数でガード）。**無課金ユーザー表示**: カード廃止→テキストのみのシンプルレイアウト（名前+bio+所属テキスト+SNSアイコン+Koryu招待）。アバター写真非表示。セクション間は細い区切り線（`theme.text}18`）のみ。CTAは「名刺を受け取ったら、Koryuで繋がろう」（訪問者向け招待）。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`（profiles / profile_blocks / profile_affiliations を並列取得）。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
+| `_document.js` | カスタムDocument。PWA manifest / theme-color / apple-touch-icon / `<link rel="icon" href="/favicon.svg" type="image/svg+xml" />`（32×32 SVG、黒丸角背景＋緑の「交」）を設定。 |
 
 ### API Routes (`pages/api/`)
 
@@ -274,3 +275,18 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - 無課金ユーザービューを再設計（プロフィール + 所属一覧 + SNSバー + CTA）
 
 次の候補: 所属ブロックへのロゴ画像設定UI、ブロック背景色の拡充（LinkBlock/ProfileCardBlock）、テーマ選択のPro解放。
+
+**2026-05-12 プロフィール設定UX大幅改善・公開プロフィール無課金表示刷新完了。**
+
+- 完成度バー固定化（ボトムナブ上部、`position: fixed`）＋Proステップ追加（7ステップ100%制）、合計100%でProかつ全完了時に非表示
+- FABプレビューボタン追加（`position: fixed` 右下、`z-index: 48`）タップでプレビューモーダルを開く
+- テーマ選択を「プロフィールページをデザイン」セクションへ移動、全ユーザー自由選択（ロック廃止）
+- テーマ6色刷新: warm / ocean 廃止 → sunset（#1a0800, オレンジ）/ grape（#130d1f, 紫）追加
+- 背景画像をテーマスウォッチ7枚目（📷スウォッチ）に統合、独立セクション廃止
+- blocksセクションのペイウォール削除（設定は全員可・公開プロフィールへの反映はProのみ）
+- 所属アイテムのボタンをカード上部横並びに変更、削除ボタンは「○件目を削除」と番号付き
+- プランセクション刷新: ヘッドライン「Freeで作って、Proで魅せる」＋Free/Proプレビューリンク
+- 無課金プロフィール（p/[userId].js）をテキストのみのシンプルレイアウトに刷新（アバター非表示・カード廃止・セクション区切り線のみ）
+- CTAを「ベントーグリッドで魅せる（Pro誘導）」→「名刺を受け取ったら、Koryuで繋がろう（訪問者招待）」に転換
+- ファビコン追加（`/favicon.svg`、32×32 黒丸角背景＋緑の「交」）
+- メール設定の戻るボタン遷移先を `/` → `/settings/profile` に修正

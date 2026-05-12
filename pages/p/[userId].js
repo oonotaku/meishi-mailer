@@ -6,9 +6,9 @@ const THEMES = [
   { id: 'dark',     bg: '#0a0a0a', card: '#1a1a1a', accent: '#22c55e', text: '#ffffff' },
   { id: 'light',    bg: '#f8f8f8', card: '#ffffff', accent: '#0070f3', text: '#111111' },
   { id: 'midnight', bg: '#0f172a', card: '#1e293b', accent: '#818cf8', text: '#e2e8f0' },
-  { id: 'warm',     bg: '#1c1410', card: '#2d2018', accent: '#f59e0b', text: '#fef3c7' },
+  { id: 'sunset',   bg: '#1a0800', card: '#2d1500', accent: '#f97316', text: '#fff7ed' },
   { id: 'sakura',   bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
-  { id: 'ocean',    bg: '#0c1a2e', card: '#0f2744', accent: '#38bdf8', text: '#e0f2fe' },
+  { id: 'grape',    bg: '#130d1f', card: '#1e1035', accent: '#a855f7', text: '#f3e8ff' },
 ]
 
 function initials(name) {
@@ -338,7 +338,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
-      <div className="shell" style={(showAsPro && profile.profile_bg_image_url) ? {
+      <div className="shell" style={profile.profile_bg_image_url ? {
         backgroundImage: `url(${profile.profile_bg_image_url})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -375,89 +375,39 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
 
         {/* ── 無課金ビュー ── */}
         {!showAsPro && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '0 4px' }}>
 
-            {/* 1. プロフィールカード */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 16,
-              padding: '24px 20px',
-              background: theme.card,
-              borderRadius: 18,
-            }}>
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="" style={{
-                  width: 64, height: 64, borderRadius: '50%',
-                  objectFit: 'cover', flexShrink: 0,
-                  border: `2px solid ${theme.accent}`,
-                }} />
-              ) : (
-                <div style={{
-                  width: 64, height: 64, borderRadius: '50%',
-                  background: theme.accent, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, fontWeight: 800, color: '#fff',
-                }}>
-                  {initials(profile.name)}
-                </div>
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 20, fontWeight: 800, color: theme.text,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {profile.name || '名前未設定'}
-                </div>
+            {/* 1. 名前 + bio（カードなし・センタリング） */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 16px 24px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: theme.text }}>{profile.name || '名前未設定'}</div>
                 {profile.bio && (
-                  <div style={{
-                    fontSize: 13, color: theme.text, opacity: 0.65,
-                    marginTop: 4, lineHeight: 1.6,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}>
+                  <div style={{ fontSize: 13, color: theme.text, opacity: 0.6, marginTop: 6, lineHeight: 1.7 }}>
                     {profile.bio}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* 2. 所属一覧 */}
+            {/* 2. 所属一覧（カードなし・テキストのみ） */}
             {affiliations.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {affiliations.map((aff, i) => (
-                  <div key={i} style={{
-                    background: theme.card,
-                    borderRadius: 14,
-                    padding: '14px 18px',
-                    borderLeft: `3px solid ${theme.accent}`,
-                  }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>
-                      {aff.company_name}
-                    </div>
-                    {aff.title && (
-                      <div style={{ fontSize: 12, color: theme.text, opacity: 0.55, marginTop: 2 }}>
-                        {aff.title}
-                      </div>
-                    )}
-                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div key={i}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>{aff.company_name}</div>
+                    {aff.title && <div style={{ fontSize: 12, color: theme.text, opacity: 0.5, marginTop: 2 }}>{aff.title}</div>}
+                    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
                       {aff.show_website && aff.website && (
                         <a href={aff.website} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 12, color: theme.accent, textDecoration: 'none',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          style={{ fontSize: 12, color: theme.accent, textDecoration: 'none' }}>
                           🔗 {aff.website.replace(/^https?:\/\//, '')}
                         </a>
                       )}
                       {aff.show_email && aff.contact_email && (
-                        <div style={{ fontSize: 12, color: theme.text, opacity: 0.5,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          ✉ {aff.contact_email}
-                        </div>
+                        <div style={{ fontSize: 12, color: theme.text, opacity: 0.5 }}>✉ {aff.contact_email}</div>
                       )}
                       {aff.show_phone && aff.phone && (
-                        <div style={{ fontSize: 12, color: theme.text, opacity: 0.5 }}>
-                          📞 {aff.phone}
-                        </div>
+                        <div style={{ fontSize: 12, color: theme.text, opacity: 0.5 }}>📞 {aff.phone}</div>
                       )}
                     </div>
                   </div>
@@ -465,34 +415,22 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
               </div>
             )}
 
-            {/* 3. SNSアイコンバー */}
+            {/* 3. SNSアイコン（カードなし・センタリング） */}
             {SNS_CONFIG.some(cfg => profile[cfg.key]) && (
-              <div style={{
-                background: theme.card, borderRadius: 14,
-                padding: '16px 20px',
-                display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center',
-              }}>
+              <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 16px',
+                display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
                 {SNS_CONFIG.filter(cfg => profile[cfg.key]).map(cfg => {
                   const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
                   const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
                   return (
-                    <a key={cfg.key} href={profile[cfg.key]}
-                      target="_blank" rel="noopener noreferrer" title={cfg.label}
-                      style={{
-                        width: 48, height: 48, borderRadius: 12,
-                        background: bgColor, flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        textDecoration: 'none',
-                      }}>
+                    <a key={cfg.key} href={profile[cfg.key]} target="_blank" rel="noopener noreferrer" title={cfg.label}
+                      style={{ width: 48, height: 48, borderRadius: 12, background: bgColor, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                       {cfg.icon ? (
-                        <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
-                          width={24} height={24} alt={cfg.label}
-                          style={{ display: 'block' }}
-                          onError={e => { e.target.style.display = 'none' }} />
+                        <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`} width={24} height={24} alt={cfg.label}
+                          style={{ display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
                       ) : (
-                        <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>
-                          {cfg.label[0]}
-                        </span>
+                        <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{cfg.label[0]}</span>
                       )}
                     </a>
                   )
@@ -500,25 +438,19 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
               </div>
             )}
 
-            {/* 4. アップグレード誘導 */}
-            <a
-              href="https://koryu.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: 6, padding: '18px 20px',
-                background: 'linear-gradient(135deg, #1a2e22, #0d1f15)',
-                borderRadius: 20, textDecoration: 'none',
-                border: '1px solid #2a4a34',
-              }}
-            >
-              <span style={{ fontSize: 13, color: '#7b9e87', fontWeight: 700, letterSpacing: '.02em' }}>
-                ✦ ベントーグリッドで魅せる
-              </span>
-              <span style={{ fontSize: 11, color: '#5a7a64', lineHeight: 1.6, textAlign: 'center' }}>
-                Koryu Pro にアップグレードして{`\n`}プロフィールを自由にデザインする
-              </span>
+            {/* 4. Koryu訴求（訪問者向け） */}
+            <a href="https://koryu.app" target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', margin: '8px 0 0', borderTop: `1px solid ${theme.text}18`,
+                padding: '24px 16px', textDecoration: 'none' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: theme.accent, marginBottom: 6 }}>
+                名刺を受け取ったら、Koryuで繋がろう
+              </div>
+              <div style={{ fontSize: 12, color: theme.text, opacity: 0.5, lineHeight: 1.7 }}>
+                名刺をスキャンするだけで、相手のSNSに自動でつながれるアプリです。無料で始められます。
+              </div>
+              <div style={{ marginTop: 12, fontSize: 12, color: theme.accent, fontWeight: 600 }}>
+                Koryuを試してみる →
+              </div>
             </a>
 
           </div>
@@ -662,11 +594,9 @@ export async function getServerSideProps({ params, query }) {
   // simulate_free=1 → 無課金表示を強制（プレビュー比較用）
   const showAsPro = (isPro || isPreview) && !simulateFree
 
-  const profile = { ...profileRes.data }
-
-  if (!showAsPro) {
-    profile.profile_theme = 'dark'
-  }
+  const activeTheme = isPro ? (profileRes.data.profile_theme || 'dark') : 'dark'
+  const activeBgImage = isPro ? profileRes.data.profile_bg_image_url : null
+  const profile = { ...profileRes.data, profile_theme: activeTheme, profile_bg_image_url: activeBgImage }
 
   // 有効なSNSリンクを抽出（無課金SNSバー用）
   const SNS_KEYS = ['sns_line','sns_whatsapp','sns_x','sns_instagram','sns_facebook',

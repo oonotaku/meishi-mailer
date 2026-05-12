@@ -11,9 +11,9 @@ const THEMES = [
   { id: 'dark',     label: 'ダーク',       bg: '#0a0a0a', card: '#1a1a1a', accent: '#22c55e', text: '#ffffff' },
   { id: 'light',    label: 'ライト',       bg: '#f8f8f8', card: '#ffffff', accent: '#0070f3', text: '#111111' },
   { id: 'midnight', label: 'ミッドナイト', bg: '#0f172a', card: '#1e293b', accent: '#818cf8', text: '#e2e8f0' },
-  { id: 'warm',     label: 'ウォーム',     bg: '#1c1410', card: '#2d2018', accent: '#f59e0b', text: '#fef3c7' },
+  { id: 'sunset',   label: 'サンセット',   bg: '#1a0800', card: '#2d1500', accent: '#f97316', text: '#fff7ed' },
   { id: 'sakura',   label: 'サクラ',       bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
-  { id: 'ocean',    label: 'オーシャン',   bg: '#0c1a2e', card: '#0f2744', accent: '#38bdf8', text: '#e0f2fe' },
+  { id: 'grape',    label: 'グレープ',     bg: '#130d1f', card: '#1e1035', accent: '#a855f7', text: '#f3e8ff' },
 ]
 
 const BLOCK_TYPE_LABELS = { photo: '📷 写真', text: '📝 テキスト', link: '🔗 リンク', sns: '💬 SNS', profile_card: '👤 プロフィールカード', affiliation: '🏢 所属・会社' }
@@ -69,6 +69,15 @@ const SCAN_SNS_MAP = {
 function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onMoveDown }) {
   return (
     <div className="affiliation-item">
+      <div className="affil-top-bar">
+        <div className="affil-top-left">
+          <button type="button" className="affil-reorder-btn" onClick={() => onMoveUp(index)} disabled={index === 0}>↑</button>
+          <button type="button" className="affil-reorder-btn" onClick={() => onMoveDown(index)} disabled={index === total - 1}>↓</button>
+        </div>
+        <button type="button" className="affil-delete-btn" onClick={() => {
+          if (window.confirm(`「${item.company_name || '所属'}」の情報を削除しますか？`)) onDelete(item.id)
+        }}>{index + 1}件目を削除</button>
+      </div>
       <div className="affiliation-body">
         <div className="affiliation-inputs">
           <input type="text" value={item.company_name}
@@ -113,13 +122,6 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
             </label>
           </div>
         </div>
-      </div>
-      <div className="affil-right">
-        <button type="button" className="affil-reorder-btn" onClick={() => onMoveUp(index)} disabled={index === 0}>↑</button>
-        <button type="button" className="affil-reorder-btn" onClick={() => onMoveDown(index)} disabled={index === total - 1}>↓</button>
-        <button type="button" className="affil-delete-btn" onClick={() => {
-          if (window.confirm(`「${item.company_name || '所属'}」の情報を削除しますか？`)) onDelete(item.id)
-        }}>✕</button>
       </div>
     </div>
   )
@@ -1241,97 +1243,6 @@ export default function ProfileSettings() {
             {openSections.affil && (
             <div className="acc-body">
 
-              {/* ── プロフィール完成度バー ── */}
-              {(() => {
-                const steps = [
-                  { id: 'avatar', label: '顔写真',    tab: 'profile_tab', weight: 20, done: !!avatarUrl,                                                    scrollRef: null },
-                  { id: 'name',   label: '表示名',    tab: 'profile_tab', weight: 15, done: !!(localName ?? profile?.name),                                  scrollRef: null },
-                  { id: 'bio',    label: 'ひとこと',  tab: 'profile_tab', weight: 10, done: !!bio,                                                          scrollRef: bioRef },
-                  { id: 'affil',  label: '所属・会社', tab: 'profile_tab', weight: 20, done: affiliations.filter(a => a.company_name?.trim()).length > 0,    scrollRef: null },
-                  { id: 'sns',    label: 'SNSリンク', tab: 'sns',         weight: 20, done: SNS_CONFIG.some(s => !!profile?.[s.key]),                        scrollRef: null },
-                  { id: 'email',  label: 'メール設定', tab: 'email',      weight: 15, done: isConfigured,                                                    scrollRef: null },
-                ]
-                const pct = steps.reduce((s, x) => s + (x.done ? x.weight : 0), 0)
-                const incomplete = steps.filter(x => !x.done)
-                const isAll = pct === 100
-                return (
-                  <div className="completion-wrap">
-                    <div className="completion-header">
-                      <span className="completion-title">プロフィール完成度</span>
-                      <span className="completion-pct">{pct}%</span>
-                    </div>
-                    <div className="completion-bar-bg">
-                      <div className={`completion-bar-fill${isAll ? ' complete' : ''}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    {isAll ? (
-                      <div className="completion-done">✨ プロフィール完成！</div>
-                    ) : (
-                      <div className="completion-chips">
-                        {incomplete.map(s => (
-                          <button key={s.id} type="button" className="completion-chip"
-                            onClick={() => {
-                              const key = s.tab === 'profile_tab' ? 'affil' : s.tab
-                              setOpenSections(prev => ({ ...prev, [key]: true }))
-                              if (s.id === 'bio') {
-                                setNameEdit(true)
-                                setTimeout(() => {
-                                  bioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                                  bioRef.current?.focus()
-                                }, 150)
-                              } else if (s.scrollRef?.current) {
-                                setTimeout(() => {
-                                  s.scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                                  s.scrollRef.current.focus()
-                                }, 80)
-                              } else {
-                                setTimeout(() => window.scrollTo({ top: 300, behavior: 'smooth' }), 80)
-                              }
-                            }}>
-                            + {s.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
-
-              {/* ── テーマ選択 ── */}
-              <div className="theme-section">
-                <div className="section-label" style={{ marginBottom: 12 }}>テーマ（公開プロフィール）</div>
-                <div className="theme-swatches">
-                  {THEMES.map(th => {
-                    const isLocked = profile?.plan !== 'pro' && th.id !== 'dark'
-                    return (
-                      <div key={th.id} className="theme-swatch-wrap" title={isLocked ? `${th.label}（Pro）` : th.label}>
-                        <button
-                          type="button"
-                          className={`theme-swatch${profileTheme === th.id ? ' selected' : ''}${isLocked ? ' locked' : ''}`}
-                          style={{
-                            background: `linear-gradient(135deg, ${th.bg} 60%, ${th.card})`,
-                            ['--swatch-accent']: th.accent,
-                          }}
-                          onClick={() => isLocked ? setOpenSections(prev => ({ ...prev, plan: true })) : handleThemeChange(th.id)}
-                        />
-                        {isLocked && <div className="theme-lock-badge">🔒</div>}
-                      </div>
-                    )
-                  })}
-                </div>
-                <div className="theme-label-row">
-                  <span className="theme-current-label">
-                    {THEMES.find(t => t.id === profileTheme)?.label || 'ダーク'}
-                  </span>
-                  {user && (
-                    <button type="button" onClick={() => setShowPreview(true)} className="theme-preview-link">
-                      プレビューを見る →
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="section-divider" />
-
               {/* ── 所属＋連絡先 ── */}
               <div className="section-header">
                 <div className="section-label">{t('profile.tab_affiliation')}</div>
@@ -1430,52 +1341,49 @@ export default function ProfileSettings() {
               </div>
               <p className="desc">公開プロフィールに表示するブロックを追加・並び替えできます。</p>
 
-              {/* ページ背景画像 */}
-              <div style={{ marginBottom: 20 }}>
-                <div className="scan-field-label" style={{ marginBottom: 8 }}>ページ背景画像（任意）</div>
-                {bgImageUrl && (
-                  <div style={{ position: 'relative', marginBottom: 10 }}>
-                    <img
-                      src={bgImageUrl}
-                      alt="背景プレビュー"
-                      style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 10, display: 'block' }}
-                    />
+              {/* ── テーマ・背景画像 ── */}
+              <div className="theme-section" style={{ marginBottom: 24 }}>
+                <div className="scan-field-label" style={{ marginBottom: 8 }}>テーマ</div>
+                <div className="theme-swatches">
+                  {THEMES.map(th => (
+                    <div key={th.id} className="theme-swatch-wrap" title={th.label}>
+                      <button
+                        type="button"
+                        className={`theme-swatch${profileTheme === th.id && !bgImageUrl ? ' selected' : ''}`}
+                        style={{ background: `linear-gradient(135deg, ${th.bg} 60%, ${th.card})` }}
+                        onClick={() => handleThemeChange(th.id)}
+                      />
+                    </div>
+                  ))}
+
+                  {/* 📷 背景画像スウォッチ */}
+                  <div className="theme-swatch-wrap" title="背景画像">
                     <button
                       type="button"
-                      onClick={handleRemoveBgImage}
-                      style={{
-                        position: 'absolute', top: 8, right: 8,
-                        background: 'rgba(0,0,0,.6)', border: 'none',
-                        borderRadius: 20, color: '#fff', fontSize: 11,
-                        padding: '4px 10px', cursor: 'pointer'
-                      }}
-                    >削除</button>
-                  </div>
-                )}
-                <button type="button" className="qr-scan-btn"
-                  onClick={() => bgImageRef.current?.click()}
-                  disabled={bgImageUploading}>
-                  {bgImageUploading ? 'アップロード中...' : bgImageUrl ? '背景を変更' : '📷 背景画像を設定'}
-                </button>
-                <input ref={bgImageRef} type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={handleBgImageUpload} />
-                <p style={{ fontSize: 11, color: '#5a5650', marginTop: 6, lineHeight: 1.6 }}>
-                  スマホのスクショもそのまま使えます
-                </p>
-              </div>
-
-              {profile?.plan !== 'pro' && (
-                <div className="paywall-overlay">
-                  <div className="paywall-box">
-                    <div className="paywall-icon">⬡</div>
-                    <div className="paywall-title">Proプランで使えます</div>
-                    <div className="paywall-desc">ベントーグリッドのカスタマイズはProプランの機能です。</div>
-                    <button className="paywall-btn" onClick={() => setOpenSections(prev => ({ ...prev, plan: true }))}>
-                      アップグレードする →
+                      className={`theme-swatch photo-swatch${bgImageUrl ? ' selected' : ''}`}
+                      style={bgImageUrl ? {
+                        backgroundImage: `url(${bgImageUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      } : {}}
+                      onClick={() => bgImageRef.current?.click()}
+                      disabled={bgImageUploading}
+                    >
+                      {!bgImageUrl && <span style={{ fontSize: 18 }}>📷</span>}
                     </button>
+                    {bgImageUrl && (
+                      <button type="button" className="theme-photo-remove" onClick={handleRemoveBgImage}>✕</button>
+                    )}
                   </div>
                 </div>
-              )}
+                <input ref={bgImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBgImageUpload} />
+                <div className="theme-label-row">
+                  <span className="theme-current-label">
+                    {bgImageUrl ? '背景画像' : (THEMES.find(t => t.id === profileTheme)?.label || 'ダーク')}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#5a5650' }}>公開プロフィールに反映（Proのみ）</span>
+                </div>
+              </div>
 
               {blocks.length === 0 && (
                 <div className="blocks-empty">まだブロックがありません。追加してプロフィールをカスタマイズしましょう。</div>
@@ -1584,23 +1492,21 @@ export default function ProfileSettings() {
                     </button>
                   </>
                 ) : (
-                  <>
-                    {/* Proでできること */}
-                    <div className="pro-features">
-                      {[
-                        { icon: '⬡', label: 'ベントーグリッドをカスタマイズ', desc: 'ブロックの追加・編集・並び替え' },
-                        { icon: '◉', label: 'QRコードを発行', desc: 'プロフィールURLのQRを即生成' },
-                        { icon: '◈', label: '6種類のテーマ', desc: 'ダーク・サクラ・オーシャンなど' },
-                      ].map(f => (
-                        <div key={f.label} className="pro-feature-row">
-                          <div className="pro-feature-icon">{f.icon}</div>
-                          <div>
-                            <div className="pro-feature-label">{f.label}</div>
-                            <div className="pro-feature-desc">{f.desc}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="plan-upgrade-wrap">
+                    <div className="plan-headline">Freeで作って、Proで魅せる</div>
+
+                    <button
+                      type="button"
+                      className="plan-preview-link"
+                      onClick={() => { setPreviewMode('free'); setShowPreview(true) }}
+                    >
+                      👁 Free / Proの違いをプレビューで確認する →
+                    </button>
+
+                    <ul className="plan-features-list">
+                      <li>✓ ベントーグリッドが公開プロフィールに表示される</li>
+                      <li>✓ テーマ・背景画像が公開プロフィールに反映される</li>
+                    </ul>
 
                     {/* 月/年切替 */}
                     <div className="plan-toggle">
@@ -1630,7 +1536,7 @@ export default function ProfileSettings() {
                     >
                       {billingLoading ? '移動中...' : `Proにアップグレード（${planType === 'yearly' ? '¥5,000/年' : '¥500/月'}）`}
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             )
@@ -1679,6 +1585,71 @@ export default function ProfileSettings() {
             <span className="bn-label">{i18n.language === 'en' ? 'Profile' : 'プロフィール'}</span>
           </div>
         </nav>
+
+        {/* ── プレビューFAB ── */}
+        {user && (
+          <button
+            type="button"
+            className="preview-fab"
+            onClick={() => setShowPreview(true)}
+            title="プロフィールをプレビュー"
+          >
+            👁
+          </button>
+        )}
+
+        {(() => {
+          const steps = [
+            { id: 'avatar', label: '顔写真',    weight: 15, done: !!avatarUrl },
+            { id: 'name',   label: '表示名',    weight: 15, done: !!(localName ?? profile?.name) },
+            { id: 'bio',    label: 'ひとこと',  weight: 10, done: !!bio },
+            { id: 'affil',  label: '所属・会社', weight: 15, done: affiliations.filter(a => a.company_name?.trim()).length > 0 },
+            { id: 'sns',    label: 'SNSリンク', weight: 15, done: SNS_CONFIG.some(s => !!profile?.[s.key]) },
+            { id: 'email',  label: 'メール設定', weight: 15, done: isConfigured },
+            { id: 'pro',    label: 'Proプラン', weight: 15, done: profile?.plan === 'pro' },
+          ]
+          const pct = steps.reduce((s, x) => s + (x.done ? x.weight : 0), 0)
+          if (pct === 100) return null
+          const incomplete = steps.filter(x => !x.done)
+          return (
+            <div className="completion-fixed">
+              <div className="completion-header">
+                <span className="completion-title">プロフィール完成度</span>
+                <span className="completion-pct">{pct}%</span>
+              </div>
+              <div className="completion-bar-bg">
+                <div className="completion-bar-fill" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="completion-chips">
+                {incomplete.map(s => (
+                  <button key={s.id} type="button" className="completion-chip"
+                    onClick={() => {
+                      if (s.id === 'pro') {
+                        setOpenSections(prev => ({ ...prev, plan: true }))
+                      } else if (s.id === 'bio') {
+                        setNameEdit(true)
+                        setTimeout(() => {
+                          bioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          bioRef.current?.focus()
+                        }, 150)
+                      } else if (s.id === 'sns') {
+                        setOpenSections(prev => ({ ...prev, sns: true }))
+                        setTimeout(() => window.scrollTo({ top: 300, behavior: 'smooth' }), 80)
+                      } else if (s.id === 'email') {
+                        setOpenSections(prev => ({ ...prev, email: true }))
+                        setTimeout(() => window.scrollTo({ top: 300, behavior: 'smooth' }), 80)
+                      } else {
+                        setOpenSections(prev => ({ ...prev, affil: true }))
+                        setTimeout(() => window.scrollTo({ top: 300, behavior: 'smooth' }), 80)
+                      }
+                    }}>
+                    + {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* ── 名刺スキャン確認オーバーレイ ── */}
@@ -2322,12 +2293,14 @@ export default function ProfileSettings() {
         }
 
         /* AffiliationItem inner elements — must be global (separate component) */
-        .affil-right {
+        .affil-top-bar {
           display: flex;
-          flex-direction: column;
           align-items: center;
-          flex-shrink: 0;
-          gap: 0;
+          justify-content: space-between;
+        }
+        .affil-top-left {
+          display: flex;
+          gap: 6px;
         }
         .affil-reorder-btn {
           background: none;
@@ -2356,18 +2329,16 @@ export default function ProfileSettings() {
           border: 1px solid #2a2a3a;
           border-radius: 8px;
           color: #4a4a5a;
-          font-size: 13px;
+          font-size: 12px;
           cursor: pointer;
-          width: 44px;
-          height: 44px;
+          height: 36px;
+          padding: 0 12px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
           transition: color .15s, background .15s, border-color .15s;
-          padding: 0;
           -webkit-tap-highlight-color: transparent;
-          margin-top: auto;
         }
         .affil-delete-btn:hover {
           color: #c08080;
@@ -2522,7 +2493,7 @@ export default function ProfileSettings() {
           flex: 1;
           display: flex;
           flex-direction: column;
-          padding-bottom: 2rem;
+          padding-bottom: 140px;
         }
 
         .profile-hero {
@@ -2680,13 +2651,13 @@ export default function ProfileSettings() {
         .bio-display:hover { color: #f0ede8; }
         .affiliation-item {
           display: flex;
-          align-items: flex-start;
-          gap: 8px;
+          flex-direction: column;
+          gap: 10px;
           margin-bottom: 12px;
           background: #12121a;
           border: 1px solid #1e1e2a;
           border-radius: 10px;
-          padding: 10px 8px 10px 12px;
+          padding: 10px 12px;
         }
         .add-affil-btn {
           width: 100%;
@@ -2812,6 +2783,39 @@ export default function ProfileSettings() {
         .pro-active-title { font-size: 15px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; }
         .pro-active-desc { font-size: 12px; color: #7b9e87; }
 
+        .plan-upgrade-wrap { padding: 4px 0; }
+        .plan-headline {
+          font-size: 18px;
+          font-weight: 700;
+          color: #f0ede8;
+          margin-bottom: 14px;
+          line-height: 1.4;
+        }
+        .plan-preview-link {
+          display: block;
+          width: 100%;
+          padding: 11px 14px;
+          background: #12121a;
+          border: 1px solid #2a2a3a;
+          border-radius: 10px;
+          color: #7b9e87;
+          font-size: 13px;
+          text-align: left;
+          cursor: pointer;
+          margin-bottom: 18px;
+          transition: background .15s, border-color .15s;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .plan-preview-link:hover { background: #1a1a2a; border-color: #3a3a5a; }
+        .plan-features-list {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 20px 0;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .plan-features-list li { font-size: 13px; color: #a0a0b0; line-height: 1.5; }
         .pro-features {
           display: flex; flex-direction: column; gap: 10px;
           margin-bottom: 20px;
@@ -2852,30 +2856,6 @@ export default function ProfileSettings() {
         }
 
         /* ── ペイウォール ── */
-        .paywall-overlay {
-          position: relative; margin: 8px 0 16px;
-          background: linear-gradient(180deg, transparent 0%, #0a0a0f 60%);
-          border-radius: 14px; overflow: hidden;
-        }
-        .paywall-box {
-          display: flex; flex-direction: column; align-items: center;
-          padding: 32px 20px; text-align: center; gap: 8px;
-          background: rgba(10,10,15,0.85);
-          border: 1px solid #1e1e2a; border-radius: 14px;
-        }
-        .paywall-icon { font-size: 32px; color: #7b9e87; margin-bottom: 4px; }
-        .paywall-title { font-size: 16px; font-weight: 800; color: #f0ede8; }
-        .paywall-desc { font-size: 13px; color: #5a5650; line-height: 1.6; }
-        .paywall-btn {
-          margin-top: 8px; padding: 12px 24px;
-          background: #7b9e87; color: #0a0a0f;
-          border: none; border-radius: 10px;
-          font-size: 14px; font-weight: 700;
-          font-family: 'Noto Sans JP', sans-serif;
-          cursor: pointer; transition: opacity .15s;
-        }
-        .paywall-btn:hover { opacity: .85; }
-
         .config-badge {
           font-size: 10px;
           font-family: 'DM Mono', monospace;
@@ -3803,6 +3783,53 @@ export default function ProfileSettings() {
           transition: color .15s, border-color .15s;
         }
         .completion-chip:hover { color: #7b9e87; border-color: #7b9e87; }
+        .preview-fab {
+          position: fixed;
+          bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          background: rgba(30, 30, 42, 0.92);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: #f0ede8;
+          font-size: 22px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 48;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+          transition: transform .15s, background .15s;
+          -webkit-tap-highlight-color: transparent;
+          padding: 0;
+        }
+        .preview-fab:hover {
+          background: rgba(42, 42, 58, 0.96);
+          transform: scale(1.07);
+        }
+        .preview-fab:active { transform: scale(0.95); }
+        @media (max-width: 430px) {
+          .preview-fab { right: 16px; }
+        }
+        @media (min-width: 431px) {
+          .preview-fab { right: calc(50% - 215px + 16px); }
+        }
+        .completion-fixed {
+          position: fixed;
+          bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          background: rgba(10,10,15,0.94);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(255,255,255,0.07);
+          padding: 8px 16px;
+          z-index: 49;
+        }
 
         /* ── テーマ選択 ── */
         .theme-section {
@@ -3832,11 +3859,31 @@ export default function ProfileSettings() {
           outline-offset: 3px;
           transform: scale(1.08);
         }
-        .theme-swatch.locked { opacity: 0.45; cursor: pointer; }
         .theme-swatch-wrap { position: relative; display: inline-block; }
-        .theme-lock-badge {
-          position: absolute; bottom: -2px; right: -4px;
-          font-size: 10px; line-height: 1; pointer-events: none;
+        .photo-swatch {
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #1e1e2a;
+          border: 1px dashed #3a3a4a;
+        }
+        .theme-photo-remove {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #333;
+          border: none;
+          color: #fff;
+          font-size: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
         }
         .theme-label-row {
           display: flex;

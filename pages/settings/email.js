@@ -158,7 +158,7 @@ export default function EmailSettings() {
 
       <div className="shell">
         <div className="header">
-          <button className="back-btn" onClick={() => router.push('/')}>← 戻る</button>
+          <button className="back-btn" onClick={() => router.push('/settings/profile')}>← 戻る</button>
           <div className="header-title">メール設定</div>
           <span className={`config-badge ${isConfigured ? 'configured' : 'unconfigured'}`}>
             {isConfigured ? '設定済み' : '未設定'}
