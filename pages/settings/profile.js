@@ -7,16 +7,14 @@ import { supabase } from '../../lib/supabase'
 import { useRequireAuth } from '../../lib/useRequireAuth'
 import { SNS_CONFIG, PRESET_CATEGORIES } from '../../lib/snsConfig'
 
-const THEMES = [
-  { id: 'dark',     label: 'ダーク',       bg: '#0a0a0a', card: '#1a1a1a', accent: '#22c55e', text: '#ffffff' },
-  { id: 'light',    label: 'ライト',       bg: '#f8f8f8', card: '#ffffff', accent: '#0070f3', text: '#111111' },
-  { id: 'midnight', label: 'ミッドナイト', bg: '#0f172a', card: '#1e293b', accent: '#818cf8', text: '#e2e8f0' },
-  { id: 'sunset',   label: 'サンセット',   bg: '#1a0800', card: '#2d1500', accent: '#f97316', text: '#fff7ed' },
-  { id: 'sakura',   label: 'サクラ',       bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
-  { id: 'grape',    label: 'グレープ',     bg: '#130d1f', card: '#1e1035', accent: '#a855f7', text: '#f3e8ff' },
+const THEME_DEFS = [
+  { id: 'dark',     bg: '#0a0a0a', card: '#1a1a1a', accent: '#22c55e', text: '#ffffff' },
+  { id: 'light',    bg: '#f8f8f8', card: '#ffffff', accent: '#0070f3', text: '#111111' },
+  { id: 'midnight', bg: '#0f172a', card: '#1e293b', accent: '#818cf8', text: '#e2e8f0' },
+  { id: 'sunset',   bg: '#1a0800', card: '#2d1500', accent: '#f97316', text: '#fff7ed' },
+  { id: 'sakura',   bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
+  { id: 'grape',    bg: '#130d1f', card: '#1e1035', accent: '#a855f7', text: '#f3e8ff' },
 ]
-
-const BLOCK_TYPE_LABELS = { photo: '📷 写真', text: '📝 テキスト', link: '🔗 リンク', sns: '💬 SNS', profile_card: '👤 プロフィールカード', affiliation: '🏢 所属・会社' }
 const TEXT_BG_PRESETS = ['#0a0a0a', '#ffffff', '#0f172a', '#1c1410', '#fff0f3', '#0c1a2e']
 
 function getBlockTitle(block) {
@@ -67,6 +65,7 @@ const SCAN_SNS_MAP = {
 }
 
 function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onMoveDown }) {
+  const { t } = useTranslation('common')
   return (
     <div className="affiliation-item">
       <div className="affil-top-bar">
@@ -76,7 +75,7 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
         </div>
         <button type="button" className="affil-delete-btn" onClick={() => {
           if (window.confirm(`「${item.company_name || '所属'}」の情報を削除しますか？`)) onDelete(item.id)
-        }}>{index + 1}件目を削除</button>
+        }}>{t('profile.affil_remove', { n: index + 1 })}</button>
       </div>
       <div className="affiliation-body">
         <div className="affiliation-inputs">
@@ -96,7 +95,7 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
               <input type="checkbox" className="toggle-check" checked={item.show_phone ?? false}
                 onChange={e => onChange(item.id, 'show_phone', e.target.checked)} />
               <span className="toggle-track"><span className="toggle-thumb" /></span>
-              <span className="toggle-text">{(item.show_phone ?? false) ? '公開' : '非公開'}</span>
+              <span className="toggle-text">{(item.show_phone ?? false) ? t('profile.show_public') : t('profile.show_private')}</span>
             </label>
           </div>
           <div className="affil-contact-row">
@@ -107,7 +106,7 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
               <input type="checkbox" className="toggle-check" checked={item.show_website ?? true}
                 onChange={e => onChange(item.id, 'show_website', e.target.checked)} />
               <span className="toggle-track"><span className="toggle-thumb" /></span>
-              <span className="toggle-text">{(item.show_website ?? true) ? '公開' : '非公開'}</span>
+              <span className="toggle-text">{(item.show_website ?? true) ? t('profile.show_public') : t('profile.show_private')}</span>
             </label>
           </div>
           <div className="affil-contact-row">
@@ -118,7 +117,7 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
               <input type="checkbox" className="toggle-check" checked={item.show_email ?? false}
                 onChange={e => onChange(item.id, 'show_email', e.target.checked)} />
               <span className="toggle-track"><span className="toggle-thumb" /></span>
-              <span className="toggle-text">{(item.show_email ?? false) ? '公開' : '非公開'}</span>
+              <span className="toggle-text">{(item.show_email ?? false) ? t('profile.show_public') : t('profile.show_private')}</span>
             </label>
           </div>
         </div>
@@ -130,6 +129,15 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
 
 export default function ProfileSettings() {
   const { t, i18n } = useTranslation('common')
+  const THEMES = THEME_DEFS.map(d => ({ ...d, label: t(`profile.theme_${d.id}`) }))
+  const BLOCK_TYPE_LABELS = {
+    photo:        t('profile.block_photo'),
+    text:         t('profile.block_text'),
+    link:         t('profile.block_link'),
+    sns:          t('profile.block_sns'),
+    profile_card: t('profile.block_profile_card'),
+    affiliation:  t('profile.block_affiliation'),
+  }
   const { user, profile, loading: authLoading } = useRequireAuth()
   const [provider, setProvider] = useState(null)
   const [savedProvider, setSavedProvider] = useState(null)
@@ -820,7 +828,7 @@ export default function ProfileSettings() {
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
       setBlocksDirty(false)
-      setBlocksMsg({ ok: true, text: '保存しました' })
+      setBlocksMsg({ ok: true, text: t('profile.saved') })
       setTimeout(() => setBlocksMsg(null), 2500)
     } catch (err) {
       setBlocksMsg({ ok: false, text: err.message })
@@ -1048,12 +1056,12 @@ export default function ProfileSettings() {
             className="profile-preview-btn"
             onClick={() => setShowPreview(true)}
           >
-            公開プロフィールを確認する →
+            {t('profile.open_public_profile')}
           </button>
 
           <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('sns')}>
-              <span className="acc-title">SNS リンク</span>
+              <span className="acc-title">{t('profile.section_sns')}</span>
               <span className="acc-chevron">{openSections.sns ? '▲' : '▼'}</span>
             </div>
             {openSections.sns && (
@@ -1061,12 +1069,12 @@ export default function ProfileSettings() {
               {/* プリセットプレビューパネル */}
               <div className="preset-panel">
                 <div className="preset-panel-header">
-                  <span className="section-label">プレビュー</span>
+                  <span className="section-label">{t('profile.sns_preview')}</span>
                   <div className="preset-tabs">
                     {[
-                      { key: 'business', label: 'ビジネス' },
-                      { key: 'personal', label: '個人' },
-                      { key: 'all',      label: 'すべて' },
+                      { key: 'business', label: t('profile.sns_tab_business') },
+                      { key: 'personal', label: t('profile.sns_tab_personal') },
+                      { key: 'all',      label: t('profile.sns_tab_all') },
                     ].map(p => (
                       <button key={p.key} type="button"
                         className={`preset-tab-btn ${presetTab === p.key ? 'active' : ''}`}
@@ -1109,10 +1117,9 @@ export default function ProfileSettings() {
                     })}
                 </div>
                 <p className="preset-hint">
-                  {presetTab === 'business' ? 'ビジネス相手に共有されるSNSのプレビュー' :
-                   presetTab === 'personal' ? '個人として共有されるSNSのプレビュー' :
-                   'すべてのSNSが相手に表示されます'}
-                  {' · '}グレー = 未設定（タップして追加）
+                  {presetTab === 'business' ? t('profile.sns_hint_business') :
+                   presetTab === 'personal' ? t('profile.sns_hint_personal') :
+                   t('profile.sns_hint_all')}
                 </p>
               </div>
 
@@ -1120,9 +1127,9 @@ export default function ProfileSettings() {
 
               {/* カテゴリ別セクション */}
               {[
-                { cat: 'personal', label: '個人でつながる',       ref: personalRef },
-                { cat: 'business', label: 'ビジネス・クリエイター', ref: businessRef },
-                { cat: 'cardapp',  label: '名刺管理アプリ',        ref: cardappRef },
+                { cat: 'personal', label: t('profile.sns_cat_personal'), ref: personalRef },
+                { cat: 'business', label: t('profile.sns_cat_business'), ref: businessRef },
+                { cat: 'cardapp',  label: '名刺管理アプリ',               ref: cardappRef },
               ].map(({ cat, label, ref }) => (
                 <div key={cat} className="sns-category-section" ref={ref}>
                   <div className="sns-category-header">{label}</div>
@@ -1159,7 +1166,7 @@ export default function ProfileSettings() {
                             className={`sns-toggle-btn ${val ? 'edit' : 'add'}${isExpanded ? ' open' : ''}`}
                             onClick={() => setExpandedSns(prev => ({ ...prev, [f.key]: !prev[f.key] }))}
                           >
-                            {isExpanded ? '閉じる' : val ? '編集' : '+ 追加'}
+                            {isExpanded ? '閉じる' : val ? t('profile.name_edit') : t('profile.sns_add')}
                           </button>
                         </div>
 
@@ -1237,7 +1244,7 @@ export default function ProfileSettings() {
 
           <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('affil')}>
-              <span className="acc-title">所属・連絡先</span>
+              <span className="acc-title">{t('profile.section_affiliations')}</span>
               <span className="acc-chevron">{openSections.affil ? '▲' : '▼'}</span>
             </div>
             {openSections.affil && (
@@ -1336,14 +1343,14 @@ export default function ProfileSettings() {
               <div className="section-header">
                 <div className="section-label">{t('profile.tab_blocks')}</div>
                 <span className={`config-badge ${blocks.length > 0 ? 'configured' : 'unconfigured'}`}>
-                  {blocks.length > 0 ? `${blocks.length}件` : '未設定'}
+                  {blocks.length > 0 ? t('profile.affil_count', { count: blocks.length }) : t('profile.unconfigured')}
                 </span>
               </div>
-              <p className="desc">公開プロフィールに表示するブロックを追加・並び替えできます。</p>
+              <p className="desc">{t('profile.blocks_desc')}</p>
 
               {/* ── テーマ・背景画像 ── */}
               <div className="theme-section" style={{ marginBottom: 24 }}>
-                <div className="scan-field-label" style={{ marginBottom: 8 }}>テーマ</div>
+                <div className="scan-field-label" style={{ marginBottom: 8 }}>{t('profile.theme_label')}</div>
                 <div className="theme-swatches">
                   {THEMES.map(th => (
                     <div key={th.id} className="theme-swatch-wrap" title={th.label}>
@@ -1379,9 +1386,9 @@ export default function ProfileSettings() {
                 <input ref={bgImageRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBgImageUpload} />
                 <div className="theme-label-row">
                   <span className="theme-current-label">
-                    {bgImageUrl ? '背景画像' : (THEMES.find(t => t.id === profileTheme)?.label || 'ダーク')}
+                    {bgImageUrl ? '背景画像' : (THEMES.find(th => th.id === profileTheme)?.label || t('profile.theme_dark'))}
                   </span>
-                  <span style={{ fontSize: 11, color: '#5a5650' }}>公開プロフィールに反映（Proのみ）</span>
+                  <span style={{ fontSize: 11, color: '#5a5650' }}>{t('profile.theme_pro_only')}</span>
                 </div>
               </div>
 
@@ -1423,7 +1430,7 @@ export default function ProfileSettings() {
               ))}
 
               <button type="button" className="add-block-btn" onClick={() => setShowTypeSheet(true)}>
-                ＋ ブロックを追加
+                {t('profile.add_block')}
               </button>
 
               {blocksMsg && (
@@ -1432,7 +1439,7 @@ export default function ProfileSettings() {
 
               {blocksDirty && (
                 <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleBlocksSave} disabled={blocksSaving}>
-                  {blocksSaving ? '保存中...' : '保存'}
+                  {blocksSaving ? t('profile.saving') : t('profile.save')}
                 </button>
               )}
             </div>
@@ -1441,7 +1448,7 @@ export default function ProfileSettings() {
 
           <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('email')}>
-              <span className="acc-title">メール設定</span>
+              <span className="acc-title">{t('profile.section_email')}</span>
               <span className="acc-chevron">{openSections.email ? '▲' : '▼'}</span>
             </div>
             {openSections.email && (
@@ -1452,7 +1459,7 @@ export default function ProfileSettings() {
                 style={{ width: '100%' }}
                 onClick={() => router.push('/settings/email')}
               >
-                メール設定ページへ →
+                {t('profile.email_settings_page')}
               </button>
             </div>
             )}
@@ -1460,7 +1467,7 @@ export default function ProfileSettings() {
 
           <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('plan')}>
-              <span className="acc-title">プラン・サブスクリプション</span>
+              <span className="acc-title">{t('profile.section_plan')}</span>
               <span className="acc-chevron">{openSections.plan ? '▲' : '▼'}</span>
             </div>
             {openSections.plan && (() => {
@@ -1483,29 +1490,29 @@ export default function ProfileSettings() {
                     <div className="pro-active-box">
                       <div className="pro-active-icon">✦</div>
                       <div className="pro-active-text">
-                        <div className="pro-active-title">Proプラン利用中</div>
-                        <div className="pro-active-desc">ベントー編集・QR発行・全テーマが使えます</div>
+                        <div className="pro-active-title">{t('profile.plan_pro_active_title')}</div>
+                        <div className="pro-active-desc">{t('profile.plan_pro_active_desc')}</div>
                       </div>
                     </div>
                     <button className="manage-btn" onClick={handlePortal} disabled={billingLoading} style={{ marginTop: 16 }}>
-                      {billingLoading ? '移動中...' : 'サブスクリプションを管理'}
+                      {billingLoading ? t('profile.plan_redirecting') : t('billing.manage_btn')}
                     </button>
                   </>
                 ) : (
                   <div className="plan-upgrade-wrap">
-                    <div className="plan-headline">Freeで作って、Proで魅せる</div>
+                    <div className="plan-headline">{t('profile.plan_headline')}</div>
 
                     <button
                       type="button"
                       className="plan-preview-link"
                       onClick={() => { setPreviewMode('free'); setShowPreview(true) }}
                     >
-                      👁 Free / Proの違いをプレビューで確認する →
+                      {t('profile.plan_preview_link')}
                     </button>
 
                     <ul className="plan-features-list">
-                      <li>✓ ベントーグリッドが公開プロフィールに表示される</li>
-                      <li>✓ テーマ・背景画像が公開プロフィールに反映される</li>
+                      <li>{t('profile.plan_feat_bento')}</li>
+                      <li>{t('profile.plan_feat_theme')}</li>
                     </ul>
 
                     {/* 月/年切替 */}
@@ -1516,16 +1523,16 @@ export default function ProfileSettings() {
                         onClick={() => setPlanType('monthly')}
                       >
                         <div className="plan-toggle-price">¥500</div>
-                        <div className="plan-toggle-period">/ 月</div>
+                        <div className="plan-toggle-period">{t('profile.plan_period_monthly')}</div>
                       </button>
                       <button
                         type="button"
                         className={`plan-toggle-btn ${planType === 'yearly' ? 'active' : ''}`}
                         onClick={() => setPlanType('yearly')}
                       >
-                        <div className="plan-toggle-badge">2ヶ月分お得</div>
+                        <div className="plan-toggle-badge">{t('profile.plan_badge_yearly')}</div>
                         <div className="plan-toggle-price">¥5,000</div>
-                        <div className="plan-toggle-period">/ 年（月換算 ¥417）</div>
+                        <div className="plan-toggle-period">{t('profile.plan_period_yearly')}</div>
                       </button>
                     </div>
 
@@ -1534,7 +1541,7 @@ export default function ProfileSettings() {
                       onClick={() => handleCheckout(planType)}
                       disabled={billingLoading}
                     >
-                      {billingLoading ? '移動中...' : `Proにアップグレード（${planType === 'yearly' ? '¥5,000/年' : '¥500/月'}）`}
+                      {billingLoading ? t('profile.plan_redirecting') : (planType === 'yearly' ? t('profile.plan_upgrade_yearly') : t('profile.plan_upgrade_monthly'))}
                     </button>
                   </div>
                 )}
@@ -1600,13 +1607,13 @@ export default function ProfileSettings() {
 
         {(() => {
           const steps = [
-            { id: 'avatar', label: '顔写真',    weight: 15, done: !!avatarUrl },
-            { id: 'name',   label: '表示名',    weight: 15, done: !!(localName ?? profile?.name) },
-            { id: 'bio',    label: 'ひとこと',  weight: 10, done: !!bio },
-            { id: 'affil',  label: '所属・会社', weight: 15, done: affiliations.filter(a => a.company_name?.trim()).length > 0 },
-            { id: 'sns',    label: 'SNSリンク', weight: 15, done: SNS_CONFIG.some(s => !!profile?.[s.key]) },
-            { id: 'email',  label: 'メール設定', weight: 15, done: isConfigured },
-            { id: 'pro',    label: 'Proプラン', weight: 15, done: profile?.plan === 'pro' },
+            { id: 'avatar', label: '顔写真',             weight: 15, done: !!avatarUrl },
+            { id: 'name',   label: '表示名',             weight: 15, done: !!(localName ?? profile?.name) },
+            { id: 'bio',    label: 'ひとこと',           weight: 10, done: !!bio },
+            { id: 'affil',  label: t('profile.step_affil'), weight: 15, done: affiliations.filter(a => a.company_name?.trim()).length > 0 },
+            { id: 'sns',    label: 'SNSリンク',          weight: 15, done: SNS_CONFIG.some(s => !!profile?.[s.key]) },
+            { id: 'email',  label: t('profile.step_email'), weight: 15, done: isConfigured },
+            { id: 'pro',    label: t('profile.step_pro'),   weight: 15, done: profile?.plan === 'pro' },
           ]
           const pct = steps.reduce((s, x) => s + (x.done ? x.weight : 0), 0)
           if (pct === 100) return null
@@ -1614,7 +1621,7 @@ export default function ProfileSettings() {
           return (
             <div className="completion-fixed">
               <div className="completion-header">
-                <span className="completion-title">プロフィール完成度</span>
+                <span className="completion-title">{t('profile.completion_title')}</span>
                 <span className="completion-pct">{pct}%</span>
               </div>
               <div className="completion-bar-bg">
@@ -1702,7 +1709,7 @@ export default function ProfileSettings() {
                   <label className="toggle-label">
                     <input type="checkbox" className="toggle-check" checked={scanShowPhone} onChange={e => setScanShowPhone(e.target.checked)} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    <span className="toggle-text">{scanShowPhone ? '公開' : '非公開'}</span>
+                    <span className="toggle-text">{scanShowPhone ? t('profile.show_public') : t('profile.show_private')}</span>
                   </label>
                 </div>
                 <input
@@ -1720,7 +1727,7 @@ export default function ProfileSettings() {
                   <label className="toggle-label">
                     <input type="checkbox" className="toggle-check" checked={scanShowWebsite} onChange={e => setScanShowWebsite(e.target.checked)} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    <span className="toggle-text">{scanShowWebsite ? '公開' : '非公開'}</span>
+                    <span className="toggle-text">{scanShowWebsite ? t('profile.show_public') : t('profile.show_private')}</span>
                   </label>
                 </div>
                 <input
@@ -1738,7 +1745,7 @@ export default function ProfileSettings() {
                   <label className="toggle-label">
                     <input type="checkbox" className="toggle-check" checked={scanShowEmail} onChange={e => setScanShowEmail(e.target.checked)} />
                     <span className="toggle-track"><span className="toggle-thumb" /></span>
-                    <span className="toggle-text">{scanShowEmail ? '公開' : '非公開'}</span>
+                    <span className="toggle-text">{scanShowEmail ? t('profile.show_public') : t('profile.show_private')}</span>
                   </label>
                 </div>
                 <input
@@ -1862,7 +1869,7 @@ export default function ProfileSettings() {
           <div className="scan-sheet" onClick={e => e.stopPropagation()}>
             <div className="scan-sheet-header">
               <span className="scan-sheet-title">
-                {editingBlock.index !== null ? 'ブロックを編集' : 'ブロックを追加'} — {BLOCK_TYPE_LABELS[editingBlock.type]}
+                {editingBlock.index !== null ? t('profile.edit_block') : t('profile.add_block')} — {BLOCK_TYPE_LABELS[editingBlock.type]}
               </span>
               <button type="button" className="scan-sheet-close" onClick={() => setEditingBlock(null)}>✕</button>
             </div>
