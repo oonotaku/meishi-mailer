@@ -16,6 +16,15 @@ function initials(name) {
   return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
 }
 
+function renderText(text) {
+  if (!text) return null
+  return (
+    <span dangerouslySetInnerHTML={{
+      __html: text.replace(/\n/g, '<br>').replace(/<br\s*\/?>/gi, '<br>')
+    }} />
+  )
+}
+
 function PhotoBlock({ block }) {
   if (!block.content?.image_url) return (
     <div style={{ width: '100%', height: '100%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -264,7 +273,7 @@ function ProfileCardBlock({ block, profile, theme }) {
           fontSize: 18, fontWeight: 800, color: theme.text, lineHeight: 1.2,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
-          {profile.name || '名前未設定'}
+          {renderText(profile.name) || '名前未設定'}
         </div>
         {profile.bio && (
           <div style={{
@@ -272,7 +281,7 @@ function ProfileCardBlock({ block, profile, theme }) {
             display: '-webkit-box', WebkitLineClamp: 3,
             WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
-            {profile.bio}
+            {renderText(profile.bio)}
           </div>
         )}
       </div>
@@ -380,10 +389,10 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
             {/* 1. 名前 + bio（カードなし・センタリング） */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 16px 24px' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: theme.text }}>{profile.name || '名前未設定'}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: theme.text }}>{renderText(profile.name) || '名前未設定'}</div>
                 {profile.bio && (
                   <div style={{ fontSize: 13, color: theme.text, opacity: 0.6, marginTop: 6, lineHeight: 1.7 }}>
-                    {profile.bio}
+                    {renderText(profile.bio)}
                   </div>
                 )}
               </div>
@@ -572,6 +581,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
 export async function getServerSideProps({ params, query }) {
   const { userId } = params
   const isPreview = query?.preview === '1'
+  const isPreviewMode = !!query.preview
   const simulateFree = query?.simulate_free === '1'
 
   const [profileRes, blocksRes, affiliationsRes] = await Promise.all([
@@ -592,10 +602,10 @@ export async function getServerSideProps({ params, query }) {
   // showAsPro: Proレイアウトで表示するか
   // preview=1 → 所有者プレビュー（Proレイアウト表示）
   // simulate_free=1 → 無課金表示を強制（プレビュー比較用）
-  const showAsPro = (isPro || isPreview) && !simulateFree
+  const showAsPro = (isPro || isPreview || isPreviewMode) && !simulateFree
 
-  const activeTheme = isPro ? (profileRes.data.profile_theme || 'dark') : 'dark'
-  const activeBgImage = isPro ? profileRes.data.profile_bg_image_url : null
+  const activeTheme = showAsPro ? (profileRes.data.profile_theme || 'dark') : 'dark'
+  const activeBgImage = showAsPro ? profileRes.data.profile_bg_image_url : null
   const profile = { ...profileRes.data, profile_theme: activeTheme, profile_bg_image_url: activeBgImage }
 
   // 有効なSNSリンクを抽出（無課金SNSバー用）

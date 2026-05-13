@@ -17,6 +17,15 @@ const THEME_DEFS = [
 ]
 const TEXT_BG_PRESETS = ['#0a0a0a', '#ffffff', '#0f172a', '#1c1410', '#fff0f3', '#0c1a2e']
 
+function renderText(text) {
+  if (!text) return null
+  return (
+    <span dangerouslySetInnerHTML={{
+      __html: text.replace(/\n/g, '<br>').replace(/<br\s*\/?>/gi, '<br>')
+    }} />
+  )
+}
+
 function getBlockTitle(block) {
   switch (block.type) {
     case 'photo': return block.content?.caption || '(キャプションなし)'
@@ -802,16 +811,18 @@ export default function ProfileSettings() {
   }
 
   async function handleThemeChange(themeId) {
+    const prevTheme = profileTheme
     setProfileTheme(themeId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      await fetch('/api/profile/update-theme', {
+      const res = await fetch('/api/profile/update-theme', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ profile_theme: themeId }),
+        body: JSON.stringify({ theme: themeId }),
       })
+      if (!res.ok) throw new Error()
     } catch {
-      // optimistic update — silent fail
+      setProfileTheme(prevTheme)
     }
   }
 
@@ -1006,12 +1017,12 @@ export default function ProfileSettings() {
             ) : (
               <>
                 <div className="hero-name-row">
-                  <div className="hero-name">{(localName ?? profile?.name) || '—'}</div>
+                  <div className="hero-name">{renderText(localName ?? profile?.name) || '—'}</div>
                   <button className="name-edit-btn" onClick={startNameEdit}>{t('profile.name_edit')}</button>
                 </div>
                 {bio && (
                   <div className="bio-display" onClick={() => setNameEdit(true)}>
-                    {bio}
+                    {renderText(bio)}
                   </div>
                 )}
                 {nameMsg && (
@@ -1598,7 +1609,7 @@ export default function ProfileSettings() {
           <button
             type="button"
             className="preview-fab"
-            onClick={() => setShowPreview(true)}
+            onClick={() => { setPreviewMode('pro'); setShowPreview(true) }}
             title="プロフィールをプレビュー"
           >
             👁
