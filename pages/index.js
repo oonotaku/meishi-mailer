@@ -588,7 +588,7 @@ export default function Home() {
               <span className="lp-hero-accent">あなたのSNSハブ</span>になる。
             </h1>
             <p className="lp-hero-en">Your card, reimagined as a living profile.</p>
-            <p className="lp-hero-sub">名刺をスキャンするだけで、ベントーグリッドのプロフィールページが自動生成。SNSリンクをまとめて、QRコードで即シェア。</p>
+            <p className="lp-hero-sub">交流会で出会った人を、忘れない。<br />名刺をスキャンして、出会いの記録とSNSプロフィールをひとつに。<br />QRで共有できる、あたらしい名刺体験です。</p>
             <div className="lp-hero-ctas">
               <a href="/login" className="lp-cta-btn">無料で始める →</a>
               <span className="lp-hero-note">クレジットカード不要</span>
@@ -601,9 +601,9 @@ export default function Home() {
               <div className="lp-bento-grid">
                 {/* Header block L */}
                 <div className="lp-block lp-block-L lp-block-header-demo">
-                  <div className="lp-demo-avatar">田</div>
+                  <div className="lp-demo-avatar">山</div>
                   <div className="lp-demo-info">
-                    <div className="lp-demo-name">田中 大輝</div>
+                    <div className="lp-demo-name">山田 太郎</div>
                     <div className="lp-demo-title">Product Manager</div>
                     <div className="lp-demo-company">Koryu株式会社</div>
                   </div>
@@ -611,7 +611,7 @@ export default function Home() {
                 {/* SNS S blocks */}
                 <div className="lp-block lp-block-S" style={{background:'#000000'}}>
                   <span className="lp-block-sns-icon">𝕏</span>
-                  <span className="lp-block-sns-label">@daiki_t</span>
+                  <span className="lp-block-sns-label">@yamada_t</span>
                 </div>
                 <div className="lp-block lp-block-S" style={{background:'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)'}}>
                   <span className="lp-block-sns-icon">📷</span>
@@ -631,7 +631,7 @@ export default function Home() {
                   <span className="lp-block-link-title">Portfolio ↗</span>
                 </div>
               </div>
-              <div className="lp-bento-url">koryu.app/p/daiki</div>
+              <div className="lp-bento-url">koryu.app/p/yamada</div>
             </div>
           </div>
         </section>
@@ -699,16 +699,16 @@ export default function Home() {
               <div className="lp-step-arrow">→</div>
               <div className="lp-step">
                 <div className="lp-step-num">02</div>
-                <div className="lp-step-icon">✨</div>
-                <h3 className="lp-step-title">プロフィール生成</h3>
-                <p className="lp-step-body">ベントーグリッドで自分らしいページを作成</p>
+                <div className="lp-step-icon">📝</div>
+                <h3 className="lp-step-title">出会いを記録する</h3>
+                <p className="lp-step-body">いつ・どこで・どんな縁かを残す</p>
               </div>
               <div className="lp-step-arrow">→</div>
               <div className="lp-step">
                 <div className="lp-step-num">03</div>
                 <div className="lp-step-icon">🔗</div>
-                <h3 className="lp-step-title">QRでシェア</h3>
-                <p className="lp-step-body">次の名刺交換でQRを見せるだけでSNSでつながれる</p>
+                <h3 className="lp-step-title">QRでつながる</h3>
+                <p className="lp-step-body">次の出会いでQRを見せるだけでSNSでつながれる</p>
               </div>
             </div>
           </div>
