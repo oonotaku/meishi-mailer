@@ -32,6 +32,11 @@ function PhotoBlock({ block }) {
     </div>
   )
   const fit = block.content?.fit || 'cover'
+  const size = block.size || 'M'
+  const captionColorMap = { white: '#ffffff', black: '#111111', gray: '#cccccc', yellow: '#fde68a' }
+  const captionColor = captionColorMap[block.content?.caption_color || 'white'] || '#ffffff'
+  const showCaption = !!block.content?.caption && size !== 'S'
+  const captionLines = size === 'XL' ? 2 : 1
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: fit === 'contain' ? '#0a0a14' : 'transparent' }}>
       <img
@@ -39,12 +44,14 @@ function PhotoBlock({ block }) {
         alt={block.content.caption || ''}
         style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }}
       />
-      {block.content.caption && (
+      {showCaption && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
-          padding: '32px 14px 14px',
+          padding: captionLines === 2 ? '48px 14px 14px' : '32px 14px 14px',
           background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
-          color: '#fff', fontSize: 12, fontWeight: 600, lineHeight: 1.5,
+          color: captionColor, fontSize: 12, fontWeight: 600, lineHeight: 1.5,
+          display: '-webkit-box', WebkitLineClamp: captionLines, WebkitBoxOrient: 'vertical',
+          overflow: 'hidden', wordBreak: 'break-word',
         }}>
           {block.content.caption}
         </div>
@@ -54,37 +61,42 @@ function PhotoBlock({ block }) {
 }
 
 function TextBlock({ block, theme }) {
+  const size = block.size || 'M'
   const hasBgImage = !!block.content?.bg_image_url
   const bg = hasBgImage ? 'transparent' : (block.content?.bg_color || theme.card)
   const lightBgs = ['#ffffff', '#fff0f3', '#f8f8f8', '#fef3c7', '#f0f9ff']
   const isLight = lightBgs.some(c => bg.toLowerCase() === c.toLowerCase())
   const textColor = hasBgImage ? '#ffffff' : (isLight ? '#111111' : '#ffffff')
+  const showBody = size !== 'S'
+  const bodyClamp = size === 'M' ? 3 : size === 'L' ? 5 : null
   return (
     <div style={{
       background: bg,
       backgroundImage: hasBgImage ? `url(${block.content.bg_image_url})` : 'none',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
+      backgroundSize: 'cover', backgroundPosition: 'center',
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-      padding: 18, gap: 6,
-      position: 'relative',
+      padding: 18, gap: 6, position: 'relative',
     }}>
       {hasBgImage && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%)',
-          borderRadius: 'inherit',
-        }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%)', borderRadius: 'inherit' }} />
       )}
       <div style={{ position: 'relative', zIndex: 1 }}>
         {block.content?.title && (
-          <div style={{ fontSize: 15, fontWeight: 800, color: textColor, lineHeight: 1.35, letterSpacing: '-0.2px' }}>
+          <div style={{
+            fontSize: 15, fontWeight: 800, color: textColor, lineHeight: 1.35, letterSpacing: '-0.2px',
+            ...(size === 'S' ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {}),
+          }}>
             {block.content.title}
           </div>
         )}
-        {block.content?.body && (
-          <div style={{ fontSize: 13, color: textColor, opacity: hasBgImage ? 0.9 : 0.75, lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {showBody && block.content?.body && (
+          <div style={{
+            fontSize: 13, color: textColor, opacity: hasBgImage ? 0.9 : 0.75, lineHeight: 1.75, wordBreak: 'break-word',
+            ...(bodyClamp
+              ? { display: '-webkit-box', WebkitLineClamp: bodyClamp, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+              : { whiteSpace: 'pre-wrap' }),
+          }}>
             {block.content.body}
           </div>
         )}
@@ -97,47 +109,126 @@ function LinkBlock({ block, theme }) {
   if (!block.content?.url) return null
   const displayUrl = block.content.url.replace(/^https?:\/\//, '').replace(/\/$/, '')
   const hasImage = !!block.content?.image_url
+  const size = block.size || 'M'
+  const displayMode = block.content?.display_mode || 'thumbnail'
+  const textColorMap = { white: '#ffffff', black: '#111111', gray: '#cccccc', yellow: '#fde68a' }
+  const overlayTextColor = textColorMap[block.content?.text_color || 'white'] || '#ffffff'
+
+  if (displayMode === 'overlay') {
+    return (
+      <a href={block.content.url} target="_blank" rel="noopener noreferrer"
+        style={{ display: 'block', width: '100%', height: '100%', position: 'relative', overflow: 'hidden', textDecoration: 'none', background: theme.card }}>
+        {hasImage && (
+          <img src={block.content.image_url} alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        )}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.08) 55%)' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 14px 14px' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: overlayTextColor, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 24 }}>
+            {block.content.title || displayUrl}
+          </div>
+          <div style={{ fontSize: 11, color: overlayTextColor, opacity: 0.6, fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+            {displayUrl}
+          </div>
+        </div>
+        <span style={{ position: 'absolute', top: 10, right: 12, fontSize: 14, color: overlayTextColor, opacity: 0.7 }}>↗</span>
+      </a>
+    )
+  }
+
+  if (size === 'S') {
+    return (
+      <a href={block.content.url} target="_blank" rel="noopener noreferrer"
+        style={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', background: theme.card, border: '1px solid rgba(255,255,255,0.08)', textDecoration: 'none', overflow: 'hidden', position: 'relative', alignItems: 'center' }}>
+        {hasImage && (
+          <div style={{ width: 72, height: '100%', flexShrink: 0, overflow: 'hidden' }}>
+            <img src={block.content.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+        <div style={{ padding: '10px 12px', flex: 1, minWidth: 0 }}>
+          <span style={{ position: 'absolute', top: 10, right: 12, fontSize: 12, color: theme.text, opacity: 0.35 }}>↗</span>
+          <div style={{ fontSize: 13, fontWeight: 700, color: theme.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 18 }}>
+            {block.content.title || displayUrl}
+          </div>
+        </div>
+      </a>
+    )
+  }
+
+  if (size === 'L') {
+    return (
+      <a href={block.content.url} target="_blank" rel="noopener noreferrer"
+        style={{ display: 'flex', flexDirection: 'row', width: '100%', height: '100%', background: theme.card, border: '1px solid rgba(255,255,255,0.08)', textDecoration: 'none', overflow: 'hidden', position: 'relative' }}>
+        {hasImage && (
+          <div style={{ width: 120, flexShrink: 0, overflow: 'hidden' }}>
+            <img src={block.content.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+        <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, position: 'relative' }}>
+          <span style={{ position: 'absolute', top: 12, right: 14, fontSize: 14, color: theme.text, opacity: 0.35 }}>↗</span>
+          <div style={{ fontSize: 15, fontWeight: 700, color: theme.text, lineHeight: 1.4, paddingRight: 20, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {block.content.title || displayUrl}
+          </div>
+          {block.content.description && (
+            <div style={{ fontSize: 13, color: theme.text, opacity: 0.6, lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' }}>
+              {block.content.description}
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: theme.text, opacity: 0.35, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 'auto' }}>
+            {displayUrl}
+          </div>
+        </div>
+      </a>
+    )
+  }
+
+  if (size === 'XL') {
+    return (
+      <a href={block.content.url} target="_blank" rel="noopener noreferrer"
+        style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: theme.card, border: '1px solid rgba(255,255,255,0.08)', textDecoration: 'none', overflow: 'hidden', position: 'relative' }}>
+        {hasImage && (
+          <div style={{ width: '100%', height: 140, overflow: 'hidden', flexShrink: 0 }}>
+            <img src={block.content.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
+        )}
+        <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}>
+          <span style={{ position: 'absolute', top: 12, right: 14, fontSize: 14, color: theme.text, opacity: 0.35 }}>↗</span>
+          <div style={{ fontSize: 16, fontWeight: 700, color: theme.text, lineHeight: 1.4, paddingRight: 20 }}>
+            {block.content.title || displayUrl}
+          </div>
+          {block.content.description && (
+            <div style={{ fontSize: 13, color: theme.text, opacity: 0.6, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {block.content.description}
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: theme.text, opacity: 0.35, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 'auto' }}>
+            {displayUrl}
+          </div>
+        </div>
+      </a>
+    )
+  }
+
+  // M (default): thumbnail + title + description 2-line
   return (
-    <a
-      href={block.content.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: 'flex', flexDirection: 'column',
-        width: '100%', height: '100%',
-        background: theme.card,
-        border: '1px solid rgba(255,255,255,0.1)',
-        textDecoration: 'none',
-        position: 'relative',
-        transition: 'opacity .15s',
-        overflow: 'hidden',
-      }}
-    >
+    <a href={block.content.url} target="_blank" rel="noopener noreferrer"
+      style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: theme.card, border: '1px solid rgba(255,255,255,0.08)', textDecoration: 'none', position: 'relative', transition: 'opacity .15s', overflow: 'hidden' }}>
       {hasImage && (
         <div style={{ width: '100%', height: 90, overflow: 'hidden', flexShrink: 0, borderRadius: '14px 14px 0 0' }}>
-          <img src={block.content.image_url} alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img src={block.content.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         </div>
       )}
       <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}>
-        <span style={{
-          position: 'absolute', top: 12, right: 14,
-          fontSize: 14, color: theme.text, opacity: 0.35,
-        }}>↗</span>
+        <span style={{ position: 'absolute', top: 12, right: 14, fontSize: 14, color: theme.text, opacity: 0.35 }}>↗</span>
         <div style={{ fontSize: 16, fontWeight: 700, color: theme.text, lineHeight: 1.4, paddingRight: 20 }}>
           {block.content.title || displayUrl}
         </div>
         {block.content.description && (
-          <div style={{ fontSize: 14, color: theme.text, opacity: 0.6, lineHeight: 1.6, flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <div style={{ fontSize: 14, color: theme.text, opacity: 0.6, lineHeight: 1.6, flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word' }}>
             {block.content.description}
           </div>
         )}
-        <div style={{
-          fontSize: 12, color: theme.text, opacity: 0.4,
-          fontFamily: 'DM Mono, monospace',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          marginTop: 'auto',
-        }}>
+        <div style={{ fontSize: 12, color: theme.text, opacity: 0.4, fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 'auto' }}>
           {displayUrl}
         </div>
       </div>
@@ -149,6 +240,7 @@ function SnsBlock({ block, profile }) {
   const platform = block.content?.platform
   const cfg = SNS_CONFIG.find(s => s.key === platform)
   const url = profile[platform]
+  const size = block.size || 'M'
   if (!cfg || !url) return null
 
   const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
@@ -165,70 +257,115 @@ function SnsBlock({ block, profile }) {
     } catch { return '' }
   })()
 
+  const iconSize = size === 'S' ? 40 : 32
+  const iconBlock = (
+    <div>
+      {cfg.icon ? (
+        <img
+          src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+          width={iconSize} height={iconSize}
+          alt={cfg.label}
+          style={{ display: 'block' }}
+          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+        />
+      ) : null}
+      <div style={{
+        display: cfg.icon ? 'none' : 'flex',
+        width: iconSize + 4, height: iconSize + 4,
+        borderRadius: 10, background: 'rgba(255,255,255,0.2)',
+        alignItems: 'center', justifyContent: 'center',
+        fontSize: Math.round(iconSize / 2), fontWeight: 900, color: '#fff',
+      }}>
+        {cfg.label[0]}
+      </div>
+    </div>
+  )
+
+  if (size === 'S') {
+    return (
+      <div
+        onClick={() => window.open(url, '_blank')}
+        style={{ background: bgColor, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 12, gap: 8, cursor: 'pointer', position: 'relative' }}
+        onTouchStart={e => e.currentTarget.style.opacity = '0.8'}
+        onTouchEnd={e => e.currentTarget.style.opacity = '1'}
+      >
+        <div style={{ position: 'absolute', top: 8, right: 10, color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>↗</div>
+        {iconBlock}
+        <div style={{ color: '#fff', fontSize: 12, fontWeight: 700, lineHeight: 1.2, textAlign: 'center' }}>{cfg.label}</div>
+      </div>
+    )
+  }
+
+  if (size === 'L') {
+    return (
+      <div
+        onClick={() => window.open(url, '_blank')}
+        style={{ background: bgColor, width: '100%', height: '100%', display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '14px 18px', gap: 16, cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+        onTouchStart={e => e.currentTarget.style.opacity = '0.8'}
+        onTouchEnd={e => e.currentTarget.style.opacity = '1'}
+      >
+        <div style={{ position: 'absolute', top: 12, right: 14, color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>↗</div>
+        <div style={{ flexShrink: 0 }}>{iconBlock}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>{cfg.label}</div>
+          {block.content?.caption ? (
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, lineHeight: 1.5, fontFamily: 'Noto Sans JP, sans-serif', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {block.content.caption}
+            </div>
+          ) : handleText ? (
+            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {handleText}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
+  if (size === 'XL') {
+    return (
+      <div
+        onClick={() => window.open(url, '_blank')}
+        style={{ background: bgColor, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', padding: 16, gap: 10, cursor: 'pointer', position: 'relative' }}
+        onTouchStart={e => e.currentTarget.style.opacity = '0.8'}
+        onTouchEnd={e => e.currentTarget.style.opacity = '1'}
+      >
+        <div style={{ position: 'absolute', top: 14, right: 14, color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>↗</div>
+        {iconBlock}
+        <div>
+          <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>{cfg.label}</div>
+          {block.content?.caption ? (
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, lineHeight: 1.5, marginTop: 3, fontFamily: 'Noto Sans JP, sans-serif', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {block.content.caption}
+            </div>
+          ) : handleText ? (
+            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {handleText}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
+  // M (default): icon + name + caption 2-line
   return (
     <div
       onClick={() => window.open(url, '_blank')}
-      style={{
-        background: bgColor,
-        width: '100%', height: '100%',
-        display: 'flex', flexDirection: 'column',
-        justifyContent: 'flex-start',
-        alignItems: 'flex-start',
-        padding: 16,
-        gap: 10,
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'opacity 0.15s',
-      }}
+      style={{ background: bgColor, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', padding: 16, gap: 10, cursor: 'pointer', position: 'relative', transition: 'opacity 0.15s' }}
       onTouchStart={e => e.currentTarget.style.opacity = '0.8'}
       onTouchEnd={e => e.currentTarget.style.opacity = '1'}
     >
       <div style={{ position: 'absolute', top: 14, right: 14, color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>↗</div>
-
+      {iconBlock}
       <div>
-        {cfg.icon ? (
-          <img
-            src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
-            width={32} height={32}
-            alt={cfg.label}
-            style={{ display: 'block' }}
-            onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
-          />
-        ) : null}
-        <div style={{
-          display: cfg.icon ? 'none' : 'flex',
-          width: 36, height: 36,
-          borderRadius: 10,
-          background: 'rgba(255,255,255,0.2)',
-          alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, fontWeight: 900, color: '#fff',
-        }}>
-          {cfg.label[0]}
-        </div>
-      </div>
-
-      <div>
-        <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>
-          {cfg.label}
-        </div>
+        <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>{cfg.label}</div>
         {block.content?.caption ? (
-          <div style={{
-            color: 'rgba(255,255,255,0.7)',
-            fontSize: 11,
-            lineHeight: 1.5,
-            marginTop: 3,
-            fontFamily: 'Noto Sans JP, sans-serif',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, lineHeight: 1.5, marginTop: 3, fontFamily: 'Noto Sans JP, sans-serif', whiteSpace: 'pre-wrap', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {block.content.caption}
           </div>
         ) : handleText ? (
-          <div style={{
-            color: 'rgba(255,255,255,0.55)', fontSize: 11,
-            fontFamily: 'DM Mono, monospace',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
+          <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {handleText}
           </div>
         ) : null}
@@ -238,49 +375,72 @@ function SnsBlock({ block, profile }) {
 }
 
 function ProfileCardBlock({ block, profile, theme }) {
-  return (
-    <div style={{
-      background: theme.card,
-      width: '100%', minHeight: '100%',
-      padding: '18px 18px 14px',
-      display: 'flex', flexDirection: 'row',
-      gap: 14, alignItems: 'flex-start',
-      overflow: 'hidden',
-    }}>
-      {/* アバター */}
-      <div style={{ flexShrink: 0 }}>
-        {profile.avatar_url ? (
-          <img src={profile.avatar_url} alt="" style={{
-            width: 56, height: 56, borderRadius: '50%',
-            objectFit: 'cover',
-            border: `2px solid ${theme.accent}`,
-          }} />
-        ) : (
-          <div style={{
-            width: 56, height: 56, borderRadius: '50%',
-            background: theme.accent,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 20, fontWeight: 800, color: '#fff',
-          }}>
-            {initials(profile.name)}
-          </div>
-        )}
-      </div>
+  const size = block.size || 'M'
+  const Avatar = ({ sz }) => profile.avatar_url ? (
+    <img src={profile.avatar_url} alt="" style={{ width: sz, height: sz, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${theme.accent}`, flexShrink: 0 }} />
+  ) : (
+    <div style={{ width: sz, height: sz, borderRadius: '50%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(sz * 0.36), fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+      {initials(profile.name)}
+    </div>
+  )
 
-      {/* テキスト */}
+  if (size === 'S') {
+    return (
+      <div style={{ background: theme.card, width: '100%', height: '100%', padding: '12px 14px', display: 'flex', flexDirection: 'row', gap: 10, alignItems: 'center', overflow: 'hidden' }}>
+        <Avatar sz={40} />
+        <div style={{ fontSize: 15, fontWeight: 800, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {profile.name || '名前未設定'}
+        </div>
+      </div>
+    )
+  }
+
+  if (size === 'L') {
+    return (
+      <div style={{ background: theme.card, width: '100%', height: '100%', padding: '16px 18px', display: 'flex', flexDirection: 'row', gap: 16, alignItems: 'center', overflow: 'hidden' }}>
+        <Avatar sz={64} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: theme.text, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {renderText(profile.name) || '名前未設定'}
+          </div>
+          {profile.bio && (
+            <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, marginTop: 6, lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {renderText(profile.bio)}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (size === 'XL') {
+    return (
+      <div style={{ background: theme.card, width: '100%', minHeight: '100%', padding: '28px 18px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, overflow: 'hidden' }}>
+        <Avatar sz={80} />
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: theme.text, lineHeight: 1.2 }}>
+            {renderText(profile.name) || '名前未設定'}
+          </div>
+          {profile.bio && (
+            <div style={{ fontSize: 13, color: theme.text, opacity: 0.7, marginTop: 8, lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {renderText(profile.bio)}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // M (default): photo(left) + name + bio 2-line
+  return (
+    <div style={{ background: theme.card, width: '100%', minHeight: '100%', padding: '18px 18px 14px', display: 'flex', flexDirection: 'row', gap: 14, alignItems: 'flex-start', overflow: 'hidden' }}>
+      <Avatar sz={56} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 18, fontWeight: 800, color: theme.text, lineHeight: 1.2,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: theme.text, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {renderText(profile.name) || '名前未設定'}
         </div>
         {profile.bio && (
-          <div style={{
-            fontSize: 12, color: theme.text, opacity: 0.6, marginTop: 5, lineHeight: 1.6,
-            display: '-webkit-box', WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}>
+          <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, marginTop: 5, lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {renderText(profile.bio)}
           </div>
         )}
@@ -291,46 +451,96 @@ function ProfileCardBlock({ block, profile, theme }) {
 
 function AffiliationBlock({ block, theme }) {
   const { company_name, title, website, contact_email, phone } = block.content || {}
+  const size = block.size || 'M'
+
+  if (size === 'XS') {
+    return (
+      <div style={{ background: theme.card, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '8px 14px', gap: 2, overflow: 'hidden' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: theme.text, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {company_name || '会社名未設定'}
+        </div>
+        {title && (
+          <div style={{ fontSize: 11, color: theme.text, opacity: 0.55, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {title}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (size === 'S') {
+    return (
+      <div style={{ background: theme.card, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 14, gap: 3, overflow: 'hidden' }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: theme.text, lineHeight: 1.3 }}>
+          {company_name || '会社名未設定'}
+        </div>
+        {title && (
+          <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, lineHeight: 1.4 }}>
+            {title}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (size === 'L') {
+    return (
+      <div style={{ background: theme.card, width: '100%', height: '100%', display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '14px 18px', gap: 20, overflow: 'hidden' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: theme.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {company_name || '会社名未設定'}
+          </div>
+          {title && (
+            <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, lineHeight: 1.4, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {title}
+            </div>
+          )}
+        </div>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 160 }}>
+          {website && (
+            <a href={website} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: theme.accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+              🔗 {website.replace(/^https?:\/\//, '')}
+            </a>
+          )}
+          {contact_email && (
+            <div style={{ fontSize: 11, color: theme.text, opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              ✉ {contact_email}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (size === 'XL') {
+    return (
+      <div style={{ background: theme.card, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '24px 20px', gap: 10, overflow: 'hidden' }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: theme.text, lineHeight: 1.3 }}>
+          {company_name || '会社名未設定'}
+        </div>
+        {title && <div style={{ fontSize: 13, color: theme.text, opacity: 0.7, lineHeight: 1.5 }}>{title}</div>}
+        {website && (
+          <a href={website} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: theme.accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none', marginTop: 6 }}>
+            🔗 {website.replace(/^https?:\/\//, '')}
+          </a>
+        )}
+        {contact_email && <div style={{ fontSize: 12, color: theme.text, opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉ {contact_email}</div>}
+        {phone && <div style={{ fontSize: 12, color: theme.text, opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📞 {phone}</div>}
+      </div>
+    )
+  }
+
+  // M (default): company + title + website
   return (
-    <div style={{
-      background: theme.card,
-      width: '100%', height: '100%',
-      display: 'flex', flexDirection: 'column',
-      justifyContent: 'flex-end', padding: 16, gap: 4,
-      overflow: 'hidden',
-    }}>
+    <div style={{ background: theme.card, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 16, gap: 4, overflow: 'hidden' }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: theme.text, lineHeight: 1.3 }}>
         {company_name || '会社名未設定'}
       </div>
-      {title && (
-        <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, lineHeight: 1.4 }}>
-          {title}
-        </div>
-      )}
+      {title && <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, lineHeight: 1.4 }}>{title}</div>}
       {website && (
-        <a href={website} target="_blank" rel="noopener noreferrer" style={{
-          fontSize: 11, color: theme.accent, marginTop: 4,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
-          textDecoration: 'none',
-        }}>
+        <a href={website} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: theme.accent, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', textDecoration: 'none' }}>
           🔗 {website.replace(/^https?:\/\//, '')}
         </a>
-      )}
-      {contact_email && (
-        <div style={{
-          fontSize: 11, color: theme.text, opacity: 0.5,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          ✉ {contact_email}
-        </div>
-      )}
-      {phone && (
-        <div style={{
-          fontSize: 11, color: theme.text, opacity: 0.5,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          📞 {phone}
-        </div>
       )}
     </div>
   )
@@ -359,6 +569,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
               const sizeClass =
                 block.size === 'L'  ? 'block-L'  :
                 block.size === 'XL' ? 'block-XL' :
+                block.size === 'XS' ? 'block-XS' :
                 block.size === 'S'  ? 'block-S'  : 'block-M'
               const isSns = block.type === 'sns'
               return (
@@ -381,6 +592,30 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
           </div>
         </div>
 
+        {/* ── Pro: 所属フッター ── */}
+        {showAsPro && affiliations.length > 0 && (
+          <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {affiliations.map((aff, i) => (
+              <div key={i}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>{aff.company_name}</div>
+                {aff.title && <div style={{ fontSize: 12, color: theme.text, opacity: 0.6, marginTop: 2 }}>{aff.title}</div>}
+                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {aff.show_website && aff.website && (
+                    <a href={aff.website} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: theme.accent, textDecoration: 'none' }}>
+                      🔗 {aff.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                  {aff.show_email && aff.contact_email && (
+                    <div style={{ fontSize: 12, color: theme.text, opacity: 0.5 }}>✉ {aff.contact_email}</div>
+                  )}
+                  {aff.show_phone && aff.phone && (
+                    <div style={{ fontSize: 12, color: theme.text, opacity: 0.5 }}>📞 {aff.phone}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── 無課金ビュー ── */}
         {!showAsPro && (
@@ -537,6 +772,11 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
           border-radius: 20px;
           box-shadow: 0 2px 12px rgba(0,0,0,0.3);
           overflow: hidden;
+        }
+        .block-XS {
+          grid-column: span 1;
+          align-self: start;
+          height: 80px;
         }
         .block-S {
           grid-column: span 1;

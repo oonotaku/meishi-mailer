@@ -995,7 +995,10 @@ export default function ProfileSettings() {
                     rows={2}
                     className="text-input bio-textarea"
                   />
-                  <div className="char-count">{bio.length} / 100</div>
+                  <div className="char-count">{bio.length} / 100文字</div>
+                  <div style={{ fontSize: 10, color: '#5a5650', marginTop: 3, lineHeight: 1.6 }}>
+                    ※ プロフィールカードのSサイズでは約20文字まで表示 / Mサイズ約50文字 / L・XLはフル表示
+                  </div>
                 </div>
                 <div className="name-edit-actions">
                   <button type="submit" className="name-save-btn" disabled={nameSaving}>
@@ -1891,6 +1894,7 @@ export default function ProfileSettings() {
                 <div className="scan-field-label" style={{ marginBottom: 8 }}>サイズ</div>
                 <div className="size-select-row">
                   {[
+                    ...(editingBlock.type === 'affiliation' ? [{ key: 'XS', desc: 'コンパクト' }] : []),
                     { key: 'S', desc: '正方形' },
                     { key: 'M', desc: '縦長' },
                     { key: 'L', desc: '全幅' },
@@ -1952,6 +1956,26 @@ export default function ProfileSettings() {
                     onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, caption: e.target.value } }))}
                     placeholder="写真の説明" className="scan-field-input" />
                   <div style={{ marginTop: 12 }}>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>キャプション文字色</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { key: 'white', color: '#ffffff', label: '白' },
+                        { key: 'black', color: '#111111', label: '黒' },
+                        { key: 'gray',  color: '#cccccc', label: 'グレー' },
+                        { key: 'yellow', color: '#fde68a', label: '黄' },
+                      ].map(({ key, color, label }) => (
+                        <button key={key} type="button" title={label}
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, caption_color: key } }))}
+                          style={{
+                            width: 36, height: 36, borderRadius: '50%', background: color, padding: 0, cursor: 'pointer',
+                            border: (editingBlock.content.caption_color || 'white') === key ? '3px solid #22c55e' : '2px solid #2a2a3a',
+                            outline: (editingBlock.content.caption_color || 'white') === key ? '2px solid #7b9e87' : 'none',
+                            outlineOffset: 2,
+                          }} />
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 12 }}>
                     <div className="scan-field-label" style={{ marginBottom: 8 }}>表示モード</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {[
@@ -1994,6 +2018,11 @@ export default function ProfileSettings() {
                     <input type="text" value={editingBlock.content.title || ''} maxLength={80}
                       onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, title: e.target.value } }))}
                       placeholder="見出し" className="scan-field-input" />
+                    {editingBlock.size === 'S' && !editingBlock.content.title?.trim() && (
+                      <div style={{ fontSize: 11, color: '#f97316', marginTop: 4, lineHeight: 1.5 }}>
+                        ⚠ Sサイズではタイトルのみ表示されます。タイトルを入力してください
+                      </div>
+                    )}
                   </div>
                   <div>
                     <div className="scan-field-label" style={{ marginBottom: 4 }}>本文</div>
@@ -2085,6 +2114,49 @@ export default function ProfileSettings() {
                       {blockImageUploading ? 'アップロード中...' : '📷 サムネイルを追加'}
                     </button>
                   </div>
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 8 }}>表示モード</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { key: 'thumbnail', label: 'サムネイル', desc: '通常' },
+                        { key: 'overlay',   label: 'オーバーレイ', desc: '背景画像に重ねる' },
+                      ].map(({ key, label, desc }) => (
+                        <button key={key} type="button"
+                          onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, display_mode: key } }))}
+                          style={{
+                            flex: 1, padding: '8px 0', borderRadius: 10, cursor: 'pointer',
+                            border: (editingBlock.content.display_mode || 'thumbnail') === key ? '2px solid #22c55e' : '1px solid #2a2a3a',
+                            background: (editingBlock.content.display_mode || 'thumbnail') === key ? '#0f2a1a' : '#111',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                          }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{label}</span>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.45)' }}>{desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {(editingBlock.content.display_mode || 'thumbnail') === 'overlay' && (
+                    <div>
+                      <div className="scan-field-label" style={{ marginBottom: 8 }}>テキスト色</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {[
+                          { key: 'white',  color: '#ffffff', label: '白' },
+                          { key: 'black',  color: '#111111', label: '黒' },
+                          { key: 'gray',   color: '#cccccc', label: 'グレー' },
+                          { key: 'yellow', color: '#fde68a', label: '黄' },
+                        ].map(({ key, color, label }) => (
+                          <button key={key} type="button" title={label}
+                            onClick={() => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, text_color: key } }))}
+                            style={{
+                              width: 36, height: 36, borderRadius: '50%', background: color, padding: 0, cursor: 'pointer',
+                              border: (editingBlock.content.text_color || 'white') === key ? '3px solid #22c55e' : '2px solid #2a2a3a',
+                              outline: (editingBlock.content.text_color || 'white') === key ? '2px solid #7b9e87' : 'none',
+                              outlineOffset: 2,
+                            }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
