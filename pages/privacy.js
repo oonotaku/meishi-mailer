@@ -31,15 +31,20 @@ Googleユーザーデータは以下のことには使用しません。
 • 第三者への販売・提供
 • 本来の目的以外のデータ分析
 
-本サービスは、Google API Services User Data Policy（https://developers.google.com/terms/api-services-user-data-policy）を遵守し、Limited Use要件に準拠しています。`,
+Googleユーザーデータは、上記目的の提供および改善以外には使用しません。また、他のデータと組み合わせてユーザーを特定・追跡することもありません。AIやMLモデルの学習・改善を含む、本来の目的以外の用途には一切使用しません。
+
+本サービスは、Google API Services User Data Policy（https://developers.google.com/terms/api-services-user-data-policy）を遵守し、Limited Use要件に完全に準拠しています。
+
+The use of raw or derived user data received from Workspace APIs will adhere to the Google User Data Policy, including the Limited Use requirements.`,
       },
       {
         heading: '3. 情報の利用目的',
         body: `収集した情報は以下の目的で利用します。
 
+※ Googleユーザーデータ（GmailアドレスおよびGmail送信権限）は第2条にのみ従って取り扱われ、以下の目的には一切使用しません。
+
 • 名刺情報の保存・管理・表示
-• お礼メールの自動生成・送信
-• チーム間での名刺情報共有（ユーザーが「チーム共有」を選択した場合）
+• お礼メールの自動生成・送信（SendGridまたはSMTP経由の場合）
 • サービスの品質向上・不具合対応`,
       },
       {
@@ -108,15 +113,20 @@ We do not use Google user data for:
 • Sale or transfer to third parties
 • Any analysis beyond the stated purpose
 
-This service complies with the Google API Services User Data Policy (https://developers.google.com/terms/api-services-user-data-policy) and adheres to its Limited Use requirements.`,
+Google user data is not used for any purpose beyond providing and improving the features described above. It is not combined with other data to identify or track users. It will not be used to develop, improve, or train generalized AI or machine learning models.
+
+This service complies with the Google API Services User Data Policy (https://developers.google.com/terms/api-services-user-data-policy) and fully adheres to its Limited Use requirements.
+
+The use of raw or derived user data received from Workspace APIs will adhere to the Google User Data Policy, including the Limited Use requirements.`,
       },
       {
         heading: '3. How We Use Your Information',
         body: `Collected information is used to:
 
+Note: Google user data (Gmail address and send-mail permission) is governed solely by Section 2 and is not used for any of the purposes listed below.
+
 • Save, manage, and display business card contacts
-• Auto-generate and send thank-you emails
-• Share contact information within your team (when you select "Team" visibility)
+• Auto-generate and send thank-you emails (via SendGrid or SMTP)
 • Improve service quality and fix bugs`,
       },
       {
