@@ -35,8 +35,8 @@ No test framework is configured.
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/email.js` | メール設定（SendGrid/Gmail/SMTP）— プロフィール設定から独立した無料メニュー。戻るボタンは `/settings/profile` へ遷移。 |
-| `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / プロフィールページをデザイン / メール設定 / プラン・サブスクリプション。**FABプレビューボタン**（`position: fixed`、右下・ボトムナブ上）タップでプレビューモーダルを開く。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能。**プロフィール完成度バー**（`position: fixed`、ボトムナブ上部）: 7ステップ構成（顔写真15・表示名15・ひとこと10・所属15・SNS15・メール設定15・Proプラン15）合計100%。Proかつ全完了時に非表示。未完ステップをチップで表示しタップで該当セクションへジャンプ（Proチップはプランセクションを開く）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集、名刺スキャンによるプロフィール自動入力。**「プロフィールページをデザイン」セクション**：**テーマ選択（6種: dark/light/midnight/sunset/sakura/grape）**全ユーザー選択可能（ロック廃止）・背景画像をテーマスウォッチ7枚目（📷スウォッチ）に統合・ベントーブロック管理（追加・編集・削除・↑↓並び替え、ペイウォール廃止・設定は全員可・表示はProのみ）。**所属・連絡先**：最大5件、ボタン（↑↓・削除）をカード上部横並びに変更、削除ボタンは「○件目を削除」と番号付き。SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）。**プランセクション（Free表示）**：ヘッドライン「Freeで作って、Proで魅せる」・Free/Proプレビューリンク（`previewMode='free'`でモーダルを開く）・機能リスト（ベントーグリッド・テーマ背景画像反映）・月/年トグル・アップグレードボタン。メール署名プレビュー、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
-| `p/[userId].js` | Public profile page — **ベントーグリッド方式**。`profile_blocks` テーブルからブロックを取得してグリッド表示。**ハードコードヘッダー廃止済み**（全要素がブロックとして管理。`profile_card` ブロックがヘッダーの役割を担う）。ブロックタイプ: photo / text / link / sns / profile_card / affiliation。サイズ: S / M / L / **XL**（`grid-row: span 2`）、`grid-auto-rows: minmax(144px, auto)`。**テーマ定数**: dark / light / midnight / sunset / sakura / grape の6種（warm / ocean 廃止）。**テーマ・背景画像**: `isPro` の場合のみ適用（`activeTheme` / `activeBgImage` 変数でガード）。**無課金ユーザー表示**: カード廃止→テキストのみのシンプルレイアウト（名前+bio+所属テキスト+SNSアイコン+Koryu招待）。アバター写真非表示。セクション間は細い区切り線（`theme.text}18`）のみ。CTAは「名刺を受け取ったら、Koryuで繋がろう」（訪問者向け招待）。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`（profiles / profile_blocks / profile_affiliations を並列取得）。|
+| `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / プロフィールページをデザイン / メール設定 / プラン・サブスクリプション。**FABプレビューボタン**（`position: fixed`、右下・ボトムナブ上）タップでプレビューモーダルを開く。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能。**デフォルトは `previewMode='pro'`**（Freeユーザーでもフルプレビュー表示でProへの動機づけ）。**プロフィール完成度バー**（`position: fixed`、ボトムナブ上部）: 7ステップ構成（顔写真15・表示名15・ひとこと10・所属15・SNS15・メール設定15・Proプラン15）合計100%。Proかつ全完了時に非表示。未完ステップをチップで表示しタップで該当セクションへジャンプ（Proチップはプランセクションを開く）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集（**bioフィールド下に文字数カウンター表示**: 「XX / 100文字 ※ Sサイズ約20文字・Mサイズ約50文字・L/XLフル表示」）、名刺スキャンによるプロフィール自動入力。**「プロフィールページをデザイン」セクション**：**テーマ選択（6種: dark/light/midnight/sunset/sakura/grape）**クリック時に即時 `/api/profile/update-theme` で自動保存（楽観的更新・失敗時ロールバック）・全ユーザー選択可能（ロック廃止）・背景画像をテーマスウォッチ7枚目（📷スウォッチ）に統合・ベントーブロック管理（追加・編集・削除・↑↓並び替え、ペイウォール廃止・設定は全員可・表示はProのみ）。**ブロックタイプ選択モーダル**に制約テキスト追加（写真「Sサイズはキャプションなし」、テキスト「Sサイズはタイトルのみ表示（入力必須）」、リンク「サムネイル/オーバーレイから選択可」、SNS「Sサイズはキャプションなし」）。**所属・連絡先**：最大5件、ボタン（↑↓・削除）をカード上部横並びに変更、削除ボタンは「○件目を削除」と番号付き。SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）。**プランセクション（Free表示）**：ヘッドライン「Freeで作って、Proで魅せる」・Free/Proプレビューリンク（`previewMode='free'`でモーダルを開く）・機能リスト（ベントーグリッド・テーマ背景画像反映）・月/年トグル・アップグレードボタン。メール署名プレビュー、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
+| `p/[userId].js` | Public profile page — **ベントーグリッド方式**。`profile_blocks` テーブルからブロックを取得してグリッド表示。**ハードコードヘッダー廃止済み**（全要素がブロックとして管理。`profile_card` ブロックがヘッダーの役割を担う）。ブロックタイプ: photo / text / link / sns / profile_card / affiliation。サイズ: **XS**（所属のみ・約80px）/ S / M / L / **XL**（`grid-row: span 2`）、`grid-auto-rows: minmax(144px, auto)`。**ブロックサイズ別アダプティブレイアウト**: 各ブロックタイプがサイズに応じて表示内容・レイアウトを自動変化（詳細は profile_blocks セクション参照）。**bioテキスト改行対応**: `dangerouslySetInnerHTML` で `\n` と `<br>` を改行として描画。**テーマ定数**: dark / light / midnight / sunset / sakura / grape の6種（warm / ocean 廃止）。**テーマ・背景画像**: `isPro` の場合のみ適用（`activeTheme` / `activeBgImage` 変数でガード）。**`?preview=1` クエリ**: isPro に関わらずテーマ・ベントーグリッドをフル表示（設定画面プレビューモーダルから参照）。**無課金ユーザー表示**: テキストのみのシンプルレイアウト（名前+bio+所属テキスト+SNSアイコン+Koryu招待）。変更なし・固定仕様。**フッター所属エリア（Proのみ）**: ベントーグリッド下に `profile_affiliations` 全件を縦並び表示（show_*フラグ尊重）。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview || isPreviewMode) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`（profiles / profile_blocks / profile_affiliations を並列取得）。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 | `_document.js` | カスタムDocument。PWA manifest / theme-color / apple-touch-icon / `<link rel="icon" href="/favicon.svg" type="image/svg+xml" />`（32×32 SVG、黒丸角背景＋緑の「交」）を設定。 |
 
@@ -116,7 +116,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - `plan`: `'free'` (default) or `'pro'`; updated by Stripe webhook
 - `scan_count_month`: resets when `scan_count_reset_at < startOfMonth`; Free limit=10, Pro limit=100
 - `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
-- `profile_theme`: `'dark'` (default) | `'light'` | `'midnight'` | `'warm'` | `'sakura'` | `'ocean'`。`/p/[userId].js` の背景・カード・アクセント・テキスト色を決定
+- `profile_theme`: `'dark'` (default) | `'light'` | `'midnight'` | `'sunset'` | `'sakura'` | `'grape'`。`/p/[userId].js` の背景・カード・アクセント・テキスト色を決定。クリック時に `/api/profile/update-theme` で即時自動保存
 - `profile_bg_image_url`: Supabase Storage `avatars` バケットの公開URL（`{userId}/profile_bg.jpg`）。Proユーザーの公開プロフィールページ背景画像。`null` when not set
 
 **`user_organizations`** — `user_id, organization_id, role (owner|member), created_at`
@@ -149,11 +149,19 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 **`profile_blocks`** — `id, user_id (FK → profiles.id), type, size, content (jsonb), order_index, created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
 - `type`: `'photo'` | `'text'` | `'link'` | `'sns'` | `'profile_card'` | `'affiliation'`
-- `size`: `'S'`（1列・高さ固定120px）| `'M'`（1列・縦長180px+）| `'L'`（全幅）| `'XL'`（1列・縦長300px）
+- `size`: `'XS'`（所属ブロックのみ・約80px）| `'S'`（1列・高さ固定120px）| `'M'`（1列・縦長180px+）| `'L'`（全幅）| `'XL'`（1列・縦長300px）
+- **ブロックサイズ別アダプティブレイアウト**（`p/[userId].js` で自動適用）:
+  - profile_card: S=写真+名前のみ / M=写真+名前+bio2行 / L=写真左・名前bio右横並び3行 / XL=写真上・名前・bioフル
+  - affiliation: XS=会社名+役職のみ / S=会社名+役職 / M=+website / L=全情報横並び / XL=全情報縦並び
+  - sns: S=アイコン+名前のみ（caption非表示）/ M=+caption2行 / L=アイコン左・caption右横並び3行 / XL=captionフル
+  - photo: S=画像のみ（caption非表示）/ M=+captionオーバーレイ1行 / L=全幅+captionオーバーレイ1行 / XL=+captionオーバーレイ2行
+  - text: S=タイトルのみ1行（title必須）/ M=+body3行 / L=+body5行 / XL=bodyフル（pre-wrap）
+  - link（thumbnailモード）: S=サムネ+タイトル1行 / M=+説明2行 / L=サムネ左・説明右横並び / XL=サムネ上+説明フル
+  - link（overlayモード）: 画像を背景にタイトル+URLをオーバーレイ。line-clamp: S=タイトル2行 / M=タイトル2行+説明2行 / L=タイトル2行+説明3行 / XL=タイトル3行+説明4行
 - `content` JSONB スキーマ:
-  - photo: `{ image_url, caption, fit }` — `fit` は `'cover'`|`'contain'`、デフォルト `'cover'`
-  - text: `{ title, body, bg_color, bg_image_url }` — `bg_image_url` は背景画像URL（グラデーションオーバーレイ付き）
-  - link: `{ title, url, description, image_url }` — `image_url` はサムネイル画像URL
+  - photo: `{ image_url, caption, fit, caption_color }` — `fit` は `'cover'`|`'contain'`、`caption_color` は `'white'`（デフォルト）|`'black'`|`'gray'`|`'yellow'`
+  - text: `{ title, body, bg_color, bg_image_url }` — `bg_image_url` は背景画像URL（グラデーションオーバーレイ付き）。bodyは改行対応（pre-wrap）
+  - link: `{ title, url, description, image_url, display_mode, text_color }` — `display_mode` は `'thumbnail'`（デフォルト）|`'overlay'`、`text_color` は `'white'`|`'black'`|`'gray'`|`'yellow'`
   - sns: `{ platform, caption? }` — `platform` は `SNS_CONFIG` の `key`（例: `'sns_x'`）、`caption` はひとこと（最大80文字、省略可）
   - profile_card: `{}` （空。アバター・名前・bioはprofilesテーブルから自動取得。各ユーザーに1つのみ）
   - affiliation: `{ company_name, title, website, contact_email, phone }` — `profile_affiliations` 保存時に自動同期。手動追加不可
@@ -290,3 +298,19 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - CTAを「ベントーグリッドで魅せる（Pro誘導）」→「名刺を受け取ったら、Koryuで繋がろう（訪問者招待）」に転換
 - ファビコン追加（`/favicon.svg`、32×32 黒丸角背景＋緑の「交」）
 - メール設定の戻るボタン遷移先を `/` → `/settings/profile` に修正
+
+**2026-05-13 プロフィールページ・ブロックUX全面ブラッシュアップ完了。**
+
+- プロフィール設定の未翻訳箇所を全てi18n対応（SNSリンク・所属・デザイン・プランセクション等）
+- テーマ選択をクリック時に即時自動保存（`/api/profile/update-theme`、楽観的更新）
+- FABプレビューのデフォルトを `previewMode='pro'` に変更（Freeユーザーでもフルプレビュー確認可）
+- `?preview=1` クエリで isPro に関わらずテーマ・ベントーをフル表示（プレビューモーダル用）
+- bioテキスト改行対応（設定画面ヘッダー・ベントーカードブロック両方）
+- **ブロックサイズ別アダプティブレイアウト全面実装**: 全6ブロック種がサイズに応じてレイアウト・表示内容を自動変化
+- 所属ブロックに XS サイズ追加（会社名+役職のみ・約80px）
+- 写真ブロック: captionオーバーレイ表示 + `caption_color` 選択（4色プリセット）
+- リンクブロック: `display_mode`（thumbnail/overlay）+ `text_color` 選択。overlayは line-clamp でサイズ別省略
+- **フッター所属エリア追加（Proのみ）**: ベントーグリッド下に profile_affiliations 全件表示
+- ブロックタイプ選択モーダルに制約テキスト追加（サイズ別の表示制限を事前告知）
+- bioフィールドに文字数カウンター追加（XX/100文字・サイズ別目安表示）
+- Vercel Preview環境に環境変数（NEXT_PUBLIC_SUPABASE_URL等）を追加しPreviewビルド修正

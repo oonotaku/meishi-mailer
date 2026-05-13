@@ -115,6 +115,13 @@ function LinkBlock({ block, theme }) {
   const overlayTextColor = textColorMap[block.content?.text_color || 'white'] || '#ffffff'
 
   if (displayMode === 'overlay') {
+    const titleClamp = size === 'XL' ? 3 : 2
+    const descClamp  = size === 'M' ? 2 : size === 'L' ? 3 : size === 'XL' ? 4 : 0
+    const showDesc   = descClamp > 0 && !!block.content?.description
+    const clampStyle = (lines) => ({
+      display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical',
+      overflow: 'hidden', wordBreak: 'break-word',
+    })
     return (
       <a href={block.content.url} target="_blank" rel="noopener noreferrer"
         style={{ display: 'block', width: '100%', height: '100%', position: 'relative', overflow: 'hidden', textDecoration: 'none', background: theme.card }}>
@@ -123,13 +130,15 @@ function LinkBlock({ block, theme }) {
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         )}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.08) 55%)' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 14px 14px' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: overlayTextColor, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 24 }}>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 14px 14px', paddingRight: 32 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: overlayTextColor, lineHeight: 1.35, ...clampStyle(titleClamp) }}>
             {block.content.title || displayUrl}
           </div>
-          <div style={{ fontSize: 11, color: overlayTextColor, opacity: 0.6, fontFamily: 'DM Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
-            {displayUrl}
-          </div>
+          {showDesc && (
+            <div style={{ fontSize: 12, color: overlayTextColor, opacity: 0.75, lineHeight: 1.55, marginTop: 4, ...clampStyle(descClamp) }}>
+              {block.content.description}
+            </div>
+          )}
         </div>
         <span style={{ position: 'absolute', top: 10, right: 12, fontSize: 14, color: overlayTextColor, opacity: 0.7 }}>↗</span>
       </a>
