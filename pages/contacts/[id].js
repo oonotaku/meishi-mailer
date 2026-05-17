@@ -259,6 +259,15 @@ export default function ContactDetail() {
   const [addingCard, setAddingCard] = useState(false)
   const [pendingAddCard, setPendingAddCard] = useState(null) // { card, imageUrl, base64, mediaType }
   const [addCardChoice, setAddCardChoice] = useState(null) // null | 'add' | 'update'
+  const [updatingCard, setUpdatingCard] = useState(false)
+
+  // Contact deletion
+  const [showDeleteContactModal, setShowDeleteContactModal] = useState(false)
+  const [deletingContact, setDeletingContact] = useState(false)
+
+  // Card deletion
+  const [deleteCardConfirmIdx, setDeleteCardConfirmIdx] = useState(null)
+  const [deletingCard, setDeletingCard] = useState(false)
 
   // 複数名刺の表示切替
   const [activeCardIdx, setActiveCardIdx] = useState(0)
@@ -711,6 +720,7 @@ export default function ContactDetail() {
 
   async function confirmUpdateCard(cardIdx) {
     if (!pendingAddCard) return
+    setUpdatingCard(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/contacts/rescan', {
@@ -725,12 +735,70 @@ export default function ContactDetail() {
         }),
       })
       const json = await r.json()
-      if (r.ok) {
-        setContact(prev => ({ ...prev, ...json.updated }))
-        setPendingAddCard(null)
-        setAddCardChoice(null)
+      if (!r.ok) {
+        alert(json.error || (i18n.language === 'ja' ? '更新に失敗しました' : 'Update failed'))
+        return
       }
-    } catch (e) { console.error(e) }
+      setPendingAddCard(null)
+      setAddCardChoice(null)
+      router.replace(router.asPath)
+    } catch (e) {
+      console.error(e)
+      alert(i18n.language === 'ja' ? 'エラーが発生しました' : 'An error occurred')
+    } finally {
+      setUpdatingCard(false)
+    }
+  }
+
+  async function handleDeleteContact() {
+    setDeletingContact(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contact_id: id }),
+      })
+      const json = await r.json()
+      if (!r.ok) {
+        alert(json.error || (i18n.language === 'ja' ? '削除に失敗しました' : 'Delete failed'))
+        return
+      }
+      router.push('/contacts')
+    } catch (e) {
+      console.error(e)
+      alert(i18n.language === 'ja' ? 'エラーが発生しました' : 'An error occurred')
+    } finally {
+      setDeletingContact(false)
+    }
+  }
+
+  async function handleDeleteCard(cardIdx) {
+    setDeletingCard(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/delete-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contact_id: id, card_index: cardIdx }),
+      })
+      const json = await r.json()
+      if (!r.ok) {
+        alert(json.error || (i18n.language === 'ja' ? '削除に失敗しました' : 'Delete failed'))
+        return
+      }
+      const newCards = (contact.cards || []).filter((_, i) => i !== cardIdx)
+      const newImageUrls = (contact.card_image_urls || []).filter((_, i) => i !== cardIdx)
+      setContact(prev => ({ ...prev, cards: newCards, card_image_urls: newImageUrls }))
+      setActiveCardIdx(0)
+      setDeleteCardConfirmIdx(null)
+      router.replace(router.asPath)
+    } catch (e) {
+      console.error(e)
+      alert(i18n.language === 'ja' ? 'エラーが発生しました' : 'An error occurred')
+    } finally {
+      setDeletingCard(false)
+    }
   }
 
   async function openMergeModal() {
@@ -930,7 +998,7 @@ export default function ContactDetail() {
             : -1
           const hasConflict = conflictIdx >= 0
           return (
-            <div className="sheet-overlay" onClick={() => { setPendingAddCard(null); setAddCardChoice(null) }}>
+            <div className="sheet-overlay" onClick={() => { if (!updatingCard) { setPendingAddCard(null); setAddCardChoice(null) } }}>
               <div className="sheet-box" onClick={e => e.stopPropagation()}>
                 <div className="sheet-title">{i18n.language === 'ja' ? 'この名刺を追加しますか？' : 'Add this card?'}</div>
                 {pendingAddCard.imageUrl && (
@@ -967,18 +1035,96 @@ export default function ContactDetail() {
                 )}
 
                 {addCardChoice === 'update' && (
-                  <button className="ctx-save-btn" onClick={() => confirmUpdateCard(conflictIdx)}>
-                    {i18n.language === 'ja' ? '既存の名刺を更新する' : 'Update existing card'}
+                  <button className="ctx-save-btn" disabled={updatingCard} onClick={() => confirmUpdateCard(conflictIdx)}>
+                    {updatingCard
+                      ? (i18n.language === 'ja' ? '更新中…' : 'Updating…')
+                      : (i18n.language === 'ja' ? '既存の名刺を更新する' : 'Update existing card')}
                   </button>
                 )}
 
-                <button className="ghost-btn" style={{ marginTop: 8 }} onClick={() => { setPendingAddCard(null); setAddCardChoice(null) }}>
+                <button className="ghost-btn" style={{ marginTop: 8 }} disabled={updatingCard} onClick={() => { setPendingAddCard(null); setAddCardChoice(null) }}>
                   {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
                 </button>
               </div>
             </div>
           )
         })()}
+
+        {/* ── コンタクト削除確認 ── */}
+        {showDeleteContactModal && (
+          <div className="sheet-overlay" onClick={() => !deletingContact && setShowDeleteContactModal(false)}>
+            <div className="sheet-box" onClick={e => e.stopPropagation()}>
+              <div className="sheet-title" style={{ color: '#cc4444' }}>
+                {i18n.language === 'ja' ? 'コンタクトを削除' : 'Delete Contact'}
+              </div>
+              <p style={{ fontSize: 13, color: '#8a8680', lineHeight: 1.7, margin: '0 0 16px' }}>
+                {i18n.language === 'ja'
+                  ? 'このコンタクトを削除しますか？出会いの記録もすべて削除されます。この操作は取り消せません。'
+                  : 'Delete this contact? All encounter records will also be deleted. This cannot be undone.'}
+              </p>
+              <button
+                className="ctx-save-btn"
+                style={{ background: '#3a0a0a', border: '1px solid #7a2020', color: '#ff6666' }}
+                disabled={deletingContact}
+                onClick={handleDeleteContact}
+              >
+                {deletingContact
+                  ? (i18n.language === 'ja' ? '削除中…' : 'Deleting…')
+                  : (i18n.language === 'ja' ? '削除する' : 'Delete')}
+              </button>
+              <button
+                className="ghost-btn"
+                style={{ marginTop: 8 }}
+                disabled={deletingContact}
+                onClick={() => setShowDeleteContactModal(false)}
+              >
+                {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── カード削除確認 ── */}
+        {deleteCardConfirmIdx !== null && (
+          <div className="sheet-overlay" onClick={() => !deletingCard && setDeleteCardConfirmIdx(null)}>
+            <div className="sheet-box" onClick={e => e.stopPropagation()}>
+              <div className="sheet-title" style={{ color: '#cc4444' }}>
+                {i18n.language === 'ja' ? 'この名刺を削除' : 'Delete Card'}
+              </div>
+              <div className="sheet-card-btn selected" style={{ cursor: 'default', marginBottom: 12 }}>
+                <div className="sheet-card-company">
+                  {cards[deleteCardConfirmIdx]?.company || `Card ${deleteCardConfirmIdx + 1}`}
+                </div>
+                {cards[deleteCardConfirmIdx]?.title && (
+                  <div className="sheet-card-title">{cards[deleteCardConfirmIdx].title}</div>
+                )}
+              </div>
+              <p style={{ fontSize: 13, color: '#8a8680', lineHeight: 1.7, margin: '0 0 16px' }}>
+                {i18n.language === 'ja'
+                  ? 'この名刺を削除しますか？この操作は取り消せません。'
+                  : 'Delete this card? This cannot be undone.'}
+              </p>
+              <button
+                className="ctx-save-btn"
+                style={{ background: '#3a0a0a', border: '1px solid #7a2020', color: '#ff6666' }}
+                disabled={deletingCard}
+                onClick={() => handleDeleteCard(deleteCardConfirmIdx)}
+              >
+                {deletingCard
+                  ? (i18n.language === 'ja' ? '削除中…' : 'Deleting…')
+                  : (i18n.language === 'ja' ? '削除する' : 'Delete')}
+              </button>
+              <button
+                className="ghost-btn"
+                style={{ marginTop: 8 }}
+                disabled={deletingCard}
+                onClick={() => setDeleteCardConfirmIdx(null)}
+              >
+                {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── マージモーダル ── */}
         {showMergeModal && (
@@ -1135,6 +1281,15 @@ export default function ContactDetail() {
               <button className="rescan-btn" onClick={openMergeModal}>
                 {i18n.language === 'ja' ? '重複をマージ' : 'Merge Duplicate'}
               </button>
+
+              {/* コンタクト削除 */}
+              <button
+                className="rescan-btn"
+                style={{ color: '#9b4040', borderColor: '#3a1a1a' }}
+                onClick={() => setShowDeleteContactModal(true)}
+              >
+                {i18n.language === 'ja' ? '削除' : 'Delete'}
+              </button>
             </div>
           )}
 
@@ -1176,14 +1331,22 @@ export default function ContactDetail() {
               </span>
               <div className="multi-cards-list">
                 {cards.map((c, i) => (
-                  <button
-                    key={i}
-                    className={`multi-card-chip ${activeCardIdx === i ? 'active' : ''}`}
-                    onClick={() => setActiveCardIdx(i)}
-                  >
-                    <span className="multi-card-company">{c.company || `Card ${i + 1}`}</span>
-                    {c.title && <span className="multi-card-title">{c.title}</span>}
-                  </button>
+                  <div key={i} className="multi-card-chip-wrap">
+                    <button
+                      className={`multi-card-chip ${activeCardIdx === i ? 'active' : ''}`}
+                      onClick={() => setActiveCardIdx(i)}
+                    >
+                      <span className="multi-card-company">{c.company || `Card ${i + 1}`}</span>
+                      {c.title && <span className="multi-card-title">{c.title}</span>}
+                    </button>
+                    {isOwner && (
+                      <button
+                        className="chip-delete-btn"
+                        onClick={e => { e.stopPropagation(); setDeleteCardConfirmIdx(i) }}
+                        title={i18n.language === 'ja' ? 'この名刺を削除' : 'Delete this card'}
+                      >×</button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -1698,6 +1861,17 @@ export default function ContactDetail() {
         .multi-card-company { font-size: 12px; color: #8a8680; }
         .multi-card-chip.active .multi-card-company { color: #7b9e87; }
         .multi-card-title { font-size: 10px; color: #3a3a4a; }
+        .multi-card-chip-wrap { position: relative; display: inline-flex; }
+        .chip-delete-btn {
+          position: absolute; top: -6px; right: -6px;
+          width: 17px; height: 17px; border-radius: 50%;
+          background: #2a0a0a; border: 1px solid #5a1a1a;
+          color: #cc4444; font-size: 11px; line-height: 1;
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
+          padding: 0; z-index: 1;
+          transition: background .15s, color .15s;
+        }
+        .chip-delete-btn:hover { background: #5a1a1a; color: #ff6666; }
 
         /* Image overlay */
         .img-overlay {
