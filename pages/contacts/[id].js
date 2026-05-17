@@ -291,6 +291,14 @@ export default function ContactDetail() {
   // meishi-mailerユーザー検出
   const [meishiProfile, setMeishiProfile] = useState(null)
 
+  // Merge duplicate
+  const [showMergeModal, setShowMergeModal] = useState(false)
+  const [mergeSearchQuery, setMergeSearchQuery] = useState('')
+  const [mergeContacts, setMergeContacts] = useState([])
+  const [mergeTarget, setMergeTarget] = useState(null)
+  const [mergeTargetEncCount, setMergeTargetEncCount] = useState(0)
+  const [mergePending, setMergePending] = useState(false)
+
   const TEMP_OPTIONS = [
     { value: 'hot', label: t('temp.hot'), emoji: '🔥' },
     { value: 'normal', label: t('temp.normal'), emoji: '🤝' },
@@ -698,6 +706,55 @@ export default function ContactDetail() {
     } catch (e) { console.error(e) }
   }
 
+  async function openMergeModal() {
+    setShowMergeModal(true)
+    setMergeTarget(null)
+    setMergeSearchQuery('')
+    setMergeContacts([])
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/list', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const json = await r.json()
+      setMergeContacts((json.data || []).filter(c => c.id !== id))
+    } catch (e) { console.error(e) }
+  }
+
+  async function selectMergeTarget(c) {
+    setMergeTarget(c)
+    setMergeTargetEncCount(0)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch(`/api/encounters/list?contact_id=${c.id}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const json = await r.json()
+      setMergeTargetEncCount((json.data || []).length)
+    } catch (e) { setMergeTargetEncCount(0) }
+  }
+
+  async function handleMerge() {
+    if (!mergeTarget) return
+    setMergePending(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ keep_id: id, merge_id: mergeTarget.id }),
+      })
+      if (r.ok) {
+        setShowMergeModal(false)
+        router.replace(router.asPath)
+      } else {
+        const json = await r.json()
+        alert(json.error || 'マージに失敗しました')
+      }
+    } catch (e) { console.error(e) }
+    finally { setMergePending(false) }
+  }
+
   async function onSend() {
     const toEmail = displayEmail
     if (!toEmail) { alert(t('contact.no_email_alert')); return }
@@ -859,6 +916,81 @@ export default function ContactDetail() {
           </div>
         )}
 
+        {/* ── マージモーダル ── */}
+        {showMergeModal && (
+          <div className="sheet-overlay" onClick={() => !mergePending && setShowMergeModal(false)}>
+            <div className="sheet-box" onClick={e => e.stopPropagation()} style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+              {mergeTarget ? (
+                <>
+                  <div className="sheet-title">
+                    {i18n.language === 'ja' ? 'マージの確認' : 'Confirm Merge'}
+                  </div>
+                  <div className="sheet-card-btn selected" style={{ cursor: 'default', marginBottom: 8 }}>
+                    <div className="sheet-card-company">{mergeTarget.name || (i18n.language === 'ja' ? '（名前なし）' : '(No name)')}</div>
+                    {mergeTarget.company && <div className="sheet-card-title">{mergeTarget.company}</div>}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#5a5650', padding: '4px 0 12px', lineHeight: 2 }}>
+                    · {i18n.language === 'ja'
+                      ? `名刺 ${mergeTarget.cards?.length || 1}枚 が追加されます`
+                      : `${mergeTarget.cards?.length || 1} card(s) will be added`}<br />
+                    · {i18n.language === 'ja'
+                      ? `出会い記録 ${mergeTargetEncCount}件 が引き継がれます`
+                      : `${mergeTargetEncCount} encounter(s) will be moved`}<br />
+                    · {i18n.language === 'ja'
+                      ? 'このレコードは削除されます'
+                      : 'This record will be deleted'}
+                  </div>
+                  <button className="ctx-save-btn" onClick={handleMerge} disabled={mergePending}>
+                    {mergePending
+                      ? (i18n.language === 'ja' ? '処理中...' : 'Processing...')
+                      : (i18n.language === 'ja' ? 'マージする' : 'Merge')}
+                  </button>
+                  <button className="ghost-btn" style={{ marginTop: 0 }} onClick={() => setMergeTarget(null)} disabled={mergePending}>
+                    {i18n.language === 'ja' ? '戻る' : 'Back'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="sheet-title">
+                    {i18n.language === 'ja' ? '重複をマージ' : 'Merge Duplicate'}
+                  </div>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder={i18n.language === 'ja' ? '名前・会社名で検索' : 'Search by name or company'}
+                    value={mergeSearchQuery}
+                    onChange={e => setMergeSearchQuery(e.target.value)}
+                    autoFocus
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                    {mergeContacts.length === 0 ? (
+                      <div style={{ fontSize: 12, color: '#3a3a4a', textAlign: 'center', padding: '16px 0' }}>
+                        {i18n.language === 'ja' ? '読み込み中...' : 'Loading...'}
+                      </div>
+                    ) : (
+                      mergeContacts
+                        .filter(c => {
+                          if (!mergeSearchQuery.trim()) return true
+                          const q = mergeSearchQuery.toLowerCase()
+                          return (c.name || '').toLowerCase().includes(q) || (c.company || '').toLowerCase().includes(q)
+                        })
+                        .map(c => (
+                          <button key={c.id} className="sheet-card-btn" onClick={() => selectMergeTarget(c)}>
+                            <div className="sheet-card-company">{c.name || (i18n.language === 'ja' ? '（名前なし）' : '(No name)')}</div>
+                            {c.company && <div className="sheet-card-title">{c.company}</div>}
+                          </button>
+                        ))
+                    )}
+                  </div>
+                  <button className="ghost-btn" style={{ marginTop: 8 }} onClick={() => setShowMergeModal(false)}>
+                    {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── HEADER ── */}
         <div className="header">
           <button className="back-btn" onClick={() => router.push('/contacts')}>{t('contact.back')}</button>
@@ -934,6 +1066,11 @@ export default function ContactDetail() {
                   disabled={addingCard}
                 />
               </label>
+
+              {/* 重複をマージ */}
+              <button className="rescan-btn" onClick={openMergeModal}>
+                {i18n.language === 'ja' ? '重複をマージ' : 'Merge Duplicate'}
+              </button>
             </div>
           )}
 

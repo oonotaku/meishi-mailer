@@ -55,6 +55,8 @@ export default function Home() {
   const [duplicateContactId, setDuplicateContactId] = useState(null)
   const [duplicateType, setDuplicateType] = useState(null)
   const [matchedSns, setMatchedSns] = useState([])
+  const [addCardConfirmId, setAddCardConfirmId] = useState(null)
+  const [addingCard, setAddingCard] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [interimText, setInterimText] = useState('')
@@ -316,6 +318,31 @@ export default function Home() {
       }
     }
     return urls
+  }
+
+  async function handleAddCard(contactId) {
+    setAddingCard(true)
+    try {
+      const card_image_urls = await uploadImages(cardImages, 'cards')
+      const { data: { session } } = await supabase.auth.getSession()
+      const cardData = cards[0] || contact
+      const r1 = await fetch('/api/contacts/add-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contact_id: contactId, card: cardData, image_url: card_image_urls[0] || null }),
+      })
+      if (!r1.ok) throw new Error((await r1.json()).error)
+      await fetch('/api/encounters/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contact_id: contactId, met_at: new Date().toISOString() }),
+      })
+      router.push(`/contacts/${contactId}`)
+    } catch (e) {
+      alert(e.message || 'エラーが発生しました')
+      setAddingCard(false)
+      setAddCardConfirmId(null)
+    }
   }
 
   async function saveContact(card_image_urls, mail_sent_at) {
@@ -1472,6 +1499,39 @@ export default function Home() {
             >
               {t('duplicate.add_encounter')}
             </button>
+
+            {addCardConfirmId === emailDuplicates[0].id ? (
+              <div style={{ marginTop: 12, padding: '12px 16px', background: '#f5f5f5', borderRadius: 10, textAlign: 'center' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 13 }}>
+                  {t('duplicate.add_card_confirm', { name: emailDuplicates[0].name || t('duplicate.unknown_name') })}
+                </p>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <button
+                    className="send-btn"
+                    style={{ flex: 1, fontSize: 14 }}
+                    disabled={addingCard}
+                    onClick={() => handleAddCard(emailDuplicates[0].id)}
+                  >
+                    {addingCard ? '…' : t('duplicate.add_card_confirm_btn')}
+                  </button>
+                  <button
+                    className="ghost-btn"
+                    style={{ flex: 1, fontSize: 14, marginTop: 0 }}
+                    onClick={() => setAddCardConfirmId(null)}
+                  >
+                    {t('duplicate.add_card_cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="save-btn"
+                onClick={() => setAddCardConfirmId(emailDuplicates[0].id)}
+              >
+                {t('duplicate.add_card')}
+              </button>
+            )}
+
             <button className="save-btn" onClick={() => router.push('/contacts')}>
               {t('duplicate.view_contacts')}
             </button>
@@ -1528,6 +1588,40 @@ export default function Home() {
             >
               {t('duplicate.add_encounter')}
             </button>
+
+            {addCardConfirmId === nameDuplicates[0]?.id ? (
+              <div style={{ marginTop: 12, padding: '12px 16px', background: '#f5f5f5', borderRadius: 10, textAlign: 'center' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 13 }}>
+                  {t('duplicate.add_card_confirm', { name: nameDuplicates[0].name || t('duplicate.unknown_name') })}
+                </p>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <button
+                    className="send-btn"
+                    style={{ flex: 1, fontSize: 14 }}
+                    disabled={addingCard}
+                    onClick={() => handleAddCard(nameDuplicates[0].id)}
+                  >
+                    {addingCard ? '…' : t('duplicate.add_card_confirm_btn')}
+                  </button>
+                  <button
+                    className="ghost-btn"
+                    style={{ flex: 1, fontSize: 14, marginTop: 0 }}
+                    onClick={() => setAddCardConfirmId(null)}
+                  >
+                    {t('duplicate.add_card_cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="ghost-btn"
+                style={{ marginTop: 4 }}
+                onClick={() => setAddCardConfirmId(nameDuplicates[0]?.id)}
+              >
+                {t('duplicate.add_card')}
+              </button>
+            )}
+
             <button className="ghost-btn" onClick={() => router.push('/contacts')}>
               {t('duplicate.view_contacts')}
             </button>

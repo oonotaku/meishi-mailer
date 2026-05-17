@@ -98,6 +98,10 @@
     "name_note": "A contact with the same name already exists. If it's the same person, record a new encounter. If it's a different person, register as new.",
     "history_label": "Scan History",
     "add_encounter": "Record this encounter",
+    "add_card": "Add this card",
+    "add_card_confirm": "Add this card to {{name}}'s contact?",
+    "add_card_confirm_btn": "Add",
+    "add_card_cancel": "Cancel",
     "register_new": "Register as new contact →",
     "view_contacts": "View Contacts",
     "scan_another": "Scan Another Card"
