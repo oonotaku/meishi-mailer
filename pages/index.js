@@ -51,6 +51,8 @@ export default function Home() {
   const [cards, setCards] = useState([])
   const [selectedCardIndex, setSelectedCardIndex] = useState(0)
   const [scannedProfile, setScannedProfile] = useState(null)
+  const [qrDuplicateContact, setQrDuplicateContact] = useState(null)
+  const [qrSavingEncounter, setQrSavingEncounter] = useState(false)
   const [meishiUser, setMeishiUser] = useState(null)
   const [duplicateContactId, setDuplicateContactId] = useState(null)
   const [duplicateType, setDuplicateType] = useState(null)
@@ -143,6 +145,26 @@ export default function Home() {
           if (!r.ok) { alert('プロフィールの取得に失敗しました。'); setStep(STEPS.UPLOAD); return }
           const data = await r.json()
           setScannedProfile(data)
+
+          // 重複チェック: emailがあれば既存contactsと照合
+          let dupContact = null
+          if (data.email) {
+            try {
+              const { data: { session } } = await supabase.auth.getSession()
+              if (session?.access_token) {
+                const listRes = await fetch('/api/contacts/list', {
+                  headers: { Authorization: `Bearer ${session.access_token}` },
+                })
+                if (listRes.ok) {
+                  const listJson = await listRes.json()
+                  dupContact = (listJson.data || []).find(c =>
+                    c.email?.toLowerCase() === data.email?.toLowerCase()
+                  ) ?? null
+                }
+              }
+            } catch (e) { /* スキップして従来通り進む */ }
+          }
+          setQrDuplicateContact(dupContact)
           setStep(STEPS.USER_QR_CONFIRM)
           return
         }
@@ -1414,43 +1436,129 @@ export default function Home() {
               </div>
             </div>
 
-            <button className="upload-btn" onClick={async () => {
-              const session = await supabase.auth.getSession()
-              const token = session.data.session?.access_token
-              const body = {
-                name: scannedProfile.name,
-                company: scannedProfile.company || '',
-                title: scannedProfile.title || '',
-                email: scannedProfile.email || '',
-                phone: scannedProfile.phone || '',
-                extracted_sns: scannedProfile.extracted_sns || {},
-                memo: `Koryuプロフィール: ${scannedProfile.profile_url}`,
-                met_at: new Date().toISOString(),
-                visibility: 'private',
-              }
-              const r = await fetch('/api/contacts/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify(body),
-              })
-              if (r.ok) {
-                const data = await r.json()
-                const contactId = data.data?.id
-                setScannedProfile(null)
-                if (contactId) {
-                  router.push(`/contacts/${contactId}`)
-                } else {
-                  setStep(STEPS.UPLOAD)
-                }
-              } else {
-                alert('保存に失敗しました')
-              }
-            }}>
-              コンタクトに追加
-            </button>
+            {qrDuplicateContact && (
+              <div style={{
+                background: '#2a1a00', border: '1px solid #6b4000',
+                borderRadius: 10, padding: '12px 16px', marginBottom: 16,
+                fontSize: 13, color: '#f59e0b', lineHeight: 1.6,
+              }}>
+                ⚠️ 「{qrDuplicateContact.name}」として登録済みの可能性があります
+              </div>
+            )}
 
-            <button className="ghost-btn" style={{ marginTop: 12 }} onClick={() => {
+            {qrDuplicateContact ? (
+              <>
+                <button
+                  className="send-btn"
+                  disabled={qrSavingEncounter}
+                  style={{ marginTop: 0 }}
+                  onClick={async () => {
+                    setQrSavingEncounter(true)
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession()
+                      const r = await fetch('/api/encounters/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                        body: JSON.stringify({ contact_id: qrDuplicateContact.id, met_at: new Date().toISOString() }),
+                      })
+                      if (r.ok) {
+                        const dupId = qrDuplicateContact.id
+                        setScannedProfile(null)
+                        setQrDuplicateContact(null)
+                        router.push(`/contacts/${dupId}`)
+                      } else {
+                        const json = await r.json()
+                        alert(json.error || '保存に失敗しました')
+                      }
+                    } catch (e) {
+                      alert('エラーが発生しました')
+                    } finally {
+                      setQrSavingEncounter(false)
+                    }
+                  }}
+                >
+                  {qrSavingEncounter ? '…' : 'この出会いを記録する'}
+                </button>
+                <button
+                  className="save-btn"
+                  disabled={qrSavingEncounter}
+                  onClick={async () => {
+                    const session = await supabase.auth.getSession()
+                    const token = session.data.session?.access_token
+                    const body = {
+                      name: scannedProfile.name,
+                      company: scannedProfile.company || '',
+                      title: scannedProfile.title || '',
+                      email: scannedProfile.email || '',
+                      phone: scannedProfile.phone || '',
+                      extracted_sns: scannedProfile.extracted_sns || {},
+                      memo: `Koryuプロフィール: ${scannedProfile.profile_url}`,
+                      met_at: new Date().toISOString(),
+                      visibility: 'private',
+                    }
+                    const r = await fetch('/api/contacts/save', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify(body),
+                    })
+                    if (r.ok) {
+                      const data = await r.json()
+                      const contactId = data.data?.id
+                      setScannedProfile(null)
+                      setQrDuplicateContact(null)
+                      if (contactId) {
+                        router.push(`/contacts/${contactId}`)
+                      } else {
+                        setStep(STEPS.UPLOAD)
+                      }
+                    } else {
+                      alert('保存に失敗しました')
+                    }
+                  }}
+                >
+                  新規コンタクトとして追加
+                </button>
+              </>
+            ) : (
+              <button className="upload-btn" onClick={async () => {
+                const session = await supabase.auth.getSession()
+                const token = session.data.session?.access_token
+                const body = {
+                  name: scannedProfile.name,
+                  company: scannedProfile.company || '',
+                  title: scannedProfile.title || '',
+                  email: scannedProfile.email || '',
+                  phone: scannedProfile.phone || '',
+                  extracted_sns: scannedProfile.extracted_sns || {},
+                  memo: `Koryuプロフィール: ${scannedProfile.profile_url}`,
+                  met_at: new Date().toISOString(),
+                  visibility: 'private',
+                }
+                const r = await fetch('/api/contacts/save', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify(body),
+                })
+                if (r.ok) {
+                  const data = await r.json()
+                  const contactId = data.data?.id
+                  setScannedProfile(null)
+                  if (contactId) {
+                    router.push(`/contacts/${contactId}`)
+                  } else {
+                    setStep(STEPS.UPLOAD)
+                  }
+                } else {
+                  alert('保存に失敗しました')
+                }
+              }}>
+                コンタクトに追加
+              </button>
+            )}
+
+            <button className="ghost-btn" style={{ marginTop: 12 }} disabled={qrSavingEncounter} onClick={() => {
               setScannedProfile(null)
+              setQrDuplicateContact(null)
               setStep(STEPS.UPLOAD)
             }}>
               キャンセル
