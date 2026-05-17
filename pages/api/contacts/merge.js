@@ -42,6 +42,12 @@ export default async function handler(req, res) {
     .eq('contact_id', merge_id)
   if (encErr) return res.status(500).json({ error: encErr.message })
 
+  const fill = (keepVal, mergeVal) =>
+    (keepVal === null || keepVal === undefined || keepVal === '') ? (mergeVal ?? keepVal) : keepVal
+
+  const keep = keepContact
+  const merge = mergeContact
+
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('contacts')
     .update({
@@ -49,6 +55,15 @@ export default async function handler(req, res) {
       card_image_urls: mergedImageUrls,
       extracted_sns: mergedExtractedSns,
       connected_sns: mergedConnectedSns,
+      name:        fill(keep.name,        merge.name),
+      company:     fill(keep.company,     merge.company),
+      department:  fill(keep.department,  merge.department),
+      title:       fill(keep.title,       merge.title),
+      email:       fill(keep.email,       merge.email),
+      phone:       fill(keep.phone,       merge.phone),
+      website:     fill(keep.website,     merge.website),
+      memo:        fill(keep.memo,        merge.memo),
+      temperature: fill(keep.temperature, merge.temperature),
     })
     .eq('id', keep_id)
     .select()

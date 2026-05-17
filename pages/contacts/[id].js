@@ -257,7 +257,8 @@ export default function ContactDetail() {
 
   // Add card
   const [addingCard, setAddingCard] = useState(false)
-  const [pendingAddCard, setPendingAddCard] = useState(null) // { card, imageUrl }
+  const [pendingAddCard, setPendingAddCard] = useState(null) // { card, imageUrl, base64, mediaType }
+  const [addCardChoice, setAddCardChoice] = useState(null) // null | 'add' | 'update'
 
   // 複数名刺の表示切替
   const [activeCardIdx, setActiveCardIdx] = useState(0)
@@ -673,7 +674,8 @@ export default function ContactDetail() {
       })
       const json = await r.json()
       if (r.ok && json.card) {
-        setPendingAddCard({ card: json.card, imageUrl })
+        setPendingAddCard({ card: json.card, imageUrl, base64, mediaType: file.type || 'image/jpeg' })
+        setAddCardChoice(null)
       } else {
         alert('OCRに失敗しました。もう一度お試しください。')
       }
@@ -702,6 +704,31 @@ export default function ContactDetail() {
           card_image_urls: json.card_image_urls,
         }))
         setPendingAddCard(null)
+        setAddCardChoice(null)
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  async function confirmUpdateCard(cardIdx) {
+    if (!pendingAddCard) return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/rescan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          contactId: id,
+          image: pendingAddCard.base64,
+          mediaType: pendingAddCard.mediaType || 'image/jpeg',
+          card_index: cardIdx,
+          image_url: pendingAddCard.imageUrl,
+        }),
+      })
+      const json = await r.json()
+      if (r.ok) {
+        setContact(prev => ({ ...prev, ...json.updated }))
+        setPendingAddCard(null)
+        setAddCardChoice(null)
       }
     } catch (e) { console.error(e) }
   }
@@ -797,16 +824,17 @@ export default function ContactDetail() {
 
   // 表示中のカードデータ（複数名刺の場合は選択されたカードの情報を表示）
   const cards = contact?.cards || []
-  const activeCard = cards.length > 1 && activeCardIdx > 0 ? cards[activeCardIdx] : null
-  // meishi-mailerユーザーの場合はライブデータを優先
-  const displayName    = meishiProfile?.name    || contact?.name    || ''
-  const displayCompany = meishiProfile?.company || activeCard?.company || contact?.company || ''
-  const displayTitle   = meishiProfile?.title   || activeCard?.title   || contact?.title   || ''
+  const isMainCard = activeCardIdx === 0
+  const activeCard = cards[activeCardIdx] || null
+  // メインカード（0枚目）はmeishiProfileライブデータを優先。追加カードはカード自身のデータを使う
+  const displayName    = isMainCard ? (meishiProfile?.name    || activeCard?.name    || contact?.name    || '') : (activeCard?.name    || contact?.name    || '')
+  const displayCompany = isMainCard ? (meishiProfile?.company || activeCard?.company || contact?.company || '') : (activeCard?.company || contact?.company || '')
+  const displayTitle   = isMainCard ? (meishiProfile?.title   || activeCard?.title   || contact?.title   || '') : (activeCard?.title   || contact?.title   || '')
   const displayDept    = activeCard?.department  || contact?.department || ''
-  const displayEmail   = meishiProfile?.email   || activeCard?.email   || contact?.email   || ''
-  const displayPhone   = meishiProfile?.phone   || activeCard?.phone   || contact?.phone   || ''
-  const displayWebsite = meishiProfile?.website || activeCard?.website || contact?.website || ''
-  const displayAvatar  = meishiProfile?.avatar_url || null
+  const displayEmail   = isMainCard ? (meishiProfile?.email   || activeCard?.email   || contact?.email   || '') : (activeCard?.email   || contact?.email   || '')
+  const displayPhone   = isMainCard ? (meishiProfile?.phone   || activeCard?.phone   || contact?.phone   || '') : (activeCard?.phone   || contact?.phone   || '')
+  const displayWebsite = isMainCard ? (meishiProfile?.website || activeCard?.website || contact?.website || '') : (activeCard?.website || contact?.website || '')
+  const displayAvatar  = isMainCard ? (meishiProfile?.avatar_url || null) : null
 
   const formatDate = (iso) => {
     if (!iso) return ''
@@ -894,27 +922,63 @@ export default function ContactDetail() {
         )}
 
         {/* ── 名刺追加 確認オーバーレイ ── */}
-        {pendingAddCard && (
-          <div className="sheet-overlay" onClick={() => setPendingAddCard(null)}>
-            <div className="sheet-box" onClick={e => e.stopPropagation()}>
-              <div className="sheet-title">{i18n.language === 'ja' ? 'この名刺を追加しますか？' : 'Add this card?'}</div>
-              {pendingAddCard.imageUrl && (
-                <img src={pendingAddCard.imageUrl} style={{ width: '100%', borderRadius: 8, marginBottom: 12, border: '1px solid #1e1e2a' }} alt="" />
-              )}
-              <div className="sheet-card-btn selected" style={{ cursor: 'default', marginBottom: 12 }}>
-                <div className="sheet-card-company">{pendingAddCard.card.company || '—'}</div>
-                {pendingAddCard.card.title && <div className="sheet-card-title">{pendingAddCard.card.title}</div>}
-                {pendingAddCard.card.email && <div className="sheet-card-title" style={{ fontFamily: 'DM Mono, monospace', fontSize: 11 }}>{pendingAddCard.card.email}</div>}
+        {pendingAddCard && (() => {
+          const scannedEmail = pendingAddCard.card?.email?.toLowerCase()
+          const existingCards = contact?.cards || []
+          const conflictIdx = scannedEmail
+            ? existingCards.findIndex(c => c?.email?.toLowerCase() === scannedEmail)
+            : -1
+          const hasConflict = conflictIdx >= 0
+          return (
+            <div className="sheet-overlay" onClick={() => { setPendingAddCard(null); setAddCardChoice(null) }}>
+              <div className="sheet-box" onClick={e => e.stopPropagation()}>
+                <div className="sheet-title">{i18n.language === 'ja' ? 'この名刺を追加しますか？' : 'Add this card?'}</div>
+                {pendingAddCard.imageUrl && (
+                  <img src={pendingAddCard.imageUrl} style={{ width: '100%', borderRadius: 8, marginBottom: 12, border: '1px solid #1e1e2a' }} alt="" />
+                )}
+                <div className="sheet-card-btn selected" style={{ cursor: 'default', marginBottom: 12 }}>
+                  <div className="sheet-card-company">{pendingAddCard.card.company || '—'}</div>
+                  {pendingAddCard.card.title && <div className="sheet-card-title">{pendingAddCard.card.title}</div>}
+                  {pendingAddCard.card.email && <div className="sheet-card-title" style={{ fontFamily: 'DM Mono, monospace', fontSize: 11 }}>{pendingAddCard.card.email}</div>}
+                </div>
+
+                {hasConflict && addCardChoice === null && (
+                  <>
+                    <div style={{ background: '#2a1a00', border: '1px solid #6b4000', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: '#f59e0b', lineHeight: 1.6 }}>
+                      ⚠️ {i18n.language === 'ja'
+                        ? '同じメールアドレスの名刺が既に登録されています。'
+                        : 'A card with this email address is already registered.'}
+                    </div>
+                    <button className="ctx-save-btn" onClick={() => setAddCardChoice('update')}>
+                      {i18n.language === 'ja' ? '既存の名刺を更新する' : 'Update existing card'}
+                    </button>
+                    <button className="ctx-save-btn" style={{ background: '#1e1e2a', border: '1px solid #2e2e3a', color: '#c0bfbb', marginTop: 8 }} onClick={() => setAddCardChoice('add')}>
+                      {i18n.language === 'ja' ? '新しい名刺として追加する' : 'Add as new card'}
+                    </button>
+                  </>
+                )}
+
+                {(!hasConflict || addCardChoice === 'add') && (
+                  <button className="ctx-save-btn" onClick={confirmAddCard}>
+                    {i18n.language === 'ja'
+                      ? (addCardChoice === 'add' ? '新しい名刺として追加する' : '追加する')
+                      : (addCardChoice === 'add' ? 'Add as new card' : 'Add')}
+                  </button>
+                )}
+
+                {addCardChoice === 'update' && (
+                  <button className="ctx-save-btn" onClick={() => confirmUpdateCard(conflictIdx)}>
+                    {i18n.language === 'ja' ? '既存の名刺を更新する' : 'Update existing card'}
+                  </button>
+                )}
+
+                <button className="ghost-btn" style={{ marginTop: 8 }} onClick={() => { setPendingAddCard(null); setAddCardChoice(null) }}>
+                  {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
+                </button>
               </div>
-              <button className="ctx-save-btn" onClick={confirmAddCard}>
-                {i18n.language === 'ja' ? '追加する' : 'Add'}
-              </button>
-              <button className="ghost-btn" style={{ marginTop: 0 }} onClick={() => setPendingAddCard(null)}>
-                {i18n.language === 'ja' ? 'キャンセル' : 'Cancel'}
-              </button>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* ── マージモーダル ── */}
         {showMergeModal && (
