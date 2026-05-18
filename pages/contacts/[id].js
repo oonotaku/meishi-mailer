@@ -276,15 +276,14 @@ export default function ContactDetail() {
   const [detecting, setDetecting] = useState(false)
   const [detectedSns, setDetectedSns] = useState(null)
 
-  // Email section
-  const [emailOpen, setEmailOpen] = useState(false)
-  const [subject, setSubject] = useState('')
-  const [body, setBody] = useState('')
-  const [sent, setSent] = useState(false)
-  const [sentAt, setSentAt] = useState(null)
-  const [resendMode, setResendMode] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [sendError, setSendError] = useState('')
+  // Email flow
+  const [emailStep, setEmailStep] = useState(null) // null | 'situation' | 'preview'
+  const [emailSituation, setEmailSituation] = useState('')
+  const [emailMemo, setEmailMemo] = useState('')
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailBody, setEmailBody] = useState('')
+  const [emailGenerating, setEmailGenerating] = useState(false)
+  const [emailSending, setEmailSending] = useState(false)
 
   // Visibility
   const [visibility, setVisibility] = useState('private')
@@ -329,10 +328,6 @@ export default function ContactDetail() {
         const data = json.data
         if (data) {
           setContact(data)
-          setSubject(data.subject || '')
-          setBody(data.body || '')
-          setSent(!!data.mail_sent_at)
-          setSentAt(data.mail_sent_at || null)
           setVisibility(data.visibility || 'private')
           setConnectedSns(data.connected_sns || {})
           setManualSns(data.manual_sns || {})
@@ -850,29 +845,62 @@ export default function ContactDetail() {
     finally { setMergePending(false) }
   }
 
-  async function onSend() {
+  async function handleGenerateEmail() {
+    if (!emailSituation) return
+    setEmailGenerating(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/generate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contact_id: id, situation: emailSituation, memo: emailMemo }),
+      })
+      const json = await r.json()
+      if (r.ok) {
+        setEmailSubject(json.subject || '')
+        setEmailBody(json.body || '')
+        setEmailStep('preview')
+      } else {
+        alert(json.error || 'メール生成に失敗しました')
+      }
+    } catch (e) {
+      alert('エラーが発生しました')
+    } finally {
+      setEmailGenerating(false)
+    }
+  }
+
+  async function handleEmailSend() {
     const toEmail = displayEmail
     if (!toEmail) { alert(t('contact.no_email_alert')); return }
-    setSending(true)
-    setSendError('')
+    setEmailSending(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const r = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ to: toEmail, subject, body }),
+        body: JSON.stringify({ to: toEmail, subject: emailSubject, body: emailBody, contact_id: id }),
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
-      const now = new Date().toISOString()
-      await supabase.from('contacts').update({ subject, body, mail_sent_at: now }).eq('id', id)
-      setSent(true)
-      setSentAt(now)
-      setResendMode(false)
+      const mailEnc = {
+        id: `mail-${Date.now()}`,
+        contact_id: id,
+        met_at: new Date().toISOString(),
+        event_name: 'メール送信',
+        memo: emailSubject,
+        created_at: new Date().toISOString(),
+      }
+      setEncounters(prev => [mailEnc, ...prev])
+      setEmailStep(null)
+      setEmailSituation('')
+      setEmailMemo('')
+      setEmailSubject('')
+      setEmailBody('')
     } catch (err) {
-      setSendError(err.message)
+      alert(err.message)
     } finally {
-      setSending(false)
+      setEmailSending(false)
     }
   }
 
@@ -1531,19 +1559,6 @@ export default function ContactDetail() {
               </div>
             )}
 
-            {/* Email buttons */}
-            {displayEmail && isOwner && (
-              <div className="email-btn-row">
-                <button className="email-new-btn" onClick={() => { setEmailOpen(true); setResendMode(true) }}>
-                  ✉ {displayEmail}
-                </button>
-                {sent && (
-                  <button className="email-hist-btn" onClick={() => { setEmailOpen(o => !o); setResendMode(false) }}>
-                    {emailOpen && !resendMode ? t('contact.email_history_close') : t('contact.email_history_open')}
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* ── meishi-mailerプロフィールブロック ── */}
@@ -1570,54 +1585,107 @@ export default function ContactDetail() {
             )
           })()}
 
-          {/* ── EMAIL SECTION (collapsible) ── */}
-          {emailOpen && (
-            <div className="section email-section">
-              {sent && !resendMode ? (
-                <>
-                  <div className="sent-meta">
-                    <span className="sent-badge">{t('contact.sent')}</span>
-                    <span className="sent-date mono">{formatDate(sentAt)}</span>
-                  </div>
-                  <div className="mail-preview">
-                    <div className="preview-label">{t('contact.subject')}</div>
-                    <div className="preview-val">{subject}</div>
-                    <div className="preview-label" style={{ marginTop: 10 }}>{t('contact.body')}</div>
-                    <div className="preview-body">{body}</div>
-                  </div>
-                  {isOwner && (
-                    <button className="ghost-btn" onClick={() => setResendMode(true)}>{t('contact.resend')}</button>
-                  )}
-                </>
-              ) : (
-                <>
-                  {resendMode && <div className="resend-notice">{t('contact.resend_notice')}</div>}
-                  <label className="field-label">{t('contact.subject')}</label>
-                  <input type="text" className="text-input" value={subject} onChange={e => setSubject(e.target.value)} />
-                  <label className="field-label" style={{ marginTop: 12 }}>{t('contact.body')}</label>
-                  <textarea className="textarea" rows={7} value={body} onChange={e => setBody(e.target.value)} />
-                  {sendError && <div className="error-box">{sendError}</div>}
-                  {isOwner && (
-                    <>
-                      <button className="send-btn" onClick={onSend} disabled={sending || !contact.email}>
-                        {sending ? t('contact.sending') : t('contact.send')}
-                      </button>
-                      {resendMode && (
-                        <button className="ghost-btn" onClick={() => setResendMode(false)}>{t('contact.cancel')}</button>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+          {/* ── メール送信シート: シチュエーション選択 ── */}
+          {emailStep === 'situation' && (
+            <div className="sheet-overlay" onClick={() => !emailGenerating && setEmailStep(null)}>
+              <div className="sheet-box" onClick={e => e.stopPropagation()}>
+                <div className="sheet-title">{i18n.language === 'ja' ? 'シチュエーションを選んでください' : 'Choose a situation'}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  {(i18n.language === 'ja'
+                    ? ['初回のお礼', '久しぶりの連絡', 'イベント後のフォロー', '商談後のフォロー', 'その他']
+                    : ['First thank-you', 'Reconnecting', 'Post-event follow-up', 'Post-meeting follow-up', 'Other']
+                  ).map(s => (
+                    <button
+                      key={s}
+                      className={`situation-chip ${emailSituation === s ? 'active' : ''}`}
+                      onClick={() => setEmailSituation(s)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <label className="field-label">{i18n.language === 'ja' ? '一言メモ（任意）' : 'Note (optional)'}</label>
+                <textarea
+                  className="textarea"
+                  rows={2}
+                  placeholder={i18n.language === 'ja' ? '話した内容、次のアクションなど' : 'Topics discussed, next steps, etc.'}
+                  value={emailMemo}
+                  onChange={e => setEmailMemo(e.target.value)}
+                />
+                <button
+                  className="ctx-save-btn"
+                  disabled={!emailSituation || emailGenerating}
+                  onClick={handleGenerateEmail}
+                >
+                  {emailGenerating ? (i18n.language === 'ja' ? '生成中…' : 'Generating…') : (i18n.language === 'ja' ? 'AIでメール文を生成する →' : 'Generate email with AI →')}
+                </button>
+                <button className="ghost-btn" style={{ marginTop: 0 }} disabled={emailGenerating} onClick={() => setEmailStep(null)}>
+                  {t('contact.cancel')}
+                </button>
+              </div>
             </div>
           )}
 
-          {/* ── 出会いの記録 ── */}
+          {/* ── メール送信シート: プレビュー・編集 ── */}
+          {emailStep === 'preview' && (
+            <div className="sheet-overlay" onClick={() => !emailSending && setEmailStep(null)}>
+              <div className="sheet-box" onClick={e => e.stopPropagation()} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
+                <div className="sheet-title">{i18n.language === 'ja' ? 'メールを確認・編集' : 'Preview & edit'}</div>
+                <label className="field-label">{t('contact.subject')}</label>
+                <input
+                  type="text"
+                  className="text-input"
+                  value={emailSubject}
+                  onChange={e => setEmailSubject(e.target.value)}
+                />
+                <label className="field-label" style={{ marginTop: 12 }}>{t('contact.body')}</label>
+                <textarea
+                  className="textarea"
+                  rows={7}
+                  value={emailBody}
+                  onChange={e => setEmailBody(e.target.value)}
+                />
+                <button
+                  className="ctx-save-btn"
+                  style={{ background: '#1e1e2a', border: '1px solid #2e2e3a', color: '#c0bfbb', marginBottom: 8 }}
+                  disabled={emailGenerating}
+                  onClick={handleGenerateEmail}
+                >
+                  {emailGenerating ? (i18n.language === 'ja' ? '生成中…' : 'Generating…') : (i18n.language === 'ja' ? '再生成する' : 'Regenerate')}
+                </button>
+                <button
+                  className="ctx-save-btn"
+                  disabled={emailSending || !emailSubject || !emailBody}
+                  onClick={handleEmailSend}
+                >
+                  {emailSending ? (i18n.language === 'ja' ? '送信中…' : 'Sending…') : (i18n.language === 'ja' ? '送信して交流を記録する' : 'Send & record interaction')}
+                </button>
+                <button className="ghost-btn" style={{ marginTop: 0 }} disabled={emailSending} onClick={() => setEmailStep(null)}>
+                  {t('contact.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── 交流履歴 ── */}
           <div className="section">
             <div className="section-hd">
               <span className="section-label">{t('encounter.section_label')}</span>
               {isOwner && !showEncForm && (
-                <button className="add-enc-btn" onClick={() => setShowEncForm(true)}>+ {t('contact.add_encounter')}</button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="add-enc-btn" onClick={() => setShowEncForm(true)}>
+                    + {t('contact.add_encounter')}
+                  </button>
+                  {displayEmail && (
+                    <button
+                      className="add-enc-btn"
+                      style={{ color: '#7b9e87', borderColor: '#1a3525' }}
+                      onClick={() => { setEmailStep('situation'); setEmailSituation(''); setEmailMemo('') }}
+                    >
+                      ✉ {i18n.language === 'ja' ? 'メールを送る' : 'Send email'}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -1673,31 +1741,45 @@ export default function ContactDetail() {
             ) : (
               <div className="enc-list">
                 {encounters.map((enc, i) => (
-                  <div key={enc.id} className="enc-item">
-                    <div className="enc-date">
-                      {enc.met_at
-                        ? new Date(enc.met_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                        : new Date(enc.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      {i === 0 && <span className="enc-badge">{t('encounter.latest')}</span>}
-                    </div>
-                    {(enc.event_name || enc.location) && (
-                      <div className="enc-meta">{[enc.event_name, enc.location].filter(Boolean).join(' · ')}</div>
-                    )}
-                    {enc.temperature && (
-                      <span className="enc-temp">
-                        {TEMP_OPTIONS.find(o => o.value === enc.temperature)?.emoji}
-                      </span>
-                    )}
-                    {enc.memo && <div className="enc-memo">{enc.memo}</div>}
-                    {enc.photo_urls?.length > 0 && (
-                      <div className="enc-photos">
-                        {enc.photo_urls.map((url, pi) => (
-                          <img key={pi} src={url} className="enc-photo" alt=""
-                            onClick={() => setExpandedImg(url)} />
-                        ))}
+                  enc.event_name === 'メール送信' ? (
+                    <div key={enc.id} className="enc-item">
+                      <div className="enc-date">
+                        <span style={{ fontSize: 16 }}>✉</span>
+                        {i18n.language === 'ja' ? 'メール送信' : 'Email sent'}
+                        {i === 0 && <span className="enc-badge">{t('encounter.latest')}</span>}
                       </div>
-                    )}
-                  </div>
+                      <div className="enc-meta" style={{ fontFamily: 'DM Mono, monospace', fontSize: 11 }}>
+                        {formatDate(enc.met_at || enc.created_at)}
+                      </div>
+                      {enc.memo && <div className="enc-memo">{enc.memo}</div>}
+                    </div>
+                  ) : (
+                    <div key={enc.id} className="enc-item">
+                      <div className="enc-date">
+                        {enc.met_at
+                          ? new Date(enc.met_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                          : new Date(enc.created_at).toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        {i === 0 && <span className="enc-badge">{t('encounter.latest')}</span>}
+                      </div>
+                      {(enc.event_name || enc.location) && (
+                        <div className="enc-meta">{[enc.event_name, enc.location].filter(Boolean).join(' · ')}</div>
+                      )}
+                      {enc.temperature && (
+                        <span className="enc-temp">
+                          {TEMP_OPTIONS.find(o => o.value === enc.temperature)?.emoji}
+                        </span>
+                      )}
+                      {enc.memo && <div className="enc-memo">{enc.memo}</div>}
+                      {enc.photo_urls?.length > 0 && (
+                        <div className="enc-photos">
+                          {enc.photo_urls.map((url, pi) => (
+                            <img key={pi} src={url} className="enc-photo" alt=""
+                              onClick={() => setExpandedImg(url)} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
                 ))}
               </div>
             )}
@@ -2046,49 +2128,15 @@ export default function ContactDetail() {
         .sns-empty-text { font-size: 13px; color: #5a5650; }
         .sns-empty-hint { font-size: 11px; color: #3a3a4a; line-height: 1.5; }
 
-        .email-btn-row {
-          margin-top: 14px; display: flex; gap: 8px;
+        /* Situation chips */
+        .situation-chip {
+          padding: 7px 13px; border-radius: 20px;
+          background: #12121a; border: 1px solid #2a2a3a;
+          color: #8a8680; font-size: 13px; font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer; transition: all .15s;
         }
-        .email-new-btn {
-          flex: 1; padding: 13px; background: #0d1f15;
-          border: 1px solid #1a3525; border-radius: 12px;
-          color: #7b9e87; font-size: 14px; font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
-          transition: opacity .15s;
-        }
-        .email-new-btn:active { opacity: .75; }
-        .email-hist-btn {
-          padding: 13px 16px; background: transparent;
-          border: 1px solid #2a2a3a; border-radius: 12px;
-          color: #5a5650; font-size: 13px; font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
-          white-space: nowrap; transition: border-color .15s, color .15s;
-        }
-        .email-hist-btn:hover { border-color: #3a3a4a; color: #8a8680; }
-
-        /* Email section */
-        .email-section { background: #0d0d14; }
-        .sent-meta {
-          display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
-        }
-        .sent-badge {
-          font-size: 11px; font-family: 'DM Mono', monospace;
-          background: #0d1f15; border: 1px solid #1a3525; color: #7b9e87;
-          padding: 2px 10px; border-radius: 999px;
-        }
-        .sent-date { font-size: 12px; font-family: 'DM Mono', monospace; color: #5a5650; }
-        .mail-preview {
-          background: #12121a; border: 1px solid #1e1e2a; border-radius: 10px;
-          padding: 12px; margin-bottom: 10px;
-        }
-        .preview-label {
-          font-size: 10px; font-family: 'DM Mono', monospace; color: #5a5650;
-          letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px;
-        }
-        .preview-val { font-size: 14px; color: #f0ede8; }
-        .preview-body { font-size: 13px; color: #8a8680; line-height: 1.75; white-space: pre-wrap; margin-top: 4px; }
-        .resend-notice {
-          font-size: 12px; color: #8a6a30; background: #1a1408;
-          border: 1px solid #2a2010; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
-        }
+        .situation-chip:hover { border-color: #7b9e87; color: #c0bfbb; }
+        .situation-chip.active { border-color: #7b9e87; color: #f0ede8; background: #0d1f15; }
 
         /* Encounter section */
         .add-enc-btn {

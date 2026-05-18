@@ -50,7 +50,7 @@
     "next": "Next: Add context →"
   },
   "context": {
-    "step_title": "Record This Meeting",
+    "step_title": "Record This Interaction",
     "event_label": "Event / Location",
     "event_placeholder": "e.g. Tech Conference, Networking Event",
     "met_label": "Date met",
@@ -97,7 +97,7 @@
     "note": "This email address is already registered.\nDuplicate contacts cannot be imported.",
     "name_note": "A contact with the same name already exists. If it's the same person, record a new encounter. If it's a different person, register as new.",
     "history_label": "Scan History",
-    "add_encounter": "Record this encounter",
+    "add_encounter": "Record this interaction",
     "add_card": "Add this card",
     "add_card_confirm": "Add this card to {{name}}'s contact?",
     "add_card_confirm_btn": "Add",
@@ -107,8 +107,8 @@
     "scan_another": "Scan Another Card"
   },
   "encounter": {
-    "section_label": "Encounter History",
-    "empty": "No encounter history",
+    "section_label": "Interaction History",
+    "empty": "No interaction history",
     "latest": "Latest"
   },
   "login": {

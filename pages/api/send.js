@@ -57,7 +57,7 @@ export default async function handler(req, res) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return res.status(401).json({ error: '認証が必要です' })
 
-  const { to, subject, body, selected_preset = 'business' } = req.body
+  const { to, subject, body, selected_preset = 'business', contact_id } = req.body
   if (!to || !subject || !body) return res.status(400).json({ error: 'missing fields' })
 
   const { data: profile } = await supabaseAdmin
@@ -88,6 +88,14 @@ export default async function handler(req, res) {
       text: body,
       html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
     })
+    if (contact_id) {
+      supabaseAdmin.from('encounters').insert({
+        contact_id,
+        met_at: new Date().toISOString(),
+        event_name: 'メール送信',
+        memo: subject || null,
+      }).then().catch(e => console.error('[send] encounter insert:', e))
+    }
     return res.json({ ok: true })
   } catch (e) {
     console.error(e)

@@ -1497,7 +1497,7 @@ export default function Home() {
                     }
                   }}
                 >
-                  {qrSavingEncounter ? '…' : 'この出会いを記録する'}
+                  {qrSavingEncounter ? '…' : 'この交流を記録する'}
                 </button>
                 <button
                   className="save-btn"

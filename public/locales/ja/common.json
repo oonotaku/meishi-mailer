@@ -50,7 +50,7 @@
     "next": "次へ: 文脈を入力 →"
   },
   "context": {
-    "step_title": "この出会いを記録する",
+    "step_title": "この交流を記録する",
     "event_label": "場所・イベント名",
     "event_placeholder": "例: ○○展示会、テック勉強会",
     "met_label": "出会った日",
@@ -97,7 +97,7 @@
     "note": "同じメールアドレスの名刺はすでに登録されています。重複するコンタクトは取り込めません。",
     "name_note": "同名のコンタクトがすでに存在します。同一人物なら出会いを記録し、別人なら新規登録できます。",
     "history_label": "撮影履歴",
-    "add_encounter": "この出会いを記録する",
+    "add_encounter": "この交流を記録する",
     "add_card": "この名刺を追加する",
     "add_card_confirm": "「{{name}}」のコンタクトにこの名刺を追加しますか？",
     "add_card_confirm_btn": "追加する",
@@ -107,8 +107,8 @@
     "scan_another": "別の名刺を撮影する"
   },
   "encounter": {
-    "section_label": "出会い履歴",
-    "empty": "出会い履歴はありません",
+    "section_label": "交流履歴",
+    "empty": "交流履歴はありません",
     "latest": "最新"
   },
   "login": {
