@@ -51,6 +51,7 @@ export default function Home() {
   const [cards, setCards] = useState([])
   const [selectedCardIndex, setSelectedCardIndex] = useState(0)
   const [scannedProfile, setScannedProfile] = useState(null)
+  const [scannedUserId, setScannedUserId] = useState(null)
   const [qrDuplicateContact, setQrDuplicateContact] = useState(null)
   const [qrSavingEncounter, setQrSavingEncounter] = useState(false)
   const [meishiUser, setMeishiUser] = useState(null)
@@ -145,25 +146,43 @@ export default function Home() {
           if (!r.ok) { alert('プロフィールの取得に失敗しました。'); setStep(STEPS.UPLOAD); return }
           const data = await r.json()
           setScannedProfile(data)
+          setScannedUserId(userId)
 
-          // 重複チェック: emailがあれば既存contactsと照合
+          // 重複チェック: koryu_user_id → email の順で照合
           let dupContact = null
-          if (data.email) {
-            try {
-              const { data: { session } } = await supabase.auth.getSession()
-              if (session?.access_token) {
-                const listRes = await fetch('/api/contacts/list', {
-                  headers: { Authorization: `Bearer ${session.access_token}` },
-                })
-                if (listRes.ok) {
-                  const listJson = await listRes.json()
-                  dupContact = (listJson.data || []).find(c =>
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.access_token) {
+              const listRes = await fetch('/api/contacts/list', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              })
+              if (listRes.ok) {
+                const listJson = await listRes.json()
+                const contacts = listJson.data || []
+
+                // ① koryu_user_id で検索（最優先）
+                dupContact = contacts.find(c =>
+                  c.koryu_user_id && c.koryu_user_id === userId
+                ) ?? null
+
+                // ② ヒットしなければemailで検索（フォールバック）
+                if (!dupContact && data.email) {
+                  dupContact = contacts.find(c =>
                     c.email?.toLowerCase() === data.email?.toLowerCase()
                   ) ?? null
+
+                  // emailでヒットしたが koryu_user_id 未設定 → 非同期で紐付け更新
+                  if (dupContact && !dupContact.koryu_user_id) {
+                    fetch('/api/contacts/update-koryu-user-id', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                      body: JSON.stringify({ contact_id: dupContact.id, koryu_user_id: userId }),
+                    }).catch(() => {})
+                  }
                 }
               }
-            } catch (e) { /* スキップして従来通り進む */ }
-          }
+            }
+          } catch (e) { /* スキップして従来通り進む */ }
           setQrDuplicateContact(dupContact)
           setStep(STEPS.USER_QR_CONFIRM)
           return
@@ -391,6 +410,7 @@ export default function Home() {
         memo: memo || null,
         extracted_sns: contact?.sns || null,
         cards: cards || [],
+        koryu_user_id: meishiUser?.user_id ?? null,
       }),
     })
     const json = await r.json()
@@ -1495,6 +1515,7 @@ export default function Home() {
                       memo: `Koryuプロフィール: ${scannedProfile.profile_url}`,
                       met_at: new Date().toISOString(),
                       visibility: 'private',
+                      koryu_user_id: scannedUserId ?? null,
                     }
                     const r = await fetch('/api/contacts/save', {
                       method: 'POST',
@@ -1533,6 +1554,7 @@ export default function Home() {
                   memo: `Koryuプロフィール: ${scannedProfile.profile_url}`,
                   met_at: new Date().toISOString(),
                   visibility: 'private',
+                  koryu_user_id: scannedUserId ?? null,
                 }
                 const r = await fetch('/api/contacts/save', {
                   method: 'POST',
