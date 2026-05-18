@@ -18,7 +18,7 @@ No test framework is configured.
 
 **Core flow (通常):** Photo capture → `/api/analyze` (Claude Vision OCR + email generation) → `/api/contacts/save` (Supabase Storage + `contacts` table + `encounters` テーブルに初回出会いを自動挿入) → `/api/send` (SendGrid) → mark `mail_sent_at`
 
-**Core flow (重複時):** Photo capture → `/api/analyze` (重複検出: `duplicates` 配列返却) → DUPLICATE画面表示 → 「この出会いを記録する」 → CONTEXT入力 → `/api/encounters/save` (encountersテーブルに追記、必要に応じてメール送信)
+**Core flow (重複時):** Photo capture → `/api/analyze` (重複検出: `duplicates` 配列返却) → DUPLICATE画面表示 → 「この交流を記録する」または「この名刺を追加する」 → CONTEXT入力 → `/api/encounters/save` (encountersテーブルに追記、必要に応じてメール送信)
 
 ### Data access pattern
 
@@ -28,9 +28,9 @@ No test framework is configured.
 
 | File | Purpose |
 |------|---------|
-| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7)/USER_QR_SCAN/USER_QR_CONFIRM(10). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。**QRで繋がる**: UPLOAD画面の「🔗 QRで繋がる →」からUSER_QR_SCANへ遷移、`getUserMedia` ライブカメラ＋`requestAnimationFrame`で毎フレームjsQR解析、meishi-mailerプロフィールURL検出後 `/api/profile/public` でプロフィール取得→USER_QR_CONFIRMで確認→`/api/contacts/save`で `extracted_sns` を含めて保存→コンタクト詳細へ遷移。**自分のプロフィールQR**: UPLOAD画面下部に `api.qrserver.com` を使ったQRコードを常時表示。**meishi-mailerユーザー検出**: `/api/analyze` が `meishi_user` フィールドを返すようになり、CONFIRM画面でバッジ（✓ meishi-mailerユーザーです）＋プロフィールリンクを表示。**統一 top-bar**: Koryuロゴ左・言語切替＋ユーザーメール＋ログアウト右（旧 user-info-row 廃止）。**統一 bottom-nav**: スキャン（`/`・active）/ つながり（`/contacts`）/ プロフィール（`/settings/profile`）を position:fixed で中央固定（max-width:430px）。 |
+| `index.js` | Main scan flow. State machine: UPLOAD → ANALYZING → CONFIRM → CONTEXT → SENDING → DONE/ERROR/DUPLICATE(7)/USER_QR_SCAN/USER_QR_CONFIRM(10). 重複検出時（`duplicates` 配列あり）はDUPLICATE画面へ遷移しブロック。DUPLICATE画面: 「この交流を記録する」＋「この名刺を追加する」（`/api/contacts/add-card`）のボタンを表示。**QRで繋がる**: UPLOAD画面の「🔗 QRで繋がる →」からUSER_QR_SCANへ遷移、`getUserMedia` ライブカメラ＋`requestAnimationFrame`で毎フレームjsQR解析、meishi-mailerプロフィールURL検出後 `/api/profile/public` でプロフィール取得→USER_QR_CONFIRMで確認→`/api/contacts/save`で `extracted_sns` + `koryu_user_id` を含めて保存→コンタクト詳細へ遷移。**QRスキャン重複チェック**: USER_QR_CONFIRM前に ① `koryu_user_id` で既存contact検索（最優先）→ ② emailでフォールバック検索。emailヒット時に `koryu_user_id` 未設定なら `/api/contacts/update-koryu-user-id` で非同期更新。重複時は「この交流を記録する」「新規コンタクトとして追加」を表示。**koryu_user_id自動セット**: 名刺スキャン保存時（`meishiUser?.user_id`）・QRスキャン保存時（`scannedUserId`）ともに `koryu_user_id` をセット。**自分のプロフィールQR**: UPLOAD画面下部に `api.qrserver.com` を使ったQRコードを常時表示。**meishi-mailerユーザー検出**: `/api/analyze` が `meishi_user` フィールドを返すようになり、CONFIRM画面でバッジ（✓ Koryuユーザーです）＋プロフィールリンクを表示。**統一 top-bar**: Koryuロゴ左・言語切替＋ユーザーメール＋ログアウト右（旧 user-info-row 廃止）。**統一 bottom-nav**: スキャン（`/`・active）/ つながり（`/contacts`）/ プロフィール（`/settings/profile`）を position:fixed で中央固定（max-width:430px）。**テキスト統一**: 「出会い」→「交流」（i18nキー + ハードコード箇所）。 |
 | `contacts.js` | 「あなたのつながり一覧」（旧: 保存済み名刺一覧）。Own + team-shared contacts. Shows team name badge for contacts from other orgs. **統一 top-bar**（旧 `<div className="header">` with back-btn を廃止）＋**統一 bottom-nav**（つながり=active）。スキャンタブはカメラ起動ではなく `/` へのリンク。`contacts.header` i18nキー使用。 |
-| `contacts/[id].js` | Contact detail — 繋がりハブ。**meishi-mailerユーザー検出**: contact.emailで `/api/profile/find-by-email` を呼び、meishi-mailerユーザーであれば name/company/title/email/phone/avatar/extracted_sns/blocks/profile_theme をライブデータで上書き表示。`displayName`/`displayCompany`/`displayEmail` 等の表示変数は meishiProfile → activeCard → contact の優先順で導出。`displayAvatar` がある場合は丸いアバター画像を表示（名刺サムネイルの代わり）。`MiniBlock` コンポーネントと `THEMES` 定数をファイル冒頭に定義し、meishiProfile.blocks があればベントーグリッドをインライン表示（「今すぐ繋がる」とメールセクションの間）。SNSも meishiProfile.extracted_sns のライブデータを優先。**複数名刺対応**: チップバーで名刺切替（`activeCardIdx` state）。「🔄 再スキャン」は複数枚時にカード選択シートを経由。「＋ 名刺を追加」はOCR（preview_only）→確認シート→`add-card` API追記。出会い履歴は `/api/encounters/list` から取得し `met_at` 降順表示。Send/rescan/add-card buttons shown only to `owner_id === user.id`。i18nはrequire()でJSONをバンドル（Vercel serverless cwd対応）。 |
+| `contacts/[id].js` | Contact detail — 繋がりハブ。**meishi-mailerユーザー検出**: contact.emailで `/api/profile/find-by-email` を呼び、meishi-mailerユーザーであれば name/company/title/email/phone/avatar/extracted_sns/blocks/profile_theme をライブデータで上書き表示。`displayName`/`displayCompany`/`displayEmail` 等の表示変数は meishiProfile → activeCard → contact の優先順で導出。`displayAvatar` がある場合は丸いアバター画像を表示（名刺サムネイルの代わり）。`MiniBlock` コンポーネントと `THEMES` 定数をファイル冒頭に定義し、meishiProfile.blocks があればベントーグリッドをインライン表示（「今すぐ繋がる」と交流履歴の間）。SNSも meishiProfile.extracted_sns のライブデータを優先。**複数名刺対応**: チップバーで名刺切替（`activeCardIdx` state）。activeCardIdx===0はKoryuライブデータ優先、1以降はカード固有データを表示。「🔄 再スキャン」は複数枚時にカード選択シートを経由。「＋ 名刺を追加」はOCR（preview_only）→確認シート（同メール重複時は「更新」「新規追加」の2択）→`add-card` API追記。**コンタクト・カード削除**: 「削除」ボタンでコンタクト丸ごと削除（一覧へ遷移）。チップバーの×ボタンでカード個別削除（2枚以上の場合のみ）。**重複をマージ**: isOwnerのみ。別contactを検索して選択し1つに統合。**交流履歴セクション**: ヘッダーに「交流を記録」「✉ メールを送る」ボタン（isOwner・displayEmailがある場合のみ）。`event_name === 'メール送信'` のencounterは✉アイコン付き特別表示。**AIメール生成フロー**: 「メールを送る」→ sheet-overlayでシチュエーション選択（5種）+ メモ入力 → `/api/contacts/generate-email` でAI生成 → プレビュー・編集sheet → `/api/send` で送信（encounterに自動記録）。交流履歴は `/api/encounters/list` から取得し `met_at` 降順表示。Send/rescan/add-card buttons shown only to `owner_id === user.id`。i18nはrequire()でJSONをバンドル（Vercel serverless cwd対応）。 |
 | `login.js` | Email/password login + signup + password reset (forgot mode). signUp に `emailRedirectTo` を指定して現在のロケールURLへリダイレクト。 |
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
@@ -47,12 +47,17 @@ No test framework is configured.
 - `GET /api/auth/gmail/callback` — Gmail OAuth2 callback. Exchanges authorization code for tokens, fetches Gmail address via userinfo, saves `gmail_refresh_token` + `gmail_email` + `smtp_provider='gmail'` to `profiles`. 成功・エラーともに `/auth/gmail-done?status=...&email=...` にリダイレクト（旧: `/settings/profile?gmail=...`）。ポップアップ経由なのでメインウィンドウのSupabaseセッションを破壊しない。
 
 **Contacts**
-- `POST /api/contacts/save` — saves contact; looks up `profiles.current_organization_id` server-side to set `organization_id`. insert成功後、`encounters` テーブルに初回出会いを自動挿入。
+- `POST /api/contacts/save` — saves contact; looks up `profiles.current_organization_id` server-side to set `organization_id`. insert成功後、`encounters` テーブルに初回交流を自動挿入。`koryu_user_id` を受け取りinsert時に含める。
 - `GET /api/contacts/list` — returns own contacts (all visibility) + team-shared contacts from all orgs the user belongs to. Includes `organization_name` field on each contact.
 - `POST /api/contacts/update-visibility` — toggles `private`/`team` on a contact (owner only)
 - `POST /api/contacts/rescan` — 名刺画像（base64）をOCRして既存contactを更新。`card_index`（更新対象カード番号、default 0）、`image_url`（Storage URL、card_image_urlsに追記）、`preview_only`（OCRのみ・DB更新なし、add-card確認フローで使用）をサポート。`card_index=0` 時のみ主フィールド（name/company/email等）を更新。`extracted_sns` はマージ（既存SNSを消さない）。
 - `POST /api/contacts/add-card` — 新しい名刺データを `contacts.cards` 配列に追記し、`image_url` を `card_image_urls` に追記する。既存Contactに複数社の名刺を紐付けるためのAPI。
 - `POST /api/contacts/update-connected-sns` — `contacts.connected_sns` JSONB を PATCH 更新。「✓ 繋がった」ボタンから呼び出し。
+- `POST /api/contacts/merge` — 2つのcontactを1つにマージ。keep_id側を残し、merge_id側のcards/card_image_urls/encounters/SNSを統合して削除。トップレベルフィールドはfillEmpty（keep側がnull/空の場合のみmerge側の値を使う）。`koryu_user_id` も fillEmpty で保持。owner_idチェックあり。
+- `POST /api/contacts/delete` — contactを削除。encountersはCASCADE DELETEで自動消去。owner_idチェックあり。
+- `POST /api/contacts/delete-card` — `contacts.cards[]` から1枚削除。`card_index` を指定。最後の1枚は削除不可（400エラー）。`card_index=0` 削除時はトップレベルフィールドを新 `cards[0]` で更新。`card_image_urls` も同期。
+- `POST /api/contacts/update-koryu-user-id` — `contacts.koryu_user_id` を更新。QRスキャン時にemailで既存contactを発見した場合に非同期で紐付け更新する。owner_idチェックあり。
+- `POST /api/contacts/generate-email` — Claude APIを使ってメール文を生成。`contact_id`・`situation`・`memo` を受け取り、contacts情報＋直近5件のencounters履歴＋送信者プロフィールをコンテキストとして渡す。`{ subject, body }` を返す。モデル: `claude-opus-4-5`。
 
 **Encounters**
 - `POST /api/encounters/save` — encounter 1件保存。`contact_id` の `owner_id === user.id` を確認してからinsert。
@@ -60,7 +65,7 @@ No test framework is configured.
 
 **Core**
 - `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。**meishi-mailerユーザー検出**: OCR抽出メールアドレスで `profiles` テーブルを検索し、自分以外のユーザーがヒットすれば `meishi_user: { user_id, name, avatar_url, profile_url }` をレスポンスに含める。クライアントはCONFIRM画面にバッジを表示。
-- `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured.
+- `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured. `contact_id` が含まれる場合、送信成功後に `encounters` テーブルへ自動insert（`event_name='メール送信'`、`memo=件名`）。既存の動作は変えない（`contact_id` がない場合は従来通り）。
 
 **Billing**
 - `POST /api/billing/create-checkout-session` — creates Stripe Checkout session for Pro plan. Reuses existing `stripe_customer_id` if present. `success_url`/`cancel_url` built from request headers.
@@ -124,20 +129,22 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - Every user has exactly one `role='owner'` row (their own org) plus zero or more `role='member'` rows
 - RLS has recursion issues — always query via supabaseAdmin in API routes
 
-**`contacts`** — `id, owner_id, organization_id, name, company, department, title, email, phone, card_image_urls (text[]), cards (jsonb[]), extracted_sns (jsonb), connected_sns (jsonb DEFAULT '{}'), subject, body, mail_sent_at, location, event_name, met_at, temperature (hot|normal|watch), memo, visibility (private|team), created_at`
+**`contacts`** — `id, owner_id, organization_id, name, company, department, title, email, phone, card_image_urls (text[]), cards (jsonb[]), extracted_sns (jsonb), connected_sns (jsonb DEFAULT '{}'), koryu_user_id (uuid FK → profiles.id ON DELETE SET NULL), subject, body, mail_sent_at, location, event_name, met_at, temperature (hot|normal|watch), memo, visibility (private|team), created_at`
 - `owner_id` = auth user UUID (not `user_id`)
 - `organization_id` = copied from owner's `profiles.current_organization_id` at save time
 - `visibility` defaults to `'private'`
 - `cards`: OCR結果を1枚ずつ格納した配列。`cards[0]` が主カード（name/company/email等のトップレベルフィールドと同期）。複数社の名刺を1 Contactに紐付けるために使用。
 - `extracted_sns`: 名刺から抽出したSNS情報（プラットフォーム→値のmap）。rescan時にマージ（既存を上書きしない）。
 - `connected_sns`: 「✓ 繋がった」済みのSNS（プラットフォーム→値のmap）。
+- `koryu_user_id`: Koryuユーザーと紐付けるための外部キー。名刺スキャン時に `meishi_user` が検出された場合、またはQRスキャン時に自動セット。email変更があっても同一人物として追跡できる。nullable。
 
 **`encounters`** — `id, contact_id (FK → contacts.id, CASCADE DELETE), met_at, event_name, location, memo, temperature (hot|normal|watch), photo_urls (text[]), created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
-- `contacts/save` 実行時に初回出会いとして自動挿入される
-- 重複名刺撮影時にDUPLICATE画面から「この出会いを記録する」で追記可能
-- `photo_urls`: 出会い時の写真URLの配列（Supabase Storage `encounters` バケット）
-- `contacts/[id].js` の出会い履歴セクションで `met_at` 降順表示
+- `contacts/save` 実行時に初回交流として自動挿入される
+- 重複名刺撮影時にDUPLICATE画面から「この交流を記録する」で追記可能
+- メール送信時（`/api/send` に `contact_id` を渡した場合）に `event_name='メール送信'`、`memo=件名` で自動挿入される
+- `photo_urls`: 交流時の写真URLの配列（Supabase Storage `encounters` バケット）
+- `contacts/[id].js` の交流履歴セクションで `met_at` 降順表示。`event_name === 'メール送信'` のencounterは✉アイコン付きで特別表示
 
 **`profile_affiliations`** — `id, user_id (FK → profiles.id), company_name, title, order_index, phone, website, contact_email, show_phone (DEFAULT false), show_website (DEFAULT true), show_email (DEFAULT false), created_at`
 - RLS無効（supabaseAdmin経由のみアクセス）
@@ -314,3 +321,16 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - ブロックタイプ選択モーダルに制約テキスト追加（サイズ別の表示制限を事前告知）
 - bioフィールドに文字数カウンター追加（XX/100文字・サイズ別目安表示）
 - Vercel Preview環境に環境変数（NEXT_PUBLIC_SUPABASE_URL等）を追加しPreviewビルド修正
+
+**2026-05-19 コンタクト管理・交流フロー大幅強化完了。**
+
+- contactsテーブルに `koryu_user_id` カラム追加（Koryuユーザーとの安定した紐付け。email変更に強い）
+- コンタクトマージ機能（手動マージ + DUPLICATE画面からの名刺追加）
+- カード個別削除・コンタクト丸ごと削除（UIの即時反映対応）
+- 名刺追加時の重複選択UI（同メールアドレス時に「更新」「新規追加」の2択）
+- チップ切替の表示優先順修正（activeCardIdx===0はKoryuライブデータ優先、別会社カードは固有データ表示）
+- QRスキャン時の重複チェック（koryu_user_id優先→emailフォールバック、emailヒット時は非同期でkoryu_user_id紐付け更新）
+- 「出会い」→「交流」へテキスト統一（i18n + ハードコード箇所。アプリ名Koryuと一致）
+- メール送信を交流履歴セクションに統合・旧collapsibleメールUIを削除
+- AIメール生成フロー実装（シチュエーション選択→`/api/contacts/generate-email`→プレビュー編集→送信）
+- メール送信後にencountersへ自動記録（`event_name='メール送信'`、✉アイコン付き特別表示）
