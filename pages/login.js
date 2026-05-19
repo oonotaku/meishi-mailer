@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import { supabase } from '../lib/supabase'
+import * as gtag from '../lib/gtag'
 
 export default function Login() {
   const { t, i18n } = useTranslation('common')
@@ -62,6 +63,7 @@ export default function Login() {
       if (err) {
         setError(err.message)
       } else {
+        gtag.event({ action: 'sign_up', category: 'engagement', label: 'email' })
         setInfo(t('login.confirm_sent'))
       }
     }
