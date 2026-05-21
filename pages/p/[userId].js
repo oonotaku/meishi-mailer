@@ -780,10 +780,10 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
             )}
 
             {/* 3. SNSアイコン（カードなし・センタリング） */}
-            {SNS_CONFIG.some(cfg => profile[cfg.key]) && (
+            {SNS_CONFIG.some(cfg => profile[cfg.key] && cfg.key !== 'sns_line' && cfg.key !== 'sns_whatsapp') && (
               <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 16px',
                 display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-                {SNS_CONFIG.filter(cfg => profile[cfg.key]).map(cfg => {
+                {SNS_CONFIG.filter(cfg => profile[cfg.key] && cfg.key !== 'sns_line' && cfg.key !== 'sns_whatsapp').map(cfg => {
                   const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
                   const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
                   return (
