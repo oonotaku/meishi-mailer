@@ -555,6 +555,111 @@ function AffiliationBlock({ block, theme }) {
   )
 }
 
+function ConnectBar({ profile }) {
+  const lineUrl = (() => {
+    const raw = profile.sns_line
+    if (!raw) return null
+    if (raw.startsWith('http')) return raw
+    return `https://line.me/ti/p/~${raw}`
+  })()
+
+  const waUrl = (() => {
+    const raw = profile.sns_whatsapp
+    if (!raw) return null
+    if (raw.startsWith('http')) return raw
+    const digits = raw.replace(/\D/g, '')
+    return `https://wa.me/${digits}`
+  })()
+
+  if (!lineUrl && !waUrl) return null
+
+  return (
+    <div style={{
+      background: '#16a34a',
+      borderRadius: 20,
+      padding: '16px 16px 12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+    }}>
+      <div style={{
+        fontSize: 11,
+        fontWeight: 700,
+        color: 'rgba(255,255,255,0.7)',
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+      }}>
+        つながりましょう
+      </div>
+
+      {lineUrl && (
+        <a
+          href={lineUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#ffffff',
+            borderRadius: 12,
+            padding: '13px 16px',
+            textDecoration: 'none',
+            fontWeight: 700,
+            fontSize: 14,
+            color: '#06C755',
+          }}
+          onTouchStart={e => e.currentTarget.style.opacity = '0.85'}
+          onTouchEnd={e => e.currentTarget.style.opacity = '1'}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img
+              src="https://cdn.simpleicons.org/line/06C755"
+              width={20} height={20} alt="LINE"
+              style={{ display: 'block', flexShrink: 0 }}
+            />
+            LINEで友達追加
+          </span>
+          <span style={{ fontSize: 16 }}>→</span>
+        </a>
+      )}
+
+      {waUrl && (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'rgba(255,255,255,0.18)',
+            borderRadius: 12,
+            padding: '13px 16px',
+            textDecoration: 'none',
+            fontWeight: 700,
+            fontSize: 14,
+            color: '#ffffff',
+            border: '1px solid rgba(255,255,255,0.25)',
+          }}
+          onTouchStart={e => e.currentTarget.style.opacity = '0.85'}
+          onTouchEnd={e => e.currentTarget.style.opacity = '1'}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img
+              src="https://cdn.simpleicons.org/whatsapp/ffffff"
+              width={20} height={20} alt="WhatsApp"
+              style={{ display: 'block', flexShrink: 0 }}
+            />
+            WhatsAppでつながる
+          </span>
+          <span style={{ fontSize: 16 }}>→</span>
+        </a>
+      )}
+    </div>
+  )
+}
+
 export default function PublicProfile({ profile, blocks, affiliations, showAsPro, activeSns }) {
   const theme = THEMES.find(t => t.id === profile.profile_theme) || THEMES[0]
 
@@ -601,6 +706,9 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
           </div>
         </div>
 
+        {/* ── SNS接続バー（全ユーザー共通・LINE/WhatsApp設定時のみ表示） ── */}
+        <ConnectBar profile={profile} theme={theme} />
+
         {/* ── Pro: 所属フッター ── */}
         {showAsPro && affiliations.length > 0 && (
           <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -641,6 +749,9 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
                 )}
               </div>
             </div>
+
+            {/* 1b. SNS接続バー */}
+            <ConnectBar profile={profile} theme={theme} />
 
             {/* 2. 所属一覧（カードなし・テキストのみ） */}
             {affiliations.length > 0 && (
