@@ -932,6 +932,25 @@ export default function ContactDetail() {
   const displayWebsite = isMainCard ? (meishiProfile?.website || activeCard?.website || contact?.website || '') : (activeCard?.website || contact?.website || '')
   const displayAvatar  = isMainCard ? (meishiProfile?.avatar_url || null) : null
 
+  function linkifyMemo(text) {
+    if (!text) return text
+    const urlRegex = /(https:\/\/koryu\.app\/p\/[^\s]+)/g
+    const parts = text.split(urlRegex)
+    return parts.map((part, i) =>
+      urlRegex.test(part) ? (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: '#22c55e', wordBreak: 'break-all' }}
+        >
+          {part}
+        </a>
+      ) : part
+    )
+  }
+
   const formatDate = (iso) => {
     if (!iso) return ''
     return new Date(iso).toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US', {
@@ -1380,19 +1399,28 @@ export default function ContactDetail() {
             </div>
           )}
 
-          {/* meishi-mailerユーザーバッジ */}
-          {meishiProfile && (
+          {/* Koryuプロフィールボタン */}
+          {contact.koryu_user_id && (
             <a
-              href={meishiProfile.profile_url}
+              href={`https://koryu.app/p/${contact.koryu_user_id}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                fontSize: 12, color: '#22c55e', textDecoration: 'none',
-                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#16a34a',
+                color: '#ffffff',
+                borderRadius: 12,
+                padding: '14px 18px',
+                textDecoration: 'none',
+                fontWeight: 700,
+                fontSize: 15,
+                margin: '12px 0',
               }}
             >
-              ✓ Koryuユーザー　プロフィールを見る →
+              <span>✓ Koryuプロフィールを見る</span>
+              <span>→</span>
             </a>
           )}
 
@@ -1751,7 +1779,7 @@ export default function ContactDetail() {
                       <div className="enc-meta" style={{ fontFamily: 'DM Mono, monospace', fontSize: 11 }}>
                         {formatDate(enc.met_at || enc.created_at)}
                       </div>
-                      {enc.memo && <div className="enc-memo">{enc.memo}</div>}
+                      {enc.memo && <div className="enc-memo">{linkifyMemo(enc.memo)}</div>}
                     </div>
                   ) : (
                     <div key={enc.id} className="enc-item">
@@ -1769,7 +1797,7 @@ export default function ContactDetail() {
                           {TEMP_OPTIONS.find(o => o.value === enc.temperature)?.emoji}
                         </span>
                       )}
-                      {enc.memo && <div className="enc-memo">{enc.memo}</div>}
+                      {enc.memo && <div className="enc-memo">{linkifyMemo(enc.memo)}</div>}
                       {enc.photo_urls?.length > 0 && (
                         <div className="enc-photos">
                           {enc.photo_urls.map((url, pi) => (
