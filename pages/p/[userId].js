@@ -706,8 +706,8 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
           </div>
         </div>
 
-        {/* ── SNS接続バー（全ユーザー共通・LINE/WhatsApp設定時のみ表示） ── */}
-        <ConnectBar profile={profile} theme={theme} />
+        {/* ── SNS接続バー（Proユーザーのみ・LINE/WhatsApp設定時） ── */}
+        {showAsPro && <ConnectBar profile={profile} theme={theme} />}
 
         {/* ── Pro: 所属フッター ── */}
         {showAsPro && affiliations.length > 0 && (
