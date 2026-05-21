@@ -1589,29 +1589,6 @@ export default function ContactDetail() {
 
           </div>
 
-          {/* ── meishi-mailerプロフィールブロック ── */}
-          {meishiProfile?.blocks?.length > 0 && (() => {
-            const theme = THEMES.find(t => t.id === meishiProfile.profile_theme) || THEMES[0]
-            return (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
-                  プロフィール
-                </div>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 8,
-                  padding: '16px',
-                  background: theme.bg,
-                  borderRadius: 16,
-                }}>
-                  {meishiProfile.blocks.map((block, i) => (
-                    <MiniBlock key={block.id || i} block={block} theme={theme} />
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
 
           {/* ── メール送信シート: シチュエーション選択 ── */}
           {emailStep === 'situation' && (
