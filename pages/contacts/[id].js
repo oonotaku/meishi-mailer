@@ -1594,29 +1594,22 @@ export default function ContactDetail() {
 
           {/* ── メール送信セクション ── */}
           {isOwner && (displayEmail || contact?.koryu_user_id) && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{
-                fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)',
-                letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10,
-              }}>
-                メール
+            <div className="section">
+              <div className="section-hd">
+                <span className="section-label">{i18n.language === 'ja' ? 'メール' : 'Email'}</span>
               </div>
               <button
                 onClick={() => setEmailStep('situation')}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: 12, padding: '14px 16px',
-                  color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                }}
+                className="sns-link-btn"
+                style={{ width: '100%', '--sns-color': '#3a3a4a' }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 16 }}>✉️</span>
-                  {i18n.language === 'ja' ? 'メールを送る' : 'Send Email'}
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16 }}>→</span>
+                <span style={{ fontSize: 18 }}>✉️</span>
+                <div className="sns-link-text">
+                  <span className="sns-link-label">
+                    {i18n.language === 'ja' ? 'メールを送る' : 'Send Email'}
+                  </span>
+                </div>
+                <span className="sns-link-arrow">→</span>
               </button>
             </div>
           )}
