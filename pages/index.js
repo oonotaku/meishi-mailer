@@ -632,419 +632,116 @@ export default function Home() {
       <Head>
         <title>Koryu — 名刺交換した出会いを、キャリアの武器に。</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="転職・独立・副業を考えたとき、あなたに連絡できる人は何人いますか？Koryuは名刺交換の出会いをSNS繋がりと交流履歴で資産に変えるアプリです。" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+        <meta name="description" content="転職・独立・副業を考えたとき、あなたに連絡できる人は何人いますか？Koryuは名刺交換の出会いをSNSと交流履歴で資産に変えるアプリです。" />
       </Head>
 
-      <div className="lp-shell">
+      <div style={{ background: '#0a0f0a', minHeight: '100vh', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+        <div style={{ maxWidth: 430, margin: '0 auto' }}>
 
-        {/* ── HEADER ── */}
-        <header className="lp-header">
-          <span className="lp-logo">Koryu</span>
-          <div className="lp-header-actions">
-            <button className="lp-lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
-            <a href="/login" className="lp-login-btn">ログイン / Login</a>
-            <a href="/login" className="lp-cta-btn-sm">無料で始める</a>
-          </div>
-        </header>
+          {/* ── ヘッダー ── */}
+          <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10, background: 'rgba(10,15,10,0.9)', backdropFilter: 'blur(8px)' }}>
+            <span style={{ fontWeight: 700, fontSize: 18, color: '#fff', letterSpacing: '0.05em' }}>Koryu</span>
+            <a href="/login" style={{ background: '#16a34a', color: '#fff', borderRadius: 999, padding: '8px 20px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>無料で始める</a>
+          </header>
 
-        {/* ── HERO ── */}
-        <section className="lp-hero">
-          <div className="lp-hero-text">
-            <p className="lp-eyebrow" style={{ color: '#16a34a', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+          {/* ── Hero ── */}
+          <section style={{ padding: '88px 20px 40px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#16a34a', marginBottom: 20 }}>
               for ambitious professionals
             </p>
-            <h1 className="lp-hero-title">
+            <h1 style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.45, marginBottom: 20, color: '#fff' }}>
               名刺交換した人たちは、<br />
-              <span className="lp-hero-accent">あなたの資産だ。</span><br />
+              あなたの資産だ。<br />
               眠らせるな。
             </h1>
-            <p className="lp-hero-sub">
+            <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,0.65)', marginBottom: 32 }}>
               転職・独立・副業——次のキャリアを動かすのは、今まで出会ってきた人たちとの繋がり。
               Koryuは、その出会いを流さずに、個人の武器にするアプリです。
             </p>
-            <div className="lp-hero-ctas">
-              <a href="/login" className="lp-cta-btn">無料で始める →</a>
-              <span className="lp-hero-note">クレジットカード不要</span>
-            </div>
-          </div>
+            <a href="/login" style={{ display: 'block', background: '#16a34a', color: '#fff', textAlign: 'center', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, textDecoration: 'none', marginBottom: 12, boxShadow: '0 4px 20px rgba(22,163,74,0.35)' }}>
+              今すぐ無料で始める
+            </a>
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+              2分で登録 · クレジットカード不要
+            </p>
+          </section>
 
-          {/* Bento Demo */}
-          <div className="lp-bento-wrap">
-            <div className="lp-bento-phone">
-              <div className="lp-bento-grid">
-                {/* Header block L */}
-                <div className="lp-block lp-block-L lp-block-header-demo">
-                  <div className="lp-demo-avatar">山</div>
-                  <div className="lp-demo-info">
-                    <div className="lp-demo-name">山田 太郎</div>
-                    <div className="lp-demo-title">Product Manager</div>
-                    <div className="lp-demo-company">Koryu株式会社</div>
-                  </div>
-                </div>
-                {/* SNS S blocks */}
-                <div className="lp-block lp-block-S" style={{background:'#000000'}}>
-                  <span className="lp-block-sns-icon">𝕏</span>
-                  <span className="lp-block-sns-label">@yamada_t</span>
-                </div>
-                <div className="lp-block lp-block-S" style={{background:'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)'}}>
-                  <span className="lp-block-sns-icon">📷</span>
-                  <span className="lp-block-sns-label">Instagram</span>
-                </div>
-                {/* Text M block */}
-                <div className="lp-block lp-block-M" style={{background:'#1a2e22', color:'#7b9e87'}}>
-                  <div className="lp-block-text-body">「プロダクトで、<br />世界を少し<br />良くしたい。」</div>
-                </div>
-                {/* LinkedIn S block */}
-                <div className="lp-block lp-block-S" style={{background:'#0077b5'}}>
-                  <span className="lp-block-sns-icon">in</span>
-                  <span className="lp-block-sns-label">LinkedIn</span>
-                </div>
-                {/* Link block S */}
-                <div className="lp-block lp-block-S" style={{background:'#f5f0e8', color:'#1a1a1a'}}>
-                  <span className="lp-block-link-title">Portfolio ↗</span>
+          {/* ── 問いかけ ── */}
+          <section style={{ padding: '40px 20px' }}>
+            <div style={{ borderLeft: '3px solid #16a34a', paddingLeft: 16, fontSize: 16, fontWeight: 500, color: 'rgba(255,255,255,0.9)', lineHeight: 1.7, marginBottom: 16 }}>
+              転職・独立を決めたとき、「この人に声をかけよう」と思える相手に、ちゃんと連絡できますか？
+            </div>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, margin: 0 }}>
+              名刺交換は毎回する。でも気づくと、繋がり方がわからなくなっている。
+              会社を離れた瞬間、その縁は消える——そんな経験、ありませんか？
+            </p>
+          </section>
+
+          {/* ── 利用シーン ── */}
+          <section style={{ padding: '0 20px 40px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
+              Koryuを使った動き方
+            </p>
+            {[
+              { title: '名刺交換したその場で、QRコードを見せてLINEで即つながる。', body: '後で聞きそびれることがなくなる。' },
+              { title: '相手があなたのプロフィールページを見る。SNS・経歴・連絡先が一覧で伝わる。', body: '「この人、面白い」と思ってもらえる第一印象を作れる。' },
+              { title: '転職・独立の報告をメールで送る。交流履歴があるから「久しぶりですが」も自然に書ける。', body: '繋がりが武器になる瞬間。' },
+            ].map((item, i) => (
+              <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 20, marginBottom: 14 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', flexShrink: 0, marginTop: 6 }} />
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, marginBottom: 6 }}>{item.title}</p>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, margin: 0 }}>{item.body}</p>
                 </div>
               </div>
-              <div className="lp-bento-url">koryu.app/p/yamada</div>
+            ))}
+          </section>
+
+          {/* ── 機能 ── */}
+          <section style={{ padding: '0 20px 40px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
+              3つの機能
+            </p>
+            {[
+              { icon: '🔗', title: '個人URLを持つ', body: '会社に依存しない、自分だけのプロフィールページ。名刺・SNS・メールに使えます。', sub: 'koryu.app/p/yourname' },
+              { icon: '📱', title: 'QRで即SNS連携', body: 'その場でLINE・WhatsAppの友達追加が完了。「後でフォローします」が不要になります。', sub: null },
+              { icon: '📋', title: '交流履歴が自動で残る', body: '誰と・いつ・どこで出会ったかを記録。いざというときに「あの人」にすぐ連絡できます。', sub: null },
+            ].map((item, i) => (
+              <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 20, marginBottom: 14 }}>
+                <div style={{ fontSize: 22, marginBottom: 10 }}>{item.icon}</div>
+                <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{item.title}</p>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, marginBottom: item.sub ? 10 : 0 }}>{item.body}</p>
+                {item.sub && (
+                  <p style={{ fontSize: 12, fontFamily: 'monospace', color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 8, padding: '6px 10px', margin: 0 }}>{item.sub}</p>
+                )}
+              </div>
+            ))}
+          </section>
+
+          {/* ── フッターCTA ── */}
+          <section style={{ padding: '40px 20px 72px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: 20, padding: '32px 24px', textAlign: 'center' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.5, marginBottom: 12, color: '#fff' }}>
+                次のキャリアの準備を、<br />今日の名刺交換から始めよう
+              </h2>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', marginBottom: 24, lineHeight: 1.6 }}>
+                まず無料で始めて、繋がりを資産に変える。
+              </p>
+              <a href="/login" style={{ display: 'block', background: '#16a34a', color: '#fff', textAlign: 'center', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, textDecoration: 'none', marginBottom: 12, boxShadow: '0 4px 20px rgba(22,163,74,0.35)' }}>
+                Koryuで無料登録する
+              </a>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+                会社メール・個人メールどちらでも · すぐ使える
+              </p>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ── 問いかけ ── */}
-        <section style={{ padding: '48px 20px', maxWidth: 480, margin: '0 auto' }}>
-          <div style={{
-            borderLeft: '3px solid #16a34a',
-            paddingLeft: 16,
-            fontSize: 17,
-            fontWeight: 500,
-            color: 'rgba(255,255,255,0.9)',
-            lineHeight: 1.7,
-            marginBottom: 16,
-          }}>
-            転職・独立を決めたとき、「この人に声をかけよう」と思える相手に、ちゃんと連絡できますか？
-          </div>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
-            名刺交換は毎回する。でも気づくと、繋がり方がわからなくなっている。
-            会社を離れた瞬間、その縁は消える——そんな経験、ありませんか？
-          </p>
-        </section>
-
-        {/* ── 利用シーン ── */}
-        <section style={{ padding: '0 20px 48px', maxWidth: 480, margin: '0 auto' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
-            Koryuを使った動き方
-          </p>
-          {[
-            '名刺交換したその場で、QRコードを見せてLINEで即つながる。後で聞きそびれることがなくなる。',
-            '相手があなたのプロフィールページを見る。SNS・経歴・連絡先が一覧で伝わる。「この人、面白い」と思ってもらえる。',
-            '転職・独立の報告をメールで送る。交流履歴があるから「久しぶりですが」も自然に書ける。繋がりが武器になる瞬間。',
-          ].map((text, i) => (
-            <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', flexShrink: 0, marginTop: 7 }} />
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8 }}>{text}</p>
-            </div>
-          ))}
-        </section>
-
-        {/* ── フッターCTA ── */}
-        <section style={{ padding: '48px 20px 80px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <h2 style={{ fontSize: 20, fontWeight: 500, color: '#fff', lineHeight: 1.5, marginBottom: 12 }}>
-            次のキャリアの準備を、<br />今日の名刺交換から始めよう
-          </h2>
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 20 }}>
-            まず無料で始めて、繋がりを資産に変える。
-          </p>
-          <a href="/login" className="lp-cta-btn">Koryuで無料登録する →</a>
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 10 }}>
-            会社メール・個人メールどちらでも · すぐ使える
-          </p>
-        </section>
-
-        {/* ── FOOTER ── */}
-        <footer className="lp-footer">
-          <span className="lp-footer-logo">Koryu</span>
-          <div className="lp-footer-links">
-            <a href="/privacy" className="lp-footer-link">プライバシーポリシー</a>
-            <span className="lp-footer-sep">·</span>
-            <a href="/terms" className="lp-footer-link">利用規約</a>
-          </div>
-          <p className="lp-footer-copy">© 2026 Koryu / node-bee LLC</p>
-        </footer>
+        </div>
       </div>
 
       <style jsx global>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { background: #f8f7f4; color: #1a1a1a; font-family: 'Noto Sans JP', sans-serif; }
-      `}</style>
-      <style jsx>{`
-        .lp-shell { min-height: 100svh; display: flex; flex-direction: column; }
-
-        /* ── HEADER ── */
-        .lp-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 1rem 1.5rem;
-          background: rgba(248,247,244,0.9);
-          backdrop-filter: blur(12px);
-          border-bottom: 1px solid #e8e4de;
-          position: sticky; top: 0; z-index: 100;
-        }
-        .lp-logo {
-          font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500;
-          color: #7b9e87; letter-spacing: .06em;
-        }
-        .lp-header-actions { display: flex; align-items: center; gap: 8px; }
-        .lp-lang-btn {
-          background: none; border: 1px solid #d0ccc6; border-radius: 4px;
-          color: #8a8680; font-size: 10px; font-family: 'DM Mono', monospace;
-          cursor: pointer; padding: 3px 7px; letter-spacing: .06em;
-        }
-        .lp-lang-btn:hover { border-color: #7b9e87; color: #7b9e87; }
-        .lp-login-btn { font-size: 13px; color: #6b6660; text-decoration: none; padding: 6px 10px; }
-        .lp-login-btn:hover { color: #1a1a1a; }
-        .lp-cta-btn-sm {
-          font-size: 12px; font-weight: 700; color: #fff;
-          background: #7b9e87; text-decoration: none;
-          padding: 8px 16px; border-radius: 8px;
-          font-family: 'Noto Sans JP', sans-serif;
-        }
-        .lp-cta-btn-sm:hover { background: #6a8d76; }
-
-        /* ── HERO ── */
-        .lp-hero {
-          display: flex; flex-direction: column; align-items: center;
-          gap: 3rem; padding: 4rem 1.5rem 3rem; max-width: 900px;
-          margin: 0 auto; width: 100%;
-        }
-        .lp-hero-text { text-align: center; }
-        .lp-eyebrow {
-          font-family: 'DM Mono', monospace; font-size: 11px;
-          letter-spacing: .2em; color: #7b9e87; margin-bottom: 1.25rem;
-        }
-        .lp-hero-title {
-          font-size: clamp(26px, 7vw, 44px); font-weight: 700;
-          line-height: 1.35; color: #1a1a1a; margin-bottom: .75rem;
-        }
-        .lp-hero-accent {
-          color: #7b9e87;
-          background: linear-gradient(135deg, #7b9e87, #5a8070);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .lp-hero-en {
-          font-size: 13px; color: #9a9690; letter-spacing: .04em;
-          font-family: 'DM Mono', monospace; margin-bottom: 1.25rem;
-        }
-        .lp-hero-sub {
-          font-size: 14px; color: #6b6660; line-height: 1.9;
-          margin-bottom: 2rem; max-width: 400px; margin-left: auto; margin-right: auto;
-        }
-        .lp-hero-ctas { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .lp-cta-btn {
-          display: inline-block; background: #7b9e87; color: #fff;
-          font-size: 15px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
-          text-decoration: none; padding: 15px 34px; border-radius: 14px;
-          transition: background .15s;
-        }
-        .lp-cta-btn:hover { background: #6a8d76; }
-        .lp-cta-btn-light {
-          background: #fff; color: #1a1a1a;
-        }
-        .lp-cta-btn-light:hover { background: #f0ede8; }
-        .lp-hero-note { font-size: 12px; color: #aaa9a6; }
-
-        /* ── BENTO DEMO ── */
-        .lp-bento-wrap { width: 100%; display: flex; justify-content: center; }
-        .lp-bento-phone {
-          width: 280px;
-          background: #0a0a0f;
-          border-radius: 28px;
-          padding: 20px 16px 16px;
-          box-shadow: 0 30px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.08);
-        }
-        .lp-bento-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-        }
-        .lp-block {
-          border-radius: 16px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          padding: 12px;
-          position: relative;
-          min-height: 80px;
-        }
-        .lp-block-L { grid-column: span 2; flex-direction: row; align-items: center; gap: 12px; background: #12121e; min-height: 90px; }
-        .lp-block-S { min-height: 80px; justify-content: space-between; }
-        .lp-block-M { min-height: 110px; grid-column: span 1; background: #1a2e22; }
-        .lp-block-header-demo { background: #12121e; }
-        .lp-demo-avatar {
-          width: 48px; height: 48px; border-radius: 50%;
-          background: #7b9e87; color: #fff;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 18px; font-weight: 700; flex-shrink: 0;
-        }
-        .lp-demo-info { flex: 1; min-width: 0; }
-        .lp-demo-name { font-size: 13px; font-weight: 700; color: #f0ede8; margin-bottom: 2px; }
-        .lp-demo-title { font-size: 10px; color: #7b9e87; }
-        .lp-demo-company { font-size: 10px; color: #5a5650; margin-top: 1px; }
-        .lp-block-sns-icon {
-          font-size: 16px; font-weight: 700; color: #fff;
-          font-family: 'DM Mono', monospace;
-        }
-        .lp-block-sns-label { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: auto; }
-        .lp-block-text-body {
-          font-size: 11px; line-height: 1.7; color: #7b9e87; font-weight: 700;
-        }
-        .lp-block-link-title { font-size: 11px; font-weight: 700; color: #1a1a1a; }
-        .lp-bento-url {
-          margin-top: 12px; text-align: center;
-          font-family: 'DM Mono', monospace; font-size: 10px; color: #3a3a4a;
-        }
-
-        /* ── WOW SECTION ── */
-        .lp-wow { background: #1a1a22; padding: 4rem 1.5rem; }
-        .lp-wow-inner { max-width: 680px; margin: 0 auto; text-align: center; }
-        .lp-section-badge {
-          display: inline-block; background: rgba(123,158,135,0.15);
-          color: #7b9e87; font-family: 'DM Mono', monospace;
-          font-size: 10px; letter-spacing: .14em; padding: 4px 12px;
-          border-radius: 999px; border: 1px solid rgba(123,158,135,0.3);
-          margin-bottom: 1rem;
-        }
-        .lp-section-title {
-          font-size: clamp(20px, 5vw, 28px); font-weight: 700;
-          color: #f0ede8; margin-bottom: .5rem; line-height: 1.4;
-        }
-        .lp-section-en {
-          font-size: 12px; color: #5a5650; font-family: 'DM Mono', monospace;
-          letter-spacing: .04em; margin-bottom: 2rem;
-        }
-        .lp-wow-grid {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-          margin-bottom: 1.5rem;
-        }
-        .lp-wow-card {
-          border-radius: 16px; overflow: hidden; padding: 12px;
-          border: 1px solid #2a2a3a;
-        }
-        .lp-wow-card-dark { background: #0e0e16; }
-        .lp-wow-card-sakura { background: #fce8ea; border-color: #f0c0c8; }
-        .lp-wow-card-ocean { background: #0d2a45; border-color: #1e4060; }
-        .lp-wow-theme-label {
-          font-size: 9px; font-family: 'DM Mono', monospace;
-          color: #5a5650; margin-bottom: 8px; letter-spacing: .08em;
-        }
-        .lp-wow-card-sakura .lp-wow-theme-label { color: #c06070; }
-        .lp-wow-card-ocean .lp-wow-theme-label { color: #4a90b8; }
-        .lp-mini-bento { display: flex; flex-direction: column; gap: 5px; }
-        .lp-mini-header { height: 28px; border-radius: 8px; background: #1e1e2a; }
-        .lp-mini-row { display: flex; gap: 5px; }
-        .lp-mini-s { flex: 1; height: 24px; border-radius: 6px; }
-        .lp-mini-m { height: 32px; border-radius: 8px; }
-        .lp-wow-note {
-          font-size: 12px; color: #5a5650; font-family: 'DM Mono', monospace;
-          letter-spacing: .06em;
-        }
-
-        /* ── HOW IT WORKS ── */
-        .lp-how { background: #f8f7f4; padding: 4rem 1.5rem; }
-        .lp-how-inner { max-width: 680px; margin: 0 auto; text-align: center; }
-        .lp-how .lp-section-title { color: #1a1a1a; }
-        .lp-how .lp-section-en { color: #9a9690; }
-        .lp-steps {
-          display: flex; flex-direction: column; gap: 0; align-items: center;
-          margin-top: 2rem;
-        }
-        .lp-step {
-          background: #fff; border: 1px solid #e8e4de; border-radius: 16px;
-          padding: 1.5rem; width: 100%; text-align: center;
-          display: flex; flex-direction: column; align-items: center; gap: 8px;
-        }
-        .lp-step-num {
-          font-family: 'DM Mono', monospace; font-size: 10px;
-          color: #7b9e87; letter-spacing: .1em;
-        }
-        .lp-step-icon { font-size: 28px; }
-        .lp-step-title { font-size: 15px; font-weight: 700; color: #1a1a1a; }
-        .lp-step-body { font-size: 13px; color: #6b6660; line-height: 1.7; }
-        .lp-step-arrow {
-          font-size: 20px; color: #7b9e87; padding: 8px; transform: rotate(90deg);
-        }
-
-        /* ── PRICING ── */
-        .lp-pricing { background: #fff; padding: 4rem 1.5rem; }
-        .lp-pricing-inner { max-width: 560px; margin: 0 auto; text-align: center; }
-        .lp-pricing .lp-section-title { color: #1a1a1a; }
-        .lp-pricing .lp-section-en { color: #9a9690; }
-        .lp-pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 2rem; }
-        .lp-plan-card {
-          background: #f8f7f4; border: 1px solid #e8e4de; border-radius: 16px;
-          padding: 1.5rem 1.25rem; display: flex; flex-direction: column;
-          gap: 8px; position: relative; text-align: left;
-        }
-        .lp-plan-card-pro { background: #0d1610; border-color: #2a3e30; }
-        .lp-plan-badge {
-          position: absolute; top: -10px; right: 14px;
-          background: #7b9e87; color: #fff;
-          font-size: 10px; font-weight: 700; font-family: 'DM Mono', monospace;
-          padding: 2px 10px; border-radius: 4px; letter-spacing: .06em;
-        }
-        .lp-plan-name {
-          font-family: 'DM Mono', monospace; font-size: 11px;
-          letter-spacing: .1em; color: #9a9690;
-        }
-        .lp-plan-card-pro .lp-plan-name { color: #5a7a65; }
-        .lp-plan-price { font-size: 28px; font-weight: 700; color: #1a1a1a; }
-        .lp-plan-card-pro .lp-plan-price { color: #f0ede8; }
-        .lp-plan-period { font-size: 11px; color: #9a9690; }
-        .lp-plan-card-pro .lp-plan-period { color: #5a7a65; }
-        .lp-plan-features { list-style: none; display: flex; flex-direction: column; gap: 6px; flex: 1; margin: 4px 0; }
-        .lp-plan-features li { font-size: 12px; color: #6b6660; }
-        .lp-plan-card-pro .lp-plan-features li { color: #7b9e87; }
-        .lp-plan-features li::before { content: '✓ '; color: #7b9e87; }
-        .lp-plan-btn {
-          display: block; text-align: center; text-decoration: none;
-          padding: 11px; border-radius: 10px; font-size: 13px; font-weight: 700;
-          font-family: 'Noto Sans JP', sans-serif; margin-top: 4px; transition: opacity .15s;
-        }
-        .lp-plan-btn-ghost { border: 1px solid #d0ccc6; color: #6b6660; }
-        .lp-plan-btn-ghost:hover { border-color: #7b9e87; color: #7b9e87; }
-        .lp-plan-btn-primary { background: #7b9e87; color: #fff; }
-        .lp-plan-btn-primary:hover { background: #6a8d76; }
-
-        /* ── FINAL CTA ── */
-        .lp-final-cta {
-          background: linear-gradient(135deg, #1a2e22 0%, #0a1a10 100%);
-          padding: 5rem 1.5rem; text-align: center;
-        }
-        .lp-final-title {
-          font-size: clamp(22px, 6vw, 36px); font-weight: 700;
-          color: #f0ede8; margin-bottom: .75rem; line-height: 1.4;
-        }
-        .lp-final-en {
-          font-size: 12px; color: #5a7a65; font-family: 'DM Mono', monospace;
-          letter-spacing: .04em; margin-bottom: 2rem;
-        }
-
-        /* ── FOOTER ── */
-        .lp-footer {
-          background: #f0ede8; padding: 2rem 1.5rem;
-          display: flex; flex-direction: column; align-items: center; gap: 10px;
-          border-top: 1px solid #e0dcd6;
-        }
-        .lp-footer-logo {
-          font-family: 'DM Mono', monospace; font-size: 14px;
-          font-weight: 500; color: #7b9e87; letter-spacing: .06em;
-        }
-        .lp-footer-links { display: flex; align-items: center; gap: 10px; }
-        .lp-footer-link {
-          font-size: 11px; color: #8a8680; text-decoration: none;
-        }
-        .lp-footer-link:hover { color: #1a1a1a; }
-        .lp-footer-sep { font-size: 11px; color: #c0bcb8; }
-        .lp-footer-copy { font-size: 11px; color: #b0aca8; font-family: 'DM Mono', monospace; }
+        html, body { background: #0a0f0a; }
       `}</style>
     </>
   )
