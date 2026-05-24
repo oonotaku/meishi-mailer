@@ -188,6 +188,7 @@ export default function ProfileSettings() {
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const qrFileRef = useRef(null)
   const cameraRef = useRef(null)
   const libraryRef = useRef(null)
@@ -630,6 +631,59 @@ export default function ProfileSettings() {
       setAffilMsg({ ok: false, text: err.message })
     } finally {
       setAffilSaving(false)
+    }
+  }
+
+  async function handleUnifiedSave() {
+    if (isSaving) return
+    setIsSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      if (snsDirty) {
+        const snsPayload = {}
+        SNS_CONFIG.forEach(f => {
+          const val = snsValues[f.key]?.trim() || ''
+          snsPayload[f.key] = (f.inputMode === 'username' && f.baseUrl && val) ? f.baseUrl + val : val
+        })
+        const r = await fetch('/api/profile/update-sns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(snsPayload),
+        })
+        if (!r.ok) throw new Error((await r.json()).error)
+        setSnsDirty(false)
+      }
+
+      if (affilDirty) {
+        const valid = affiliations.filter(a => a.company_name.trim())
+        const r = await fetch('/api/profile/affiliations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ affiliations: valid.map((a, i) => ({
+            company_name: a.company_name.trim(),
+            title: a.title?.trim() || null,
+            order_index: i,
+            phone: a.phone?.trim() || null,
+            website: a.website?.trim() || null,
+            contact_email: a.contact_email?.trim() || null,
+            show_phone: a.show_phone ?? false,
+            show_website: a.show_website ?? true,
+            show_email: a.show_email ?? false,
+          })) }),
+        })
+        if (!r.ok) throw new Error((await r.json()).error)
+        setAffilDirty(false)
+      }
+
+      if (blocksDirty) {
+        await handleBlocksSave()
+      }
+    } catch (e) {
+      alert('保存に失敗しました: ' + e.message)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -1249,9 +1303,6 @@ export default function ProfileSettings() {
                 <div className={`msg ${snsMsg.ok ? 'success' : 'error'}`} style={{ marginBottom: 12 }}>{snsMsg.text}</div>
               )}
 
-              <button type="button" className="save-btn" onClick={handleSnsSave} disabled={snsSaving}>
-                {snsSaving ? t('profile.saving') : t('profile.save')}
-              </button>
             </div>
             )}
           </div>
@@ -1296,9 +1347,6 @@ export default function ProfileSettings() {
                 <div className={`msg ${affilMsg.ok ? 'success' : 'error'}`}>{affilMsg.text}</div>
               )}
 
-              <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleAffilSave} disabled={affilSaving}>
-                {affilSaving ? t('profile.saving') : t('profile.save')}
-              </button>
 
             </div>
             )}
@@ -1408,11 +1456,6 @@ export default function ProfileSettings() {
                 <div className={`msg ${blocksMsg.ok ? 'success' : 'error'}`} style={{ marginTop: 12 }}>{blocksMsg.text}</div>
               )}
 
-              {blocksDirty && (
-                <button type="button" className="save-btn" style={{ marginTop: 14 }} onClick={handleBlocksSave} disabled={blocksSaving}>
-                  {blocksSaving ? t('profile.saving') : t('profile.save')}
-                </button>
-              )}
             </div>
             )}
           </div>
@@ -1563,6 +1606,34 @@ export default function ProfileSettings() {
             <span className="bn-label">{i18n.language === 'en' ? 'Profile' : 'プロフィール'}</span>
           </div>
         </nav>
+
+        {/* ── 保存FAB ── */}
+        {isDirty && (
+          <button
+            onClick={handleUnifiedSave}
+            disabled={isSaving}
+            style={{
+              position: 'fixed',
+              bottom: 80,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 49,
+              background: isSaving ? 'rgba(22,163,74,0.6)' : '#16a34a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 999,
+              padding: '14px 36px',
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: isSaving ? 'default' : 'pointer',
+              boxShadow: '0 4px 20px rgba(22,163,74,0.4)',
+              transition: 'background 0.2s, opacity 0.2s',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isSaving ? '保存中…' : '💾 変更を保存'}
+          </button>
+        )}
 
         {/* ── プレビューFAB ── */}
         {user && (
@@ -1785,22 +1856,6 @@ export default function ProfileSettings() {
         </div>
       )}
 
-      {isDirty && (
-        <div className="sticky-save-bar">
-          <button
-            type="button"
-            className="sticky-save-btn"
-            onClick={() => {
-              if (snsDirty) handleSnsSave({ preventDefault: () => {} })
-              else if (blocksDirty) handleBlocksSave()
-              else handleAffilSave()
-            }}
-            disabled={snsSaving || blocksSaving || affilSaving}
-          >
-            {(snsSaving || blocksSaving || affilSaving) ? t('profile.saving') : t('profile.save')}
-          </button>
-        </div>
-      )}
 
       {/* ── タイプ選択シート ── */}
       {showTypeSheet && (
