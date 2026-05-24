@@ -1532,13 +1532,13 @@ export default function ContactDetail() {
                   const isConnecting = connectingPlatform === s.platform
                   return (
                     <div key={s.platform} className="sns-row-item">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <a
                           href={s.card_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="sns-link-btn"
-                          style={{ borderColor: s.color, '--sns-color': s.color, flex: 1 }}
+                          style={{ borderColor: s.color, '--sns-color': s.color, flex: 1, minWidth: 0 }}
                         >
                           {s.icon ? (
                             <img
@@ -1555,27 +1555,29 @@ export default function ContactDetail() {
                               {s.label}
                               {s.isManual && <span className="manual-badge">{t('contact.manual_added')}</span>}
                             </span>
-                            <span className="sns-link-sub">{s.card_value?.replace(/^https?:\/\//, '').slice(0, 32)}</span>
+                            <span className="sns-link-sub">{s.card_value?.replace(/^https?:\/\//, '').slice(0, 28)}</span>
                           </div>
                           <span className="sns-link-arrow">→</span>
                         </a>
-                        {isOwner && s.isManual && (
-                          <button
-                            className="remove-sns-btn"
-                            onClick={() => handleRemoveManualSns(s.platform)}
-                            title={t('contact.remove_sns')}
-                          >×</button>
-                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+                          {isOwner && s.isMatch && (
+                            <button
+                              className={`connected-btn-compact ${isConnected ? 'done' : ''}`}
+                              onClick={() => toggleConnected(s.platform, isConnected)}
+                              disabled={isConnecting}
+                            >
+                              {isConnecting ? '…' : isConnected ? t('contact.connected_done') : t('contact.connect_mark')}
+                            </button>
+                          )}
+                          {isOwner && s.isManual && (
+                            <button
+                              className="remove-sns-btn"
+                              onClick={() => handleRemoveManualSns(s.platform)}
+                              title={t('contact.remove_sns')}
+                            >×</button>
+                          )}
+                        </div>
                       </div>
-                      {isOwner && s.isMatch && (
-                        <button
-                          className={`connected-btn ${isConnected ? 'done' : ''}`}
-                          onClick={() => toggleConnected(s.platform, isConnected)}
-                          disabled={isConnecting}
-                        >
-                          {isConnecting ? '…' : isConnected ? `✓ ${t('contact.connected_done')}` : t('contact.connect_mark')}
-                        </button>
-                      )}
                     </div>
                   )
                 })}
@@ -2128,6 +2130,18 @@ export default function ContactDetail() {
         .connected-btn:active { opacity: 0.75; }
         .connected-btn.done { background: rgba(22,163,74,0.25); border-color: #16a34a; color: #4ade80; }
         .connected-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+        .connected-btn-compact {
+          padding: 8px 12px; border-radius: 8px;
+          border: 1.5px solid rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.65);
+          font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+          min-width: 72px; text-align: center;
+          transition: background 0.15s, opacity 0.15s; line-height: 1.3;
+        }
+        .connected-btn-compact:active { opacity: 0.75; }
+        .connected-btn-compact.done { background: rgba(22,163,74,0.25); border-color: #16a34a; color: #4ade80; }
+        .connected-btn-compact:disabled { opacity: 0.5; cursor: default; }
 
         .sns-empty {
           text-align: center; padding: 1.5rem 1rem; display: flex;

@@ -174,7 +174,7 @@
     "sending": "Sending...",
     "page_title_fallback": "Contact Detail",
     "connect_section": "Connect Now",
-    "connect_mark": "🤝 We connected!",
+    "connect_mark": "Connect",
     "connected_done": "Connected ✓",
     "no_sns_match": "No matching SNS found",
     "no_sns_match_hint": "The SNS on this card is not in your profile, or the card has no SNS info",
