@@ -194,6 +194,7 @@ export default function ProfileSettings() {
   const [usernameChecking, setUsernameChecking] = useState(false)
   const [usernameError, setUsernameError] = useState('')
   const [showUsernameWarning, setShowUsernameWarning] = useState(false)
+  const planSectionRef = useRef(null)
   const qrFileRef = useRef(null)
   const cameraRef = useRef(null)
   const libraryRef = useRef(null)
@@ -1182,7 +1183,7 @@ export default function ProfileSettings() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : profile?.plan === 'pro' ? (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
                   <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>koryu.app/p/</span>
@@ -1205,6 +1206,21 @@ export default function ProfileSettings() {
                   style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
                 >
                   {usernameChecking ? '確認中…' : '設定する'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
+                  koryu.app/p/<span style={{ color: 'rgba(255,255,255,0.25)' }}>{user?.id?.slice(0, 8)}…</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setOpenSections(prev => ({ ...prev, plan: true }))
+                    setTimeout(() => planSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#facc15', background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}
+                >
+                  🔒 ProプランでカスタムURLを設定
                 </button>
               </div>
             )}
@@ -1606,7 +1622,7 @@ export default function ProfileSettings() {
             )}
           </div>
 
-          <div className="acc-section">
+          <div className="acc-section" ref={planSectionRef}>
             <div className="acc-header" onClick={() => toggleSection('plan')}>
               <span className="acc-title">{t('profile.section_plan')}</span>
               <span className="acc-chevron">{openSections.plan ? '▲' : '▼'}</span>

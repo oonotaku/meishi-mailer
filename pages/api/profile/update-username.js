@@ -28,8 +28,8 @@ export default async function handler(req, res) {
     .eq('id', user.id)
     .single()
 
-  if (profile?.username && profile?.plan !== 'pro') {
-    return res.status(403).json({ error: 'ユーザー名の変更はProプランのみ可能です' })
+  if (profile?.plan !== 'pro') {
+    return res.status(403).json({ error: 'プロフィールURLの設定はProプランのみ可能です' })
   }
 
   const { data: existing } = await supabaseAdmin
