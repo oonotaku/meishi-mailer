@@ -223,6 +223,7 @@ function computeAllSns(extractedSns, manualSns, profile) {
       isManual: !!(manualSns?.[platform]),
     })
   }
+  results.sort((a, b) => Number(b.isMatch) - Number(a.isMatch))
   return results
 }
 
@@ -2118,11 +2119,14 @@ export default function ContactDetail() {
         .sns-link-arrow { font-size: 16px; color: #5a5650; flex-shrink: 0; }
 
         .connected-btn {
-          align-self: flex-end; background: none; border: 1px solid #1e1e2a;
-          border-radius: 999px; padding: 5px 14px; font-size: 12px; font-family: 'DM Mono', monospace;
-          color: #5a5650; cursor: pointer; transition: all .15s;
+          width: 100%; padding: 12px 16px; border-radius: 10px;
+          border: 1.5px solid rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7);
+          font-size: 14px; font-weight: 600; cursor: pointer; text-align: center;
+          margin-top: 6px; transition: background 0.15s, opacity 0.15s;
         }
-        .connected-btn.done { border-color: #1a3525; color: #7b9e87; background: #0d1f15; }
+        .connected-btn:active { opacity: 0.75; }
+        .connected-btn.done { background: rgba(22,163,74,0.25); border-color: #16a34a; color: #4ade80; }
         .connected-btn:disabled { opacity: .6; cursor: not-allowed; }
 
         .sns-empty {
