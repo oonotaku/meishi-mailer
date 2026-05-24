@@ -1592,6 +1592,34 @@ export default function ContactDetail() {
 
           </div>
 
+          {/* ── メール送信セクション ── */}
+          {isOwner && (displayEmail || contact?.koryu_user_id) && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)',
+                letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10,
+              }}>
+                メール
+              </div>
+              <button
+                onClick={() => setEmailStep('situation')}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 12, padding: '14px 16px',
+                  color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>✉️</span>
+                  {i18n.language === 'ja' ? 'メールを送る' : 'Send Email'}
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16 }}>→</span>
+              </button>
+            </div>
+          )}
 
           {/* ── メール送信シート: シチュエーション選択 ── */}
           {emailStep === 'situation' && (
@@ -1680,20 +1708,9 @@ export default function ContactDetail() {
             <div className="section-hd">
               <span className="section-label">{t('encounter.section_label')}</span>
               {isOwner && !showEncForm && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="add-enc-btn" onClick={() => setShowEncForm(true)}>
-                    + {t('contact.add_encounter')}
-                  </button>
-                  {displayEmail && (
-                    <button
-                      className="add-enc-btn"
-                      style={{ color: '#7b9e87', borderColor: '#1a3525' }}
-                      onClick={() => { setEmailStep('situation'); setEmailSituation(''); setEmailMemo('') }}
-                    >
-                      ✉ {i18n.language === 'ja' ? 'メールを送る' : 'Send email'}
-                    </button>
-                  )}
-                </div>
+                <button className="add-enc-btn" onClick={() => setShowEncForm(true)}>
+                  + {t('contact.add_encounter')}
+                </button>
               )}
             </div>
 
