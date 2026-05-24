@@ -1300,49 +1300,6 @@ export default function ProfileSettings() {
                 {affilSaving ? t('profile.saving') : t('profile.save')}
               </button>
 
-              <div className="section-divider" />
-
-              {/* ── 署名プレビュー ── */}
-              <div className="sig-preview-wrap">
-                <div className="section-label" style={{ marginBottom: '12px' }}>{t('profile.sig_preview_title')}</div>
-                <p className="sig-preview-desc">{t('profile.sig_preview_desc')}</p>
-                <div className="sig-preview-box">
-                  <hr style={{ border: 'none', borderTop: '1px solid #e5e5e5', margin: '0 0 16px 0' }} />
-                  <table cellPadding="0" cellSpacing="0" border="0">
-                    <tbody>
-                      <tr>
-                        <td style={{ paddingRight: '16px', verticalAlign: 'top' }}>
-                          <button type="button" onClick={() => setShowPreview(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'block' }}>
-                            <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://koryu.app/p/${user?.id}`)}&bgcolor=ffffff&color=000000&margin=2`}
-                              width="100" height="100"
-                              alt="Profile QR"
-                              style={{ display: 'block', border: 0 }}
-                            />
-                          </button>
-                          <div style={{ fontSize: '10px', color: '#999', textAlign: 'center', marginTop: '4px' }}>{t('profile.open_profile')}</div>
-                        </td>
-                        <td style={{ verticalAlign: 'middle' }}>
-                          {(localName || profile?.name) && (
-                            <strong style={{ fontSize: '14px', color: '#333' }}>{localName || profile?.name}</strong>
-                          )}
-                          {affiliations[0]?.company_name && (
-                            <div style={{ color: '#555', fontSize: '12px', marginTop: '4px' }}>{affiliations[0].company_name}</div>
-                          )}
-                          {affiliations[0]?.title && (
-                            <div style={{ color: '#777', fontSize: '12px' }}>{affiliations[0].title}</div>
-                          )}
-                          <div style={{ marginTop: '6px', fontSize: '11px' }}>
-                            <button type="button" onClick={() => setShowPreview(true)} style={{ color: '#aaa', textDecoration: 'none', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '11px', fontFamily: 'inherit' }}>
-                              {`https://koryu.app/p/${user?.id}`}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
             )}
           </div>
@@ -3196,7 +3153,7 @@ export default function ProfileSettings() {
         .acc-section { border-bottom: 1px solid rgba(255,255,255,0.08); }
         .acc-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; cursor: pointer; user-select: none; }
         .acc-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.65); letter-spacing: 0.02em; }
-        .acc-chevron { font-size: 10px; color: #3a3a4a; }
+        .acc-chevron { font-size: 10px; color: rgba(255,255,255,0.3); }
         .acc-body { padding-bottom: 1.5rem; }
         .sns-registered-summary {
           display: flex;
