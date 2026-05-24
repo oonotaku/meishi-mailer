@@ -10,7 +10,7 @@ function ConnectionBadge({ contact }) {
   const snsConnected = Object.keys(contact.connected_sns || {}).length > 0
   const encounterCount = contact.encounter_count || 0
 
-  if (!snsConnected && encounterCount <= 1) return null
+  if (!snsConnected && encounterCount === 0) return null
 
   return (
     <div style={{
@@ -154,8 +154,17 @@ export default function Contacts() {
           return (
             <div className="list">
               {displayContacts.map(c => {
+                const isSnsConnected = Object.keys(c.connected_sns || {}).length > 0
                 return (
-                  <button key={c.id} className="card" onClick={() => router.push(`/contacts/${c.id}`)}>
+                  <button
+                    key={c.id}
+                    className="card"
+                    onClick={() => router.push(`/contacts/${c.id}`)}
+                    style={{
+                      background: isSnsConnected ? 'rgba(22,163,74,0.1)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isSnsConnected ? 'rgba(22,163,74,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                    }}
+                  >
                     <div className="avatar">{initials(c.name)}</div>
                     <div className="info">
                       <div className="name">{c.name || t('contacts.no_name')}</div>
