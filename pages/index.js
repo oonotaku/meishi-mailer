@@ -630,9 +630,9 @@ export default function Home() {
   if (!user) return (
     <>
       <Head>
-        <title>{isJa ? 'Koryu — 名刺の裏面が、あなたのSNSハブになる。' : 'Koryu — Your card, reimagined.'}</title>
+        <title>Koryu — 名刺交換した出会いを、キャリアの武器に。</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content={isJa ? '名刺をスキャンするだけで、ベントーグリッドのプロフィールページが完成。SNSでつながる新しい名刺体験。' : 'Scan a business card, create a stunning bento-grid profile, and connect on SNS instantly.'} />
+        <meta name="description" content="転職・独立・副業を考えたとき、あなたに連絡できる人は何人いますか？Koryuは名刺交換の出会いをSNS繋がりと交流履歴で資産に変えるアプリです。" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </Head>
 
@@ -651,13 +651,18 @@ export default function Home() {
         {/* ── HERO ── */}
         <section className="lp-hero">
           <div className="lp-hero-text">
-            <div className="lp-eyebrow">KORYU · 交流</div>
+            <p className="lp-eyebrow" style={{ color: '#16a34a', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+              for ambitious professionals
+            </p>
             <h1 className="lp-hero-title">
-              名刺の裏面が、<br />
-              <span className="lp-hero-accent">あなたのSNSハブ</span>になる。
+              名刺交換した人たちは、<br />
+              <span className="lp-hero-accent">あなたの資産だ。</span><br />
+              眠らせるな。
             </h1>
-            <p className="lp-hero-en">Your card, reimagined as a living profile.</p>
-            <p className="lp-hero-sub">交流会で出会った人を、忘れない。<br />名刺をスキャンして、出会いの記録とSNSプロフィールをひとつに。<br />QRで共有できる、あたらしい名刺体験です。</p>
+            <p className="lp-hero-sub">
+              転職・独立・副業——次のキャリアを動かすのは、今まで出会ってきた人たちとの繋がり。
+              Koryuは、その出会いを流さずに、個人の武器にするアプリです。
+            </p>
             <div className="lp-hero-ctas">
               <a href="/login" className="lp-cta-btn">無料で始める →</a>
               <span className="lp-hero-note">クレジットカード不要</span>
@@ -705,125 +710,54 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── WOW SECTION ── */}
-        <section className="lp-wow">
-          <div className="lp-wow-inner">
-            <div className="lp-section-badge">Profile</div>
-            <h2 className="lp-section-title">
-              こんなプロフィールページが<br />作れます
-            </h2>
-            <p className="lp-section-en">Create a stunning bento-grid profile in minutes.</p>
-            <div className="lp-wow-grid">
-              <div className="lp-wow-card lp-wow-card-dark">
-                <div className="lp-wow-theme-label">Dark</div>
-                <div className="lp-mini-bento lp-mini-dark">
-                  <div className="lp-mini-header"></div>
-                  <div className="lp-mini-row">
-                    <div className="lp-mini-s" style={{background:'#111'}}></div>
-                    <div className="lp-mini-s" style={{background:'#1a3525'}}></div>
-                  </div>
-                  <div className="lp-mini-m" style={{background:'#0e0e16'}}></div>
-                </div>
-              </div>
-              <div className="lp-wow-card lp-wow-card-sakura">
-                <div className="lp-wow-theme-label">Sakura</div>
-                <div className="lp-mini-bento lp-mini-sakura">
-                  <div className="lp-mini-header" style={{background:'#f7d6d9'}}></div>
-                  <div className="lp-mini-row">
-                    <div className="lp-mini-s" style={{background:'#e8a0aa'}}></div>
-                    <div className="lp-mini-s" style={{background:'#f0c0c8'}}></div>
-                  </div>
-                  <div className="lp-mini-m" style={{background:'#fce8ea'}}></div>
-                </div>
-              </div>
-              <div className="lp-wow-card lp-wow-card-ocean">
-                <div className="lp-wow-theme-label">Ocean</div>
-                <div className="lp-mini-bento lp-mini-ocean">
-                  <div className="lp-mini-header" style={{background:'#1a3a5c'}}></div>
-                  <div className="lp-mini-row">
-                    <div className="lp-mini-s" style={{background:'#0d2a45'}}></div>
-                    <div className="lp-mini-s" style={{background:'#1e4060'}}></div>
-                  </div>
-                  <div className="lp-mini-m" style={{background:'#122233'}}></div>
-                </div>
-              </div>
-            </div>
-            <p className="lp-wow-note">6種のテーマ · ブロック自由配置 · QRコード即発行</p>
+        {/* ── 問いかけ ── */}
+        <section style={{ padding: '48px 20px', maxWidth: 480, margin: '0 auto' }}>
+          <div style={{
+            borderLeft: '3px solid #16a34a',
+            paddingLeft: 16,
+            fontSize: 17,
+            fontWeight: 500,
+            color: 'rgba(255,255,255,0.9)',
+            lineHeight: 1.7,
+            marginBottom: 16,
+          }}>
+            転職・独立を決めたとき、「この人に声をかけよう」と思える相手に、ちゃんと連絡できますか？
           </div>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8 }}>
+            名刺交換は毎回する。でも気づくと、繋がり方がわからなくなっている。
+            会社を離れた瞬間、その縁は消える——そんな経験、ありませんか？
+          </p>
         </section>
 
-        {/* ── HOW IT WORKS ── */}
-        <section className="lp-how">
-          <div className="lp-how-inner">
-            <div className="lp-section-badge">How it works</div>
-            <h2 className="lp-section-title">3ステップで完成</h2>
-            <p className="lp-section-en">From card to profile in under a minute.</p>
-            <div className="lp-steps">
-              <div className="lp-step">
-                <div className="lp-step-num">01</div>
-                <div className="lp-step-icon">📸</div>
-                <h3 className="lp-step-title">名刺をスキャン</h3>
-                <p className="lp-step-body">AIが名前・会社・SNSを自動で読み取り</p>
-              </div>
-              <div className="lp-step-arrow">→</div>
-              <div className="lp-step">
-                <div className="lp-step-num">02</div>
-                <div className="lp-step-icon">📝</div>
-                <h3 className="lp-step-title">出会いを記録する</h3>
-                <p className="lp-step-body">いつ・どこで・どんな縁かを残す</p>
-              </div>
-              <div className="lp-step-arrow">→</div>
-              <div className="lp-step">
-                <div className="lp-step-num">03</div>
-                <div className="lp-step-icon">🔗</div>
-                <h3 className="lp-step-title">QRでつながる</h3>
-                <p className="lp-step-body">次の出会いでQRを見せるだけでSNSでつながれる</p>
-              </div>
+        {/* ── 利用シーン ── */}
+        <section style={{ padding: '0 20px 48px', maxWidth: 480, margin: '0 auto' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 20 }}>
+            Koryuを使った動き方
+          </p>
+          {[
+            '名刺交換したその場で、QRコードを見せてLINEで即つながる。後で聞きそびれることがなくなる。',
+            '相手があなたのプロフィールページを見る。SNS・経歴・連絡先が一覧で伝わる。「この人、面白い」と思ってもらえる。',
+            '転職・独立の報告をメールで送る。交流履歴があるから「久しぶりですが」も自然に書ける。繋がりが武器になる瞬間。',
+          ].map((text, i) => (
+            <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', flexShrink: 0, marginTop: 7 }} />
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8 }}>{text}</p>
             </div>
-          </div>
+          ))}
         </section>
 
-        {/* ── PRICING ── */}
-        <section className="lp-pricing">
-          <div className="lp-pricing-inner">
-            <div className="lp-section-badge">Pricing</div>
-            <h2 className="lp-section-title">シンプルな料金体系</h2>
-            <p className="lp-section-en">Start free. Upgrade when you're ready.</p>
-            <div className="lp-pricing-grid">
-              <div className="lp-plan-card">
-                <div className="lp-plan-name">FREE</div>
-                <div className="lp-plan-price">¥0</div>
-                <div className="lp-plan-period">ずっと無料</div>
-                <ul className="lp-plan-features">
-                  <li>名刺スキャン</li>
-                  <li>プロフィール作成</li>
-                  <li>SNSリンク管理</li>
-                  <li>出会い記録</li>
-                </ul>
-                <a href="/login" className="lp-plan-btn lp-plan-btn-ghost">無料で始める</a>
-              </div>
-              <div className="lp-plan-card lp-plan-card-pro">
-                <div className="lp-plan-badge">Pro</div>
-                <div className="lp-plan-name">PRO</div>
-                <div className="lp-plan-price">¥500</div>
-                <div className="lp-plan-period">/ 月（年払い ¥5,000）</div>
-                <ul className="lp-plan-features">
-                  <li>ベントーグリッド編集</li>
-                  <li>6種テーマ選択</li>
-                  <li>QRコード発行</li>
-                  <li>Free の全機能</li>
-                </ul>
-                <a href="/login" className="lp-plan-btn lp-plan-btn-primary">Proで始める</a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── FINAL CTA ── */}
-        <section className="lp-final-cta">
-          <h2 className="lp-final-title">あなたの名刺、<br />もっとリッチに。</h2>
-          <p className="lp-final-en">Your next connection deserves more than a paper card.</p>
-          <a href="/login" className="lp-cta-btn lp-cta-btn-light">今すぐ無料で始める →</a>
+        {/* ── フッターCTA ── */}
+        <section style={{ padding: '48px 20px 80px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 500, color: '#fff', lineHeight: 1.5, marginBottom: 12 }}>
+            次のキャリアの準備を、<br />今日の名刺交換から始めよう
+          </h2>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 20 }}>
+            まず無料で始めて、繋がりを資産に変える。
+          </p>
+          <a href="/login" className="lp-cta-btn">Koryuで無料登録する →</a>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginTop: 10 }}>
+            会社メール・個人メールどちらでも · すぐ使える
+          </p>
         </section>
 
         {/* ── FOOTER ── */}
