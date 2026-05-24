@@ -655,8 +655,7 @@ export default function Home() {
               眠らせるな。
             </h1>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,0.65)', marginBottom: 32 }}>
-              転職・独立・副業——次のキャリアを動かすのは、今まで出会ってきた人たちとの繋がり。
-              Koryuは、その出会いを流さずに、個人の武器にするアプリです。
+              名刺交換したその場でSNSで繋がり、交流履歴を残し、いざという時にメールできる。転職・独立・副業を決めたとき、人脈が武器になる。
             </p>
             <a href="/login" style={{ display: 'block', background: '#16a34a', color: '#fff', textAlign: 'center', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, textDecoration: 'none', marginBottom: 12, boxShadow: '0 4px 20px rgba(22,163,74,0.35)' }}>
               今すぐ無料で始める
