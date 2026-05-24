@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   const { data: rawContacts, error } = await supabaseAdmin
     .from('contacts')
-    .select('*')
+    .select('*, encounters(count)')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -41,6 +41,7 @@ export default async function handler(req, res) {
 
   const result = contacts.map(c => ({
     ...c,
+    encounter_count: c.encounters?.[0]?.count ?? 0,
     card_signed_urls: (c.card_image_urls || []).map(url => {
       const path = extractStoragePath(url)
       return path && signedUrlMap.has(path) ? signedUrlMap.get(path) : url

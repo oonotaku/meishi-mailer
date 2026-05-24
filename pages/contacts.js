@@ -6,6 +6,23 @@ import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslation
 import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
+function ConnectionBadge({ contact }) {
+  const snsConnected = Object.keys(contact.connected_sns || {}).length > 0
+  const encounterCount = contact.encounter_count || 0
+
+  if (!snsConnected && encounterCount <= 1) return null
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 4,
+      fontSize: 12, color: 'rgba(255,255,255,0.55)', flexShrink: 0,
+    }}>
+      {snsConnected && <span style={{ fontSize: 13 }}>🔗</span>}
+      {encounterCount > 1 && <span>交流{encounterCount}回</span>}
+    </div>
+  )
+}
+
 export default function Contacts() {
   const { t, i18n } = useTranslation('common')
   const { user, profile, loading: authLoading } = useRequireAuth()
@@ -144,11 +161,7 @@ export default function Contacts() {
                       <div className="name">{c.name || t('contacts.no_name')}</div>
                       <div className="meta">{c.company || '—'}</div>
                     </div>
-                    <div className="badges">
-                      <div className={`badge ${c.mail_sent_at ? 'sent' : 'unsent'}`}>
-                        {c.mail_sent_at ? t('contacts.sent') : t('contacts.unsent')}
-                      </div>
-                    </div>
+                    <ConnectionBadge contact={c} />
                   </button>
                 )
               })}
