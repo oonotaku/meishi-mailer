@@ -459,6 +459,16 @@ export default function ProfileSettings() {
       ? !!profile?.sender_email
       : !!profile?.sender_email && !!profile?.smtp_host)
 
+  const completionPct =
+    (avatarUrl ? 15 : 0) +
+    ((localName ?? profile?.name) ? 15 : 0) +
+    (bio ? 10 : 0) +
+    (affiliations.filter(a => a.company_name?.trim()).length > 0 ? 15 : 0) +
+    (SNS_CONFIG.some(s => !!profile?.[s.key]) ? 15 : 0) +
+    (isConfigured ? 15 : 0) +
+    (profile?.plan === 'pro' ? 15 : 0)
+  const showCompletionBar = completionPct < 100
+
   async function handleGmailConnect() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
@@ -1757,10 +1767,10 @@ export default function ProfileSettings() {
             disabled={isSaving}
             style={{
               position: 'fixed',
-              bottom: 80,
+              bottom: showCompletionBar ? 200 : 80,
               left: '50%',
               transform: 'translateX(-50%)',
-              zIndex: 49,
+              zIndex: 51,
               background: isSaving ? 'rgba(22,163,74,0.6)' : '#16a34a',
               color: '#fff',
               border: 'none',
@@ -1800,17 +1810,16 @@ export default function ProfileSettings() {
             { id: 'email',  label: t('profile.step_email'), weight: 15, done: isConfigured },
             { id: 'pro',    label: t('profile.step_pro'),   weight: 15, done: profile?.plan === 'pro' },
           ]
-          const pct = steps.reduce((s, x) => s + (x.done ? x.weight : 0), 0)
-          if (pct === 100) return null
+          if (completionPct === 100) return null
           const incomplete = steps.filter(x => !x.done)
           return (
             <div className="completion-fixed">
               <div className="completion-header">
                 <span className="completion-title">{t('profile.completion_title')}</span>
-                <span className="completion-pct">{pct}%</span>
+                <span className="completion-pct">{completionPct}%</span>
               </div>
               <div className="completion-bar-bg">
-                <div className="completion-bar-fill" style={{ width: `${pct}%` }} />
+                <div className="completion-bar-fill" style={{ width: `${completionPct}%` }} />
               </div>
               <div className="completion-chips">
                 {incomplete.map(s => (
