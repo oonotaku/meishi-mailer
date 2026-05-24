@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest,
       sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note,
       phone, website, contact_email, show_phone, show_website, show_email,
-      avatar_url, bio, profile_theme`)
+      avatar_url, bio, profile_theme, username`)
     .eq('id', user.id)
     .single()
 
@@ -81,6 +81,7 @@ export default async function handler(req, res) {
       avatar_url: billingData?.avatar_url ?? null,
       bio: billingData?.bio ?? null,
       profile_theme: billingData?.profile_theme ?? 'dark',
+      username: billingData?.username ?? null,
     },
   })
 }
