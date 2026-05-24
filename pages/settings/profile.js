@@ -189,6 +189,11 @@ export default function ProfileSettings() {
   const [affiliations, setAffiliations] = useState([])
   const [affilSaving, setAffilSaving] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [username, setUsername] = useState('')
+  const [usernameInput, setUsernameInput] = useState('')
+  const [usernameChecking, setUsernameChecking] = useState(false)
+  const [usernameError, setUsernameError] = useState('')
+  const [showUsernameWarning, setShowUsernameWarning] = useState(false)
   const qrFileRef = useRef(null)
   const cameraRef = useRef(null)
   const libraryRef = useRef(null)
@@ -245,6 +250,7 @@ export default function ProfileSettings() {
       if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
       if (profile?.profile_bg_image_url) setBgImageUrl(profile.profile_bg_image_url)
       if (profileTheme === null) setProfileTheme(profile?.profile_theme || 'dark')
+      setUsername(profile?.username || '')
     }
     if (profile !== null && Object.keys(snsValues).length === 0) {
       const initial = {}
@@ -687,6 +693,32 @@ export default function ProfileSettings() {
     }
   }
 
+  async function handleSetUsername() {
+    if (usernameInput.length < 3) return
+    setUsernameChecking(true)
+    setUsernameError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/profile/update-username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ username: usernameInput }),
+      })
+      const json = await r.json()
+      if (!r.ok) {
+        setUsernameError(json.error)
+      } else {
+        setUsername(json.username)
+        setUsernameInput('')
+        setShowUsernameWarning(false)
+      }
+    } catch (e) {
+      setUsernameError('エラーが発生しました')
+    } finally {
+      setUsernameChecking(false)
+    }
+  }
+
   async function handleQrScan(e) {
     const file = e.target.files?.[0]
     if (!file || !qrTarget) return
@@ -1126,6 +1158,101 @@ export default function ProfileSettings() {
           >
             {t('profile.open_public_profile')}
           </button>
+
+          {/* ── プロフィールURL ── */}
+          <div style={{ marginBottom: 24, padding: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10 }}>
+              プロフィールURL
+            </div>
+            {username ? (
+              <div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
+                  koryu.app/p/<span style={{ color: '#4ade80', fontWeight: 700 }}>{username}</span>
+                </div>
+                {profile?.plan === 'pro' ? (
+                  <button
+                    onClick={() => setShowUsernameWarning(true)}
+                    style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}
+                  >
+                    変更する
+                  </button>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    🔒 変更はProプランのみ
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>koryu.app/p/</span>
+                  <input
+                    type="text"
+                    value={usernameInput}
+                    onChange={e => {
+                      setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))
+                      setUsernameError('')
+                    }}
+                    placeholder="yourname"
+                    maxLength={30}
+                    style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '8px 10px', color: '#fff', fontSize: 14 }}
+                  />
+                </div>
+                {usernameError && <div style={{ fontSize: 12, color: '#f87171', marginBottom: 8 }}>{usernameError}</div>}
+                <button
+                  onClick={handleSetUsername}
+                  disabled={usernameChecking || usernameInput.length < 3}
+                  style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {usernameChecking ? '確認中…' : '設定する'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Proユーザー向け変更確認モーダル ── */}
+          {showUsernameWarning && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+              <div style={{ background: '#1a1a2e', borderRadius: 20, padding: 24, maxWidth: 360, width: '100%', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ fontSize: 20, marginBottom: 12 }}>⚠️</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 12 }}>ユーザー名を変更しますか？</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16, lineHeight: 1.6 }}>
+                  現在のURL <span style={{ color: '#4ade80' }}>koryu.app/p/{username}</span> は即座に使用できなくなります。<br /><br />
+                  名刺・SNS・共有済みリンクをすべて更新する必要があります。
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>koryu.app/p/</span>
+                  <input
+                    type="text"
+                    value={usernameInput}
+                    onChange={e => {
+                      setUsernameInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))
+                      setUsernameError('')
+                    }}
+                    placeholder={username}
+                    maxLength={30}
+                    style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px 10px', color: '#fff', fontSize: 14 }}
+                  />
+                </div>
+                {usernameError && <div style={{ fontSize: 12, color: '#f87171', marginBottom: 8 }}>{usernameError}</div>}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    onClick={() => { setShowUsernameWarning(false); setUsernameInput(''); setUsernameError('') }}
+                    style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.7)', fontSize: 14, cursor: 'pointer' }}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={handleSetUsername}
+                    disabled={usernameChecking || usernameInput.length < 3}
+                    style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#dc2626', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {usernameChecking ? '確認中…' : '理解した上で変更する'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="acc-section">
             <div className="acc-header" onClick={() => toggleSection('sns')}>

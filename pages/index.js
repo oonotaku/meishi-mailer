@@ -1241,7 +1241,7 @@ export default function Home() {
                       </div>
                       <div style={{background:'#fff', borderRadius:16, padding:14, display:'inline-block'}}>
                         <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://koryu.app/p/${user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://koryu.app/p/${profile?.username || user.id}`)}&bgcolor=ffffff&color=111111&margin=2`}
                           alt="My QR"
                           style={{width:220, height:220, display:'block'}}
                         />

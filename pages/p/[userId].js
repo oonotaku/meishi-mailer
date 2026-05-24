@@ -939,10 +939,19 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
 }
 
 export async function getServerSideProps({ params, query }) {
-  const { userId } = params
+  const handle = params.userId
   const isPreview = query?.preview === '1'
   const isPreviewMode = !!query.preview
   const simulateFree = query?.simulate_free === '1'
+
+  // usernameとして検索し、ヒットしなければUUIDとして扱う
+  let userId = handle
+  const { data: byUsername } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('username', handle.toLowerCase())
+    .single()
+  if (byUsername) userId = byUsername.id
 
   const [profileRes, blocksRes, affiliationsRes] = await Promise.all([
     supabaseAdmin.from('profiles')
