@@ -162,7 +162,8 @@ export default function Contacts() {
                     onClick={() => router.push(`/contacts/${c.id}`)}
                     style={{
                       background: isSnsConnected ? 'rgba(22,163,74,0.1)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${isSnsConnected ? 'rgba(22,163,74,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                      border: `1px solid ${isSnsConnected ? 'rgba(22,163,74,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                      ...(isSnsConnected && { boxShadow: 'inset 3px 0 0 #16a34a' }),
                     }}
                   >
                     <div className="avatar">{initials(c.name)}</div>
