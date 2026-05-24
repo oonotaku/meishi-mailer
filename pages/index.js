@@ -876,8 +876,8 @@ export default function Home() {
                           style={{width:220, height:220, display:'block'}}
                         />
                       </div>
-                      <div style={{fontSize:11, color:'#5a5a7a', fontFamily:'DM Mono, monospace', textAlign:'center'}}>
-                        koryu.app/p/{user.id.slice(0,16)}...
+                      <div style={{fontSize:13, color:'#c8c4e0', fontFamily:'DM Mono, monospace', textAlign:'center', letterSpacing:'0.02em', fontWeight:600}}>
+                        koryu.app/p/{profile?.username || user.id.slice(0, 16) + '...'}
                       </div>
                       <button className="qr-sheet-cancel" style={{width:'100%'}} onClick={() => { setShowMyQr(false); setShowQrSheet(false) }}>
                         {i18n.language === 'en' ? 'Close' : '閉じる'}
