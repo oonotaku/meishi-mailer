@@ -3193,9 +3193,9 @@ export default function ProfileSettings() {
           border-color: #7b9e87;
           background: #0d1f15;
         }
-        .acc-section { border-bottom: 1px solid #1e1e2a; }
+        .acc-section { border-bottom: 1px solid rgba(255,255,255,0.08); }
         .acc-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; cursor: pointer; user-select: none; }
-        .acc-title { font-size: 14px; font-weight: 700; color: #f0ede8; }
+        .acc-title { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); letter-spacing: 0.01em; }
         .acc-chevron { font-size: 10px; color: #3a3a4a; }
         .acc-body { padding-bottom: 1.5rem; }
         .sns-registered-summary {
