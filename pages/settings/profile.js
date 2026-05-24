@@ -3195,7 +3195,7 @@ export default function ProfileSettings() {
         }
         .acc-section { border-bottom: 1px solid rgba(255,255,255,0.08); }
         .acc-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; cursor: pointer; user-select: none; }
-        .acc-title { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); letter-spacing: 0.01em; }
+        .acc-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.65); letter-spacing: 0.02em; }
         .acc-chevron { font-size: 10px; color: #3a3a4a; }
         .acc-body { padding-bottom: 1.5rem; }
         .sns-registered-summary {
