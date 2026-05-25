@@ -733,7 +733,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         )}
         <div className="card">
           <div className="bento-grid">
-            {blocks.map((block, i) => {
+            {blocks.filter(b => b.type !== 'affiliation').map((block, i) => {
               const sizeClass =
                 block.size === 'L'  ? 'block-L'  :
                 block.size === 'XL' ? 'block-XL' :
