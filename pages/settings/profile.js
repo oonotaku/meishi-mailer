@@ -1564,11 +1564,11 @@ export default function ProfileSettings() {
                 </div>
               </div>
 
-              {blocks.length === 0 && (
+              {blocks.filter(b => b.type !== 'affiliation').length === 0 && (
                 <div className="blocks-empty">まだブロックがありません。追加してプロフィールをカスタマイズしましょう。</div>
               )}
 
-              {blocks.map((block, index) => (
+              {blocks.map((block, index) => block.type === 'affiliation' ? null : (
                 <div key={block.id || index} className="block-item">
                   <div className="block-item-left">
                     <span className="block-item-type-badge">{BLOCK_TYPE_LABELS[block.type]}</span>
@@ -1604,6 +1604,10 @@ export default function ProfileSettings() {
               <button type="button" className="add-block-btn" onClick={() => setShowTypeSheet(true)}>
                 {t('profile.add_block')}
               </button>
+
+              <p style={{ fontSize: 12, color: '#5a5650', marginTop: 10, lineHeight: 1.6 }}>
+                {t('profile.blocks_affil_note')}
+              </p>
 
               {blocksMsg && (
                 <div className={`msg ${blocksMsg.ok ? 'success' : 'error'}`} style={{ marginTop: 12 }}>{blocksMsg.text}</div>
