@@ -1840,8 +1840,8 @@ export default function ContactDetail() {
         }
         .header-center { flex: 1; display: flex; justify-content: center; }
         .lang-btn {
-          background: none; border: 1px solid #2a2a3a; border-radius: 4px;
-          color: #5a5650; font-size: 10px; font-family: 'DM Mono', monospace;
+          background: none; border: 1px solid #3a3a4a; border-radius: 4px;
+          color: #7a7670; font-size: 10px; font-family: 'DM Mono', monospace;
           cursor: pointer; padding: 3px 8px; letter-spacing: .06em;
         }
         .vis-toggle {

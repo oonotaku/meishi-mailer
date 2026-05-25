@@ -245,7 +245,7 @@ export default function Contacts() {
         }
         .user-email {
           font-size: 11px;
-          color: #3a3a4a;
+          color: #5a5a6a;
           font-family: 'DM Mono', monospace;
           max-width: 130px;
           overflow: hidden;
@@ -255,7 +255,7 @@ export default function Contacts() {
         .logout-btn {
           background: none;
           border: none;
-          color: #3a3a4a;
+          color: #5a5a6a;
           font-size: 11px;
           font-family: 'Noto Sans JP', sans-serif;
           cursor: pointer;
@@ -265,9 +265,9 @@ export default function Contacts() {
         .logout-btn:active { color: #7b9e87; }
         .lang-btn {
           background: none;
-          border: 1px solid #2a2a3a;
+          border: 1px solid #3a3a4a;
           border-radius: 4px;
-          color: #5a5650;
+          color: #7a7670;
           font-size: 12px;
           font-family: 'DM Mono', monospace;
           cursor: pointer;
@@ -309,7 +309,7 @@ export default function Contacts() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #3a3a4a;
+          color: #5a5a6a;
           font-family: 'Noto Sans JP', sans-serif;
           transition: color .15s;
         }
