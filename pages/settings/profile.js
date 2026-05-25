@@ -2487,8 +2487,8 @@ export default function ProfileSettings() {
         <div className="preview-overlay" onClick={() => setShowPreview(false)}>
           <div className="preview-sheet" onClick={e => e.stopPropagation()}>
             <div className="preview-sheet-header">
-              <span className="preview-sheet-title">プロフィール プレビュー</span>
-              <button type="button" className="preview-close-btn" onClick={() => setShowPreview(false)}>✕ 閉じる</button>
+              <span className="preview-sheet-title">{t('profile.preview_modal_title')}</span>
+              <button type="button" className="preview-close-btn" onClick={() => setShowPreview(false)}>{t('profile.preview_modal_close')}</button>
             </div>
             <div className="preview-toggle-bar">
               <button
@@ -2503,7 +2503,7 @@ export default function ProfileSettings() {
                 className={`preview-toggle-btn${previewMode === 'free' ? ' active' : ''}`}
                 onClick={() => setPreviewMode('free')}
               >
-                無課金
+                {t('profile.preview_tab_free')}
               </button>
             </div>
             <iframe
