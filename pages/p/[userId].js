@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import { supabaseAdmin } from '../../lib/supabaseAdmin'
 import { SNS_CONFIG } from '../../lib/snsConfig'
@@ -10,6 +11,29 @@ const THEMES = [
   { id: 'sakura',   bg: '#fff0f3', card: '#ffffff', accent: '#f43f5e', text: '#1a1a1a' },
   { id: 'grape',    bg: '#130d1f', card: '#1e1035', accent: '#a855f7', text: '#f3e8ff' },
 ]
+
+const UI_STRINGS = {
+  ja: {
+    connectTitle: 'つながりましょう',
+    lineBtn: 'LINEで友達追加',
+    waBtn: 'WhatsAppでつながる',
+    ctaTitle: '名刺を受け取ったら、Koryuで繋がろう',
+    ctaBody: '名刺をスキャンするだけで、相手のSNSに自動でつながれるアプリです。無料で始められます。',
+    ctaLink: 'Koryuを試してみる →',
+    banner: '名刺から、SNSでつながる。',
+    nameUnset: '名前未設定',
+  },
+  en: {
+    connectTitle: 'Connect with me',
+    lineBtn: 'Add on LINE',
+    waBtn: 'Connect on WhatsApp',
+    ctaTitle: 'Got my card? Connect on Koryu',
+    ctaBody: 'Scan business cards and instantly connect on SNS. Free to start.',
+    ctaLink: 'Try Koryu →',
+    banner: 'From cards to SNS connections.',
+    nameUnset: 'Name not set',
+  },
+}
 
 function initials(name) {
   if (!name) return '?'
@@ -555,7 +579,7 @@ function AffiliationBlock({ block, theme }) {
   )
 }
 
-function ConnectBar({ profile }) {
+function ConnectBar({ profile, strings }) {
   const lineUrl = (() => {
     const raw = profile.sns_line
     if (!raw) return null
@@ -589,7 +613,7 @@ function ConnectBar({ profile }) {
         letterSpacing: '0.05em',
         textTransform: 'uppercase',
       }}>
-        つながりましょう
+        {strings.connectTitle}
       </div>
 
       {lineUrl && (
@@ -618,7 +642,7 @@ function ConnectBar({ profile }) {
               width={20} height={20} alt="LINE"
               style={{ display: 'block', flexShrink: 0 }}
             />
-            LINEで友達追加
+            {strings.lineBtn}
           </span>
           <span style={{ fontSize: 16 }}>→</span>
         </a>
@@ -651,7 +675,7 @@ function ConnectBar({ profile }) {
               width={20} height={20} alt="WhatsApp"
               style={{ display: 'block', flexShrink: 0 }}
             />
-            WhatsAppでつながる
+            {strings.waBtn}
           </span>
           <span style={{ fontSize: 16 }}>→</span>
         </a>
@@ -662,6 +686,15 @@ function ConnectBar({ profile }) {
 
 export default function PublicProfile({ profile, blocks, affiliations, showAsPro, activeSns }) {
   const theme = THEMES.find(t => t.id === profile.profile_theme) || THEMES[0]
+  const [lang, setLang] = useState(null)
+
+  useEffect(() => {
+    const nav = (navigator.language || 'ja').toLowerCase()
+    setLang(nav.startsWith('ja') ? 'ja' : 'en')
+  }, [])
+
+  const effectiveLang = showAsPro ? (lang || 'ja') : 'ja'
+  const strings = UI_STRINGS[effectiveLang]
 
   return (
     <>
@@ -677,6 +710,27 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',
       } : {}}>
+        {showAsPro && lang && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -8 }}>
+            <button
+              onClick={() => setLang(l => l === 'ja' ? 'en' : 'ja')}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${theme.text}28`,
+                color: theme.text,
+                opacity: 0.5,
+                borderRadius: 8,
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: 'pointer',
+                letterSpacing: '0.06em',
+              }}
+            >
+              {lang === 'ja' ? 'EN' : 'JA'}
+            </button>
+          </div>
+        )}
         <div className="card">
           <div className="bento-grid">
             {blocks.map((block, i) => {
@@ -707,7 +761,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         </div>
 
         {/* ── SNS接続バー（Proユーザーのみ・LINE/WhatsApp設定時） ── */}
-        {showAsPro && <ConnectBar profile={profile} theme={theme} />}
+        {showAsPro && <ConnectBar profile={profile} theme={theme} strings={strings} />}
 
         {/* ── Pro: 所属フッター ── */}
         {showAsPro && affiliations.length > 0 && (
@@ -741,7 +795,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
             {/* 1. 名前 + bio（カードなし・センタリング） */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '32px 16px 24px' }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: theme.text }}>{renderText(profile.name) || '名前未設定'}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: theme.text }}>{renderText(profile.name) || strings.nameUnset}</div>
                 {profile.bio && (
                   <div style={{ fontSize: 13, color: theme.text, opacity: 0.6, marginTop: 6, lineHeight: 1.7 }}>
                     {renderText(profile.bio)}
@@ -751,7 +805,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
             </div>
 
             {/* 1b. SNS接続バー */}
-            <ConnectBar profile={profile} theme={theme} />
+            <ConnectBar profile={profile} theme={theme} strings={strings} />
 
             {/* 2. 所属一覧（カードなし・テキストのみ） */}
             {affiliations.length > 0 && (
@@ -807,13 +861,13 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
               style={{ display: 'block', margin: '8px 0 0', borderTop: `1px solid ${theme.text}18`,
                 padding: '24px 16px', textDecoration: 'none' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: theme.accent, marginBottom: 6 }}>
-                名刺を受け取ったら、Koryuで繋がろう
+                {strings.ctaTitle}
               </div>
               <div style={{ fontSize: 12, color: theme.text, opacity: 0.5, lineHeight: 1.7 }}>
-                名刺をスキャンするだけで、相手のSNSに自動でつながれるアプリです。無料で始められます。
+                {strings.ctaBody}
               </div>
               <div style={{ marginTop: 12, fontSize: 12, color: theme.accent, fontWeight: 600 }}>
-                Koryuを試してみる →
+                {strings.ctaLink}
               </div>
             </a>
 
@@ -838,7 +892,7 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
           }}
         >
           <span style={{ fontSize: 13, color: theme.text, opacity: 0.5, lineHeight: 1.5 }}>
-            名刺から、SNSでつながる。
+            {strings.banner}
           </span>
           <span style={{
             fontSize: 12, fontWeight: 700,
@@ -851,12 +905,11 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
         </a>
 
         <div className="footer" style={{ color: theme.text }}>
-          このページは{' '}
-          <a href="https://koryu.app" target="_blank" rel="noopener noreferrer"
-            style={{ color: theme.text, opacity: 0.4, textDecoration: 'none' }}>
-            Koryu
-          </a>
-          {' '}で作成されました
+          {effectiveLang === 'en' ? (
+            <>This page was created with{' '}<a href="https://koryu.app" target="_blank" rel="noopener noreferrer" style={{ color: theme.text, opacity: 0.4, textDecoration: 'none' }}>Koryu</a></>
+          ) : (
+            <>このページは{' '}<a href="https://koryu.app" target="_blank" rel="noopener noreferrer" style={{ color: theme.text, opacity: 0.4, textDecoration: 'none' }}>Koryu</a>{' '}で作成されました</>
+          )}
         </div>
       </div>
 
