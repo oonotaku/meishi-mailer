@@ -2405,52 +2405,109 @@ export default function ProfileSettings() {
                 </div>
               )}
 
-              {/* connect_bar: SNS選択（登録済みSNSから最大2つ） */}
+              {/* connect_bar: タイトル・SNS選択・ボタンテキスト編集 */}
               {editingBlock.type === 'connect_bar' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div className="scan-field-label" style={{ marginBottom: 4 }}>
-                    表示するSNSを選択（最大2つ）
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                  {/* セクションタイトル */}
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 6 }}>セクションタイトル</div>
+                    <input
+                      type="text"
+                      value={editingBlock.content.title || ''}
+                      maxLength={40}
+                      placeholder="つながりましょう"
+                      className="scan-field-input"
+                      onChange={e => setEditingBlock(prev => ({ ...prev, content: { ...prev.content, title: e.target.value } }))}
+                    />
+                    <p style={{ fontSize: 11, color: '#5a5650', marginTop: 4 }}>空欄の場合は「つながりましょう」を表示</p>
                   </div>
-                  <p style={{ fontSize: 11, color: '#5a5650', marginBottom: 8, lineHeight: 1.6 }}>
-                    「SNSリンク」セクションで登録済みのSNSが選べます。
-                  </p>
-                  {SNS_CONFIG.filter(cfg => profile?.[cfg.key]).length === 0 && (
-                    <p style={{ fontSize: 12, color: '#7a6a5a' }}>登録済みSNSがありません。「SNSリンク」セクションで登録してください。</p>
+
+                  {/* SNS選択 */}
+                  <div>
+                    <div className="scan-field-label" style={{ marginBottom: 6 }}>表示するSNSを選択（最大2つ）</div>
+                    {SNS_CONFIG.filter(cfg => profile?.[cfg.key]).length === 0 && (
+                      <p style={{ fontSize: 12, color: '#7a6a5a' }}>登録済みSNSがありません。「SNSリンク」セクションで登録してください。</p>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {SNS_CONFIG.filter(cfg => profile?.[cfg.key]).map(cfg => {
+                        const selected = (editingBlock.content.sns || []).includes(cfg.key)
+                        const maxReached = (editingBlock.content.sns || []).length >= 2
+                        const isDisabled = !selected && maxReached
+                        return (
+                          <label key={cfg.key} style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '10px 12px', borderRadius: 10,
+                            background: selected ? '#0f2a1a' : '#12121a',
+                            border: selected ? '1.5px solid #22c55e' : '1px solid #2a2a3a',
+                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                            opacity: isDisabled ? 0.4 : 1,
+                          }}>
+                            <input type="checkbox" checked={selected} disabled={isDisabled}
+                              onChange={e => {
+                                setEditingBlock(prev => {
+                                  const cur = prev.content.sns || []
+                                  const next = e.target.checked
+                                    ? [...cur, cfg.key].slice(0, 2)
+                                    : cur.filter(k => k !== cfg.key)
+                                  return { ...prev, content: { ...prev.content, sns: next } }
+                                })
+                              }}
+                              style={{ accentColor: '#22c55e', width: 16, height: 16, flexShrink: 0 }} />
+                            {cfg.icon && (
+                              <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+                                width={16} height={16} alt={cfg.label}
+                                style={{ display: 'block', flexShrink: 0 }}
+                                onError={e => { e.target.style.display = 'none' }} />
+                            )}
+                            <span style={{ fontSize: 13, fontWeight: 600 }}>{cfg.label}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 選択中SNSのボタンテキスト編集 */}
+                  {(editingBlock.content.sns || []).length > 0 && (
+                    <div>
+                      <div className="scan-field-label" style={{ marginBottom: 6 }}>ボタンの文言（任意）</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {(editingBlock.content.sns || []).map(key => {
+                          const cfg = SNS_CONFIG.find(c => c.key === key)
+                          if (!cfg) return null
+                          return (
+                            <div key={key}>
+                              <div style={{ fontSize: 11, color: '#7a6a5a', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {cfg.icon && (
+                                  <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+                                    width={12} height={12} alt={cfg.label}
+                                    style={{ display: 'block', opacity: 0.5 }}
+                                    onError={e => { e.target.style.display = 'none' }} />
+                                )}
+                                {cfg.label}
+                              </div>
+                              <input
+                                type="text"
+                                value={(editingBlock.content.snsText || {})[key] || ''}
+                                maxLength={40}
+                                placeholder={cfg.connectText || cfg.label}
+                                className="scan-field-input"
+                                onChange={e => setEditingBlock(prev => ({
+                                  ...prev,
+                                  content: {
+                                    ...prev.content,
+                                    snsText: { ...(prev.content.snsText || {}), [key]: e.target.value },
+                                  },
+                                }))}
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p style={{ fontSize: 11, color: '#5a5650', marginTop: 6 }}>空欄の場合はデフォルト文言を使用</p>
+                    </div>
                   )}
-                  {SNS_CONFIG.filter(cfg => profile?.[cfg.key]).map(cfg => {
-                    const selected = (editingBlock.content.sns || []).includes(cfg.key)
-                    const maxReached = (editingBlock.content.sns || []).length >= 2
-                    const isDisabled = !selected && maxReached
-                    return (
-                      <label key={cfg.key} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 12px', borderRadius: 10,
-                        background: selected ? '#0f2a1a' : '#12121a',
-                        border: selected ? '1.5px solid #22c55e' : '1px solid #2a2a3a',
-                        cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        opacity: isDisabled ? 0.4 : 1,
-                      }}>
-                        <input type="checkbox" checked={selected} disabled={isDisabled}
-                          onChange={e => {
-                            setEditingBlock(prev => {
-                              const cur = prev.content.sns || []
-                              const next = e.target.checked
-                                ? [...cur, cfg.key].slice(0, 2)
-                                : cur.filter(k => k !== cfg.key)
-                              return { ...prev, content: { ...prev.content, sns: next } }
-                            })
-                          }}
-                          style={{ accentColor: '#22c55e', width: 16, height: 16, flexShrink: 0 }} />
-                        {cfg.icon && (
-                          <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
-                            width={16} height={16} alt={cfg.label}
-                            style={{ display: 'block', flexShrink: 0 }}
-                            onError={e => { e.target.style.display = 'none' }} />
-                        )}
-                        <span style={{ fontSize: 13, fontWeight: 600 }}>{cfg.label}</span>
-                      </label>
-                    )
-                  })}
+
                 </div>
               )}
 

@@ -586,18 +586,20 @@ function getSnsHref(cfg, val) {
   return val
 }
 
-function ConnectBar({ snsItems, strings }) {
+function ConnectBar({ snsItems, title, strings }) {
   if (!snsItems || snsItems.length === 0) return null
+  const displayTitle = title || strings.connectTitle
   return (
     <div style={{ background: '#16a34a', borderRadius: 20, padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-        {strings.connectTitle}
+        {displayTitle}
       </div>
-      {snsItems.map(({ cfg, href }, i) => {
+      {snsItems.map(({ cfg, href, text }, i) => {
         const isDark = ['#000000', '#010101', '#24292e'].includes(cfg.color)
         const btnBg    = i === 0 ? '#ffffff' : 'rgba(255,255,255,0.18)'
         const btnColor = i === 0 ? (isDark ? '#111' : (cfg.color || '#333')) : '#ffffff'
         const iconHex  = i === 0 ? (cfg.color || '333333').replace('#', '') : 'ffffff'
+        const label    = text || cfg.connectText || cfg.label
         return (
           <a key={cfg.key} href={href} target="_blank" rel="noopener noreferrer"
             style={{
@@ -616,7 +618,7 @@ function ConnectBar({ snsItems, strings }) {
                   style={{ display: 'block', flexShrink: 0 }}
                   onError={e => { e.target.style.display = 'none' }} />
               )}
-              {cfg.label}
+              {label}
             </span>
             <span style={{ fontSize: 16 }}>→</span>
           </a>
@@ -690,13 +692,16 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
           return chunks.map((chunk, ci) => {
             if (chunk.kind === 'connect_bar') {
               const selectedKeys = chunk.block.content?.sns || []
+              const snsText = chunk.block.content?.snsText || {}
+              const customTitle = chunk.block.content?.title || ''
               const snsItems = selectedKeys.map(key => {
                 const cfg = SNS_CONFIG.find(c => c.key === key)
                 if (!cfg || !profile[key]) return null
                 const href = getSnsHref(cfg, profile[key])
-                return href ? { cfg, href } : null
+                const text = snsText[key] || ''
+                return href ? { cfg, href, text } : null
               }).filter(Boolean)
-              return <ConnectBar key={ci} snsItems={snsItems} strings={strings} />
+              return <ConnectBar key={ci} snsItems={snsItems} title={customTitle} strings={strings} />
             }
             return (
               <div key={ci} className="card">
