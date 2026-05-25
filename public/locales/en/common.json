@@ -139,7 +139,8 @@
     "no_results": "No results found",
     "sent": "Sent",
     "unsent": "Unsent",
-    "no_name": "(No name)"
+    "no_name": "(No name)",
+    "encounter_count": "{{count}} encounters"
   },
   "contact": {
     "back": "← Contacts",
@@ -331,7 +332,16 @@
     "plan_upgrade_monthly": "Upgrade to Pro (¥500/mo)",
     "plan_redirecting": "Redirecting...",
     "sns_add": "+ Add",
-    "plan_period_monthly": "/ mo"
+    "plan_period_monthly": "/ mo",
+    "profile_url_label": "Profile URL",
+    "profile_url_pro_cta": "Set Custom URL with Pro Plan",
+    "affil_company_placeholder": "Company / Organization",
+    "affil_title_placeholder": "Title / Position (optional)",
+    "affil_phone_placeholder": "📞 Phone",
+    "affil_website_placeholder": "🌐 Website",
+    "affil_email_placeholder": "✉ Email",
+    "save_changes": "Save Changes",
+    "block_edit_btn": "Edit"
   },
   "sns": {
     "qr_scan": "📷 Scan from QR code screenshot",

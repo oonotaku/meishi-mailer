@@ -139,7 +139,8 @@
     "no_results": "検索結果が見つかりませんでした",
     "sent": "送信済み",
     "unsent": "未送信",
-    "no_name": "（名前なし）"
+    "no_name": "（名前なし）",
+    "encounter_count": "交流{{count}}回"
   },
   "contact": {
     "back": "← 一覧",
@@ -331,7 +332,16 @@
     "plan_upgrade_monthly": "Proにアップグレード（¥500/月）",
     "plan_redirecting": "移動中...",
     "sns_add": "+ 追加",
-    "plan_period_monthly": "/ 月"
+    "plan_period_monthly": "/ 月",
+    "profile_url_label": "プロフィールURL",
+    "profile_url_pro_cta": "ProプランでカスタムURLを設定",
+    "affil_company_placeholder": "会社名・団体名",
+    "affil_title_placeholder": "肩書き・役職（任意）",
+    "affil_phone_placeholder": "📞 電話番号",
+    "affil_website_placeholder": "🌐 ウェブサイト",
+    "affil_email_placeholder": "✉ メール",
+    "save_changes": "変更を保存",
+    "block_edit_btn": "編集"
   },
   "sns": {
     "qr_scan": "📷 QRコードのスクショから読み取る",

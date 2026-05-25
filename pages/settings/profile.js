@@ -90,16 +90,16 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
         <div className="affiliation-inputs">
           <input type="text" value={item.company_name}
             onChange={e => onChange(item.id, 'company_name', e.target.value)}
-            placeholder="会社名・団体名" maxLength={100} />
+            placeholder={t('profile.affil_company_placeholder')} maxLength={100} />
           <input type="text" value={item.title || ''}
             onChange={e => onChange(item.id, 'title', e.target.value)}
-            placeholder="肩書き・役職（任意）" maxLength={100} />
+            placeholder={t('profile.affil_title_placeholder')} maxLength={100} />
         </div>
         <div className="affil-contact-fields">
           <div className="affil-contact-row">
             <input type="tel" value={item.phone || ''}
               onChange={e => onChange(item.id, 'phone', e.target.value)}
-              placeholder="📞 電話番号" className="affil-contact-input" />
+              placeholder={t('profile.affil_phone_placeholder')} className="affil-contact-input" />
             <label className="toggle-label small">
               <input type="checkbox" className="toggle-check" checked={item.show_phone ?? false}
                 onChange={e => onChange(item.id, 'show_phone', e.target.checked)} />
@@ -110,7 +110,7 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
           <div className="affil-contact-row">
             <input type="url" value={item.website || ''}
               onChange={e => onChange(item.id, 'website', e.target.value)}
-              placeholder="🌐 ウェブサイト" className="affil-contact-input" />
+              placeholder={t('profile.affil_website_placeholder')} className="affil-contact-input" />
             <label className="toggle-label small">
               <input type="checkbox" className="toggle-check" checked={item.show_website ?? true}
                 onChange={e => onChange(item.id, 'show_website', e.target.checked)} />
@@ -121,7 +121,7 @@ function AffiliationItem({ item, index, total, onDelete, onChange, onMoveUp, onM
           <div className="affil-contact-row">
             <input type="email" value={item.contact_email || ''}
               onChange={e => onChange(item.id, 'contact_email', e.target.value)}
-              placeholder="✉ メール" className="affil-contact-input" />
+              placeholder={t('profile.affil_email_placeholder')} className="affil-contact-input" />
             <label className="toggle-label small">
               <input type="checkbox" className="toggle-check" checked={item.show_email ?? false}
                 onChange={e => onChange(item.id, 'show_email', e.target.checked)} />
@@ -1173,7 +1173,7 @@ export default function ProfileSettings() {
           {/* ── プロフィールURL ── */}
           <div style={{ marginBottom: 24, padding: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10 }}>
-              プロフィールURL
+              {t('profile.profile_url_label')}
             </div>
             {username ? (
               <div>
@@ -1230,7 +1230,7 @@ export default function ProfileSettings() {
                   }}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#facc15', background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}
                 >
-                  🔒 ProプランでカスタムURLを設定
+                  🔒 {t('profile.profile_url_pro_cta')}
                 </button>
               </div>
             )}
@@ -1588,7 +1588,7 @@ export default function ProfileSettings() {
                       }}>↓</button>
                     <button type="button" className="block-edit-btn"
                       onClick={() => setEditingBlock({ index, type: block.type, size: block.size, content: { ...block.content } })}>
-                      編集
+                      {t('profile.block_edit_btn')}
                     </button>
                     <button type="button" className="block-delete-btn"
                       onClick={() => {
@@ -1784,7 +1784,7 @@ export default function ProfileSettings() {
               whiteSpace: 'nowrap',
             }}
           >
-            {isSaving ? '保存中…' : '💾 変更を保存'}
+            {isSaving ? t('profile.saving') : `💾 ${t('profile.save_changes')}`}
           </button>
         )}
 

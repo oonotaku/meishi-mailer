@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useRequireAuth } from '../lib/useRequireAuth'
 
 function ConnectionBadge({ contact }) {
+  const { t } = useTranslation('common')
   const snsConnected = Object.keys(contact.connected_sns || {}).length > 0
   const encounterCount = contact.encounter_count || 0
 
@@ -18,7 +19,7 @@ function ConnectionBadge({ contact }) {
       fontSize: 12, color: 'rgba(255,255,255,0.55)', flexShrink: 0,
     }}>
       {snsConnected && <span style={{ fontSize: 13 }}>🔗</span>}
-      {encounterCount > 1 && <span>交流{encounterCount}回</span>}
+      {encounterCount > 1 && <span>{t('contacts.encounter_count', { count: encounterCount })}</span>}
     </div>
   )
 }
