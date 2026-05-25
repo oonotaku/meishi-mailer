@@ -316,6 +316,7 @@
     "block_sns": "💬 SNS",
     "block_profile_card": "👤 プロフィールカード",
     "block_affiliation": "🏢 所属・会社",
+    "block_connect_bar": "🔗 つながりましょう",
     "blocks_affil_note": "所属・連絡先はプロフィール最下部に固定表示されます。内容は「所属・連絡先」セクションで編集してください。",
     "completion_title": "プロフィール完成度",
     "step_affil": "所属・会社",

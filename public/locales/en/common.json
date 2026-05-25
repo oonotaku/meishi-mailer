@@ -316,6 +316,7 @@
     "block_sns": "💬 SNS",
     "block_profile_card": "👤 Profile Card",
     "block_affiliation": "🏢 Affiliation",
+    "block_connect_bar": "🔗 Connect Bar",
     "blocks_affil_note": "Affiliations are shown as a fixed footer at the bottom of your profile. Edit them in the \"Affiliations\" section.",
     "completion_title": "Profile Completion",
     "step_affil": "Affiliations",

@@ -37,6 +37,11 @@ function getBlockTitle(block) {
     }
     case 'profile_card': return 'プロフィールカード'
     case 'affiliation': return block.content?.company_name || '(会社名未設定)'
+    case 'connect_bar': {
+      const keys = block.content?.sns || []
+      if (keys.length === 0) return '(SNS未選択)'
+      return keys.map(k => SNS_CONFIG.find(c => c.key === k)?.label || k).join(', ')
+    }
     default: return ''
   }
 }
@@ -146,6 +151,7 @@ export default function ProfileSettings() {
     sns:          t('profile.block_sns'),
     profile_card: t('profile.block_profile_card'),
     affiliation:  t('profile.block_affiliation'),
+    connect_bar:  t('profile.block_connect_bar'),
   }
   const { user, profile, loading: authLoading } = useRequireAuth()
   const [provider, setProvider] = useState(null)
@@ -2024,20 +2030,24 @@ export default function ProfileSettings() {
             <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {(() => {
                 const hasProfileCard = blocks.some(b => b.type === 'profile_card')
+                const hasConnectBar  = blocks.some(b => b.type === 'connect_bar')
                 const isPro = profile?.plan === 'pro'
                 return [
-                  { type: 'profile_card', label: '👤 プロフィールカード', desc: '名前・bio・所属を表示',     constraint: null,                             disabled: hasProfileCard },
+                  { type: 'profile_card', label: '👤 プロフィールカード', desc: '名前・bio・所属を表示',                              disabled: hasProfileCard },
+                  { type: 'connect_bar',  label: '🔗 つながりましょう',   desc: 'SNSへの大きな緑ボタン（最大2つ選択）',               disabled: hasConnectBar, proOnly: true },
                   { type: 'photo',        label: '📷 写真',               desc: '画像とキャプションを表示', constraint: 'Sサイズはキャプションなし' },
                   { type: 'text',         label: '📝 テキスト',           desc: 'タイトルと本文を自由に記述', constraint: 'Sサイズはタイトルのみ表示（入力必須）' },
                   { type: 'link',         label: '🔗 リンク',             desc: 'URLへのリンクカード',       constraint: 'サムネイル / オーバーレイから選択可' },
                   { type: 'sns',          label: '💬 SNS',                desc: 'SNSリンクを大きく表示',    constraint: 'Sサイズはキャプションなし', proOnly: true },
                 ].map(({ type, label, desc, constraint, disabled, proOnly }) => {
                   const isDisabled = !!disabled || (proOnly && !isPro)
+                  const initContent = type === 'connect_bar' ? { sns: [] } : {}
+                  const initSize    = type === 'connect_bar' ? 'L' : 'L'
                   return (
                     <button key={type} type="button" className="type-select-btn"
                       disabled={isDisabled}
                       style={isDisabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
-                      onClick={() => { if (isDisabled) return; setShowTypeSheet(false); setEditingBlock({ index: null, type, size: 'L', content: {} }) }}>
+                      onClick={() => { if (isDisabled) return; setShowTypeSheet(false); setEditingBlock({ index: null, type, size: initSize, content: initContent }) }}>
                       <span className="type-select-label">
                         {label}
                         {disabled ? ' (追加済み)' : ''}
@@ -2066,26 +2076,28 @@ export default function ProfileSettings() {
             </div>
             <div className="scan-sheet-body">
 
-              {/* サイズ選択 */}
-              <div>
-                <div className="scan-field-label" style={{ marginBottom: 8 }}>サイズ</div>
-                <div className="size-select-row">
-                  {[
-                    ...(editingBlock.type === 'affiliation' ? [{ key: 'XS', desc: 'コンパクト' }] : []),
-                    { key: 'S', desc: '正方形' },
-                    { key: 'M', desc: '縦長' },
-                    { key: 'L', desc: '全幅' },
-                    { key: 'XL', desc: '超縦長' },
-                  ].map(({ key, desc }) => (
-                    <button key={key} type="button"
-                      className={`size-select-btn${editingBlock.size === key ? ' active' : ''}`}
-                      onClick={() => setEditingBlock(prev => ({ ...prev, size: key }))}>
-                      <span className="size-select-key">{key}</span>
-                      <span className="size-select-desc">{desc}</span>
-                    </button>
-                  ))}
+              {/* サイズ選択（connect_barは非表示・常にL） */}
+              {editingBlock.type !== 'connect_bar' && (
+                <div>
+                  <div className="scan-field-label" style={{ marginBottom: 8 }}>サイズ</div>
+                  <div className="size-select-row">
+                    {[
+                      ...(editingBlock.type === 'affiliation' ? [{ key: 'XS', desc: 'コンパクト' }] : []),
+                      { key: 'S', desc: '正方形' },
+                      { key: 'M', desc: '縦長' },
+                      { key: 'L', desc: '全幅' },
+                      { key: 'XL', desc: '超縦長' },
+                    ].map(({ key, desc }) => (
+                      <button key={key} type="button"
+                        className={`size-select-btn${editingBlock.size === key ? ' active' : ''}`}
+                        onClick={() => setEditingBlock(prev => ({ ...prev, size: key }))}>
+                        <span className="size-select-key">{key}</span>
+                        <span className="size-select-desc">{desc}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* photo */}
               {editingBlock.type === 'photo' && (
@@ -2393,6 +2405,55 @@ export default function ProfileSettings() {
                 </div>
               )}
 
+              {/* connect_bar: SNS選択（登録済みSNSから最大2つ） */}
+              {editingBlock.type === 'connect_bar' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="scan-field-label" style={{ marginBottom: 4 }}>
+                    表示するSNSを選択（最大2つ）
+                  </div>
+                  <p style={{ fontSize: 11, color: '#5a5650', marginBottom: 8, lineHeight: 1.6 }}>
+                    「SNSリンク」セクションで登録済みのSNSが選べます。
+                  </p>
+                  {SNS_CONFIG.filter(cfg => profile?.[cfg.key]).length === 0 && (
+                    <p style={{ fontSize: 12, color: '#7a6a5a' }}>登録済みSNSがありません。「SNSリンク」セクションで登録してください。</p>
+                  )}
+                  {SNS_CONFIG.filter(cfg => profile?.[cfg.key]).map(cfg => {
+                    const selected = (editingBlock.content.sns || []).includes(cfg.key)
+                    const maxReached = (editingBlock.content.sns || []).length >= 2
+                    const isDisabled = !selected && maxReached
+                    return (
+                      <label key={cfg.key} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 12px', borderRadius: 10,
+                        background: selected ? '#0f2a1a' : '#12121a',
+                        border: selected ? '1.5px solid #22c55e' : '1px solid #2a2a3a',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        opacity: isDisabled ? 0.4 : 1,
+                      }}>
+                        <input type="checkbox" checked={selected} disabled={isDisabled}
+                          onChange={e => {
+                            setEditingBlock(prev => {
+                              const cur = prev.content.sns || []
+                              const next = e.target.checked
+                                ? [...cur, cfg.key].slice(0, 2)
+                                : cur.filter(k => k !== cfg.key)
+                              return { ...prev, content: { ...prev.content, sns: next } }
+                            })
+                          }}
+                          style={{ accentColor: '#22c55e', width: 16, height: 16, flexShrink: 0 }} />
+                        {cfg.icon && (
+                          <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`}
+                            width={16} height={16} alt={cfg.label}
+                            style={{ display: 'block', flexShrink: 0 }}
+                            onError={e => { e.target.style.display = 'none' }} />
+                        )}
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{cfg.label}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
               {/* affiliation */}
               {editingBlock.type === 'affiliation' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -2473,7 +2534,7 @@ export default function ProfileSettings() {
                   const newBlock = {
                     id: editingBlock.index !== null ? (blocks[editingBlock.index]?.id || `new-${Date.now()}`) : `new-${Date.now()}`,
                     type: editingBlock.type,
-                    size: editingBlock.size,
+                    size: editingBlock.type === 'connect_bar' ? 'L' : editingBlock.size,
                     content: editingBlock.content,
                   }
                   setBlocks(prev => {

@@ -14,6 +14,7 @@ const THEMES = [
 
 const UI_STRINGS = {
   ja: {
+    connectTitle: 'つながりましょう',
     ctaTitle: '名刺を受け取ったら、Koryuで繋がろう',
     ctaBody: '名刺をスキャンするだけで、相手のSNSに自動でつながれるアプリです。無料で始められます。',
     ctaLink: 'Koryuを試してみる →',
@@ -21,6 +22,7 @@ const UI_STRINGS = {
     nameUnset: '名前未設定',
   },
   en: {
+    connectTitle: 'Connect with me',
     ctaTitle: 'Got my card? Connect on Koryu',
     ctaBody: 'Scan business cards and instantly connect on SNS. Free to start.',
     ctaLink: 'Try Koryu →',
@@ -584,30 +586,42 @@ function getSnsHref(cfg, val) {
   return val
 }
 
-function FreeSnsBar({ profile, theme }) {
-  const items = SNS_CONFIG
-    .map(cfg => ({ cfg, href: getSnsHref(cfg, profile[cfg.key]) }))
-    .filter(({ href }) => !!href)
-  if (items.length === 0) return null
+function ConnectBar({ snsItems, strings }) {
+  if (!snsItems || snsItems.length === 0) return null
   return (
-    <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {items.map(({ cfg, href }) => (
-        <a key={cfg.key} href={href} target="_blank" rel="noopener noreferrer"
-          style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: theme.text, minHeight: 28 }}>
-          {cfg.icon ? (
-            <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`} width={16} height={16} alt={cfg.label}
-              style={{ display: 'block', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
-          ) : (
-            <span style={{ width: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 800, flexShrink: 0 }}>{cfg.label[0]}</span>
-          )}
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{cfg.label}</span>
-          <span style={{ fontSize: 11, opacity: 0.4, marginLeft: 'auto',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '50%' }}>
-            {profile[cfg.key].replace(/^https?:\/\//, '')}
-          </span>
-        </a>
-      ))}
+    <div style={{ background: '#16a34a', borderRadius: 20, padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+        {strings.connectTitle}
+      </div>
+      {snsItems.map(({ cfg, href }, i) => {
+        const isDark = ['#000000', '#010101', '#24292e'].includes(cfg.color)
+        const btnBg    = i === 0 ? '#ffffff' : 'rgba(255,255,255,0.18)'
+        const btnColor = i === 0 ? (isDark ? '#111' : (cfg.color || '#333')) : '#ffffff'
+        const iconHex  = i === 0 ? (cfg.color || '333333').replace('#', '') : 'ffffff'
+        return (
+          <a key={cfg.key} href={href} target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: btnBg, borderRadius: 12, padding: '13px 16px',
+              textDecoration: 'none', fontWeight: 700, fontSize: 14, color: btnColor,
+              border: i === 0 ? undefined : '1px solid rgba(255,255,255,0.25)',
+            }}
+            onTouchStart={e => e.currentTarget.style.opacity = '0.85'}
+            onTouchEnd={e => e.currentTarget.style.opacity = '1'}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {cfg.icon && (
+                <img src={`https://cdn.simpleicons.org/${cfg.icon}/${iconHex}`}
+                  width={20} height={20} alt={cfg.label}
+                  style={{ display: 'block', flexShrink: 0 }}
+                  onError={e => { e.target.style.display = 'none' }} />
+              )}
+              {cfg.label}
+            </span>
+            <span style={{ fontSize: 16 }}>→</span>
+          </a>
+        )
+      })}
     </div>
   )
 }
@@ -659,34 +673,60 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
             </button>
           </div>
         )}
-        <div className="card">
-          <div className="bento-grid">
-            {blocks.filter(b => b.type !== 'affiliation').map((block, i) => {
-              const sizeClass =
-                block.size === 'L'  ? 'block-L'  :
-                block.size === 'XL' ? 'block-XL' :
-                block.size === 'XS' ? 'block-XS' :
-                block.size === 'S'  ? 'block-S'  : 'block-M'
-              const isSns = block.type === 'sns'
-              return (
-                <div
-                  key={block.id || i}
-                  className={`bento-block ${sizeClass}${isSns ? ' block-sns' : ''}`}
-                  style={{ background: theme.card, overflow: 'hidden' }}
-                  onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)'; e.currentTarget.style.transition = 'transform 0.1s' }}
-                  onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)' }}
-                >
-                  {block.type === 'photo'        && <PhotoBlock        block={block} theme={theme} />}
-                  {block.type === 'text'         && <TextBlock         block={block} theme={theme} />}
-                  {block.type === 'link'         && <LinkBlock         block={block} theme={theme} />}
-                  {block.type === 'sns'          && <SnsBlock          block={block} profile={profile} theme={theme} />}
-                  {block.type === 'profile_card' && <ProfileCardBlock  block={block} profile={profile} affiliations={affiliations} theme={theme} />}
-                  {block.type === 'affiliation'  && <AffiliationBlock  block={block} theme={theme} />}
+        {(() => {
+          const visibleBlocks = blocks.filter(b => b.type !== 'affiliation')
+          const chunks = []
+          let gridBuf = []
+          visibleBlocks.forEach(block => {
+            if (block.type === 'connect_bar') {
+              if (gridBuf.length > 0) { chunks.push({ kind: 'grid', blocks: gridBuf }); gridBuf = [] }
+              chunks.push({ kind: 'connect_bar', block })
+            } else {
+              gridBuf.push(block)
+            }
+          })
+          if (gridBuf.length > 0) chunks.push({ kind: 'grid', blocks: gridBuf })
+
+          return chunks.map((chunk, ci) => {
+            if (chunk.kind === 'connect_bar') {
+              const selectedKeys = chunk.block.content?.sns || []
+              const snsItems = selectedKeys.map(key => {
+                const cfg = SNS_CONFIG.find(c => c.key === key)
+                if (!cfg || !profile[key]) return null
+                const href = getSnsHref(cfg, profile[key])
+                return href ? { cfg, href } : null
+              }).filter(Boolean)
+              return <ConnectBar key={ci} snsItems={snsItems} strings={strings} />
+            }
+            return (
+              <div key={ci} className="card">
+                <div className="bento-grid">
+                  {chunk.blocks.map((block, i) => {
+                    const sizeClass =
+                      block.size === 'L'  ? 'block-L'  :
+                      block.size === 'XL' ? 'block-XL' :
+                      block.size === 'XS' ? 'block-XS' :
+                      block.size === 'S'  ? 'block-S'  : 'block-M'
+                    const isSns = block.type === 'sns'
+                    return (
+                      <div key={block.id || i} className={`bento-block ${sizeClass}${isSns ? ' block-sns' : ''}`}
+                        style={{ background: theme.card, overflow: 'hidden' }}
+                        onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)'; e.currentTarget.style.transition = 'transform 0.1s' }}
+                        onTouchEnd={e => { e.currentTarget.style.transform = 'scale(1)' }}>
+                        {block.type === 'photo'        && <PhotoBlock       block={block} theme={theme} />}
+                        {block.type === 'text'         && <TextBlock        block={block} theme={theme} />}
+                        {block.type === 'link'         && <LinkBlock        block={block} theme={theme} />}
+                        {block.type === 'sns'          && <SnsBlock         block={block} profile={profile} theme={theme} />}
+                        {block.type === 'profile_card' && <ProfileCardBlock block={block} profile={profile} affiliations={affiliations} theme={theme} />}
+                        {block.type === 'affiliation'  && <AffiliationBlock block={block} theme={theme} />}
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
-          </div>
-        </div>
+              </div>
+            )
+          })
+        })()}
 
         {/* ── Pro: 所属フッター ── */}
         {showAsPro && affiliations.length > 0 && (
@@ -755,8 +795,16 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
               </div>
             )}
 
-            {/* 3. SNS一覧（テキスト＋リンク形式・全SNS含む） */}
-            <FreeSnsBar profile={profile} theme={theme} />
+            {/* 3. つながりましょう（先頭2SNS・固定） */}
+            {(() => {
+              const freeItems = SNS_CONFIG
+                .map(cfg => ({ cfg, href: getSnsHref(cfg, profile[cfg.key]) }))
+                .filter(({ href }) => !!href)
+                .slice(0, 2)
+              return freeItems.length > 0
+                ? <div style={{ padding: '0 0 4px' }}><ConnectBar snsItems={freeItems} strings={strings} /></div>
+                : null
+            })()}
 
             {/* 4. Koryu訴求（訪問者向け） */}
             <a href="https://koryu.app" target="_blank" rel="noopener noreferrer"
