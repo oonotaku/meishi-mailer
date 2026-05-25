@@ -2024,22 +2024,30 @@ export default function ProfileSettings() {
             <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {(() => {
                 const hasProfileCard = blocks.some(b => b.type === 'profile_card')
+                const isPro = profile?.plan === 'pro'
                 return [
                   { type: 'profile_card', label: '👤 プロフィールカード', desc: '名前・bio・所属を表示',     constraint: null,                             disabled: hasProfileCard },
                   { type: 'photo',        label: '📷 写真',               desc: '画像とキャプションを表示', constraint: 'Sサイズはキャプションなし' },
                   { type: 'text',         label: '📝 テキスト',           desc: 'タイトルと本文を自由に記述', constraint: 'Sサイズはタイトルのみ表示（入力必須）' },
                   { type: 'link',         label: '🔗 リンク',             desc: 'URLへのリンクカード',       constraint: 'サムネイル / オーバーレイから選択可' },
-                  { type: 'sns',          label: '💬 SNS',                desc: 'SNSリンクを大きく表示',    constraint: 'Sサイズはキャプションなし' },
-                ].map(({ type, label, desc, constraint, disabled }) => (
-                  <button key={type} type="button" className="type-select-btn"
-                    disabled={!!disabled}
-                    style={disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
-                    onClick={() => { if (disabled) return; setShowTypeSheet(false); setEditingBlock({ index: null, type, size: 'L', content: {} }) }}>
-                    <span className="type-select-label">{label}{disabled ? ' (追加済み)' : ''}</span>
-                    <span className="type-select-desc">{desc}</span>
-                    {constraint && <span style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{constraint}</span>}
-                  </button>
-                ))
+                  { type: 'sns',          label: '💬 SNS',                desc: 'SNSリンクを大きく表示',    constraint: 'Sサイズはキャプションなし', proOnly: true },
+                ].map(({ type, label, desc, constraint, disabled, proOnly }) => {
+                  const isDisabled = !!disabled || (proOnly && !isPro)
+                  return (
+                    <button key={type} type="button" className="type-select-btn"
+                      disabled={isDisabled}
+                      style={isDisabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                      onClick={() => { if (isDisabled) return; setShowTypeSheet(false); setEditingBlock({ index: null, type, size: 'L', content: {} }) }}>
+                      <span className="type-select-label">
+                        {label}
+                        {disabled ? ' (追加済み)' : ''}
+                        {proOnly && !isPro ? ' 🔒 Pro' : ''}
+                      </span>
+                      <span className="type-select-desc">{desc}</span>
+                      {constraint && <span style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{constraint}</span>}
+                    </button>
+                  )
+                })
               })()}
             </div>
           </div>

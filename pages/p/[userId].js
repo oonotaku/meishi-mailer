@@ -14,9 +14,6 @@ const THEMES = [
 
 const UI_STRINGS = {
   ja: {
-    connectTitle: 'つながりましょう',
-    lineBtn: 'LINEで友達追加',
-    waBtn: 'WhatsAppでつながる',
     ctaTitle: '名刺を受け取ったら、Koryuで繋がろう',
     ctaBody: '名刺をスキャンするだけで、相手のSNSに自動でつながれるアプリです。無料で始められます。',
     ctaLink: 'Koryuを試してみる →',
@@ -24,9 +21,6 @@ const UI_STRINGS = {
     nameUnset: '名前未設定',
   },
   en: {
-    connectTitle: 'Connect with me',
-    lineBtn: 'Add on LINE',
-    waBtn: 'Connect on WhatsApp',
     ctaTitle: 'Got my card? Connect on Koryu',
     ctaBody: 'Scan business cards and instantly connect on SNS. Free to start.',
     ctaLink: 'Try Koryu →',
@@ -579,107 +573,41 @@ function AffiliationBlock({ block, theme }) {
   )
 }
 
-function ConnectBar({ profile, strings }) {
-  const lineUrl = (() => {
-    const raw = profile.sns_line
-    if (!raw) return null
-    if (raw.startsWith('http')) return raw
-    return `https://line.me/ti/p/~${raw}`
-  })()
-
-  const waUrl = (() => {
-    const raw = profile.sns_whatsapp
-    if (!raw) return null
-    if (raw.startsWith('http')) return raw
-    const digits = raw.replace(/\D/g, '')
+function getSnsHref(cfg, val) {
+  if (!val) return null
+  if (cfg.key === 'sns_line') return val.startsWith('http') ? val : `https://line.me/ti/p/~${val}`
+  if (cfg.key === 'sns_whatsapp') {
+    if (val.startsWith('http')) return val
+    const digits = val.replace(/\D/g, '')
     return `https://wa.me/${digits}`
-  })()
+  }
+  return val
+}
 
-  if (!lineUrl && !waUrl) return null
-
+function FreeSnsBar({ profile, theme }) {
+  const items = SNS_CONFIG
+    .map(cfg => ({ cfg, href: getSnsHref(cfg, profile[cfg.key]) }))
+    .filter(({ href }) => !!href)
+  if (items.length === 0) return null
   return (
-    <div style={{
-      background: '#16a34a',
-      borderRadius: 20,
-      padding: '16px 16px 12px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-    }}>
-      <div style={{
-        fontSize: 11,
-        fontWeight: 700,
-        color: 'rgba(255,255,255,0.7)',
-        letterSpacing: '0.05em',
-        textTransform: 'uppercase',
-      }}>
-        {strings.connectTitle}
-      </div>
-
-      {lineUrl && (
-        <a
-          href={lineUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: '#ffffff',
-            borderRadius: 12,
-            padding: '13px 16px',
-            textDecoration: 'none',
-            fontWeight: 700,
-            fontSize: 14,
-            color: '#06C755',
-          }}
-          onTouchStart={e => e.currentTarget.style.opacity = '0.85'}
-          onTouchEnd={e => e.currentTarget.style.opacity = '1'}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img
-              src="https://cdn.simpleicons.org/line/06C755"
-              width={20} height={20} alt="LINE"
-              style={{ display: 'block', flexShrink: 0 }}
-            />
-            {strings.lineBtn}
+    <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {items.map(({ cfg, href }) => (
+        <a key={cfg.key} href={href} target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: theme.text, minHeight: 28 }}>
+          {cfg.icon ? (
+            <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`} width={16} height={16} alt={cfg.label}
+              style={{ display: 'block', flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+          ) : (
+            <span style={{ width: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 800, flexShrink: 0 }}>{cfg.label[0]}</span>
+          )}
+          <span style={{ fontSize: 13, fontWeight: 600 }}>{cfg.label}</span>
+          <span style={{ fontSize: 11, opacity: 0.4, marginLeft: 'auto',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '50%' }}>
+            {profile[cfg.key].replace(/^https?:\/\//, '')}
           </span>
-          <span style={{ fontSize: 16 }}>→</span>
         </a>
-      )}
-
-      {waUrl && (
-        <a
-          href={waUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'rgba(255,255,255,0.18)',
-            borderRadius: 12,
-            padding: '13px 16px',
-            textDecoration: 'none',
-            fontWeight: 700,
-            fontSize: 14,
-            color: '#ffffff',
-            border: '1px solid rgba(255,255,255,0.25)',
-          }}
-          onTouchStart={e => e.currentTarget.style.opacity = '0.85'}
-          onTouchEnd={e => e.currentTarget.style.opacity = '1'}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img
-              src="https://cdn.simpleicons.org/whatsapp/ffffff"
-              width={20} height={20} alt="WhatsApp"
-              style={{ display: 'block', flexShrink: 0 }}
-            />
-            {strings.waBtn}
-          </span>
-          <span style={{ fontSize: 16 }}>→</span>
-        </a>
-      )}
+      ))}
     </div>
   )
 }
@@ -760,9 +688,6 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
           </div>
         </div>
 
-        {/* ── SNS接続バー（Proユーザーのみ・LINE/WhatsApp設定時） ── */}
-        {showAsPro && <ConnectBar profile={profile} theme={theme} strings={strings} />}
-
         {/* ── Pro: 所属フッター ── */}
         {showAsPro && affiliations.length > 0 && (
           <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -804,9 +729,6 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
               </div>
             </div>
 
-            {/* 1b. SNS接続バー */}
-            <ConnectBar profile={profile} theme={theme} strings={strings} />
-
             {/* 2. 所属一覧（カードなし・テキストのみ） */}
             {affiliations.length > 0 && (
               <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -833,28 +755,8 @@ export default function PublicProfile({ profile, blocks, affiliations, showAsPro
               </div>
             )}
 
-            {/* 3. SNSアイコン（カードなし・センタリング） */}
-            {SNS_CONFIG.some(cfg => profile[cfg.key] && cfg.key !== 'sns_line' && cfg.key !== 'sns_whatsapp') && (
-              <div style={{ borderTop: `1px solid ${theme.text}18`, padding: '20px 16px',
-                display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-                {SNS_CONFIG.filter(cfg => profile[cfg.key] && cfg.key !== 'sns_line' && cfg.key !== 'sns_whatsapp').map(cfg => {
-                  const darkBrands = ['#000000', '#010101', '#24292e', '#e7e7e7']
-                  const bgColor = darkBrands.includes(cfg.color) ? '#1a1a2e' : cfg.color
-                  return (
-                    <a key={cfg.key} href={profile[cfg.key]} target="_blank" rel="noopener noreferrer" title={cfg.label}
-                      style={{ width: 48, height: 48, borderRadius: 12, background: bgColor, flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-                      {cfg.icon ? (
-                        <img src={`https://cdn.simpleicons.org/${cfg.icon}/ffffff`} width={24} height={24} alt={cfg.label}
-                          style={{ display: 'block' }} onError={e => { e.target.style.display = 'none' }} />
-                      ) : (
-                        <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{cfg.label[0]}</span>
-                      )}
-                    </a>
-                  )
-                })}
-              </div>
-            )}
+            {/* 3. SNS一覧（テキスト＋リンク形式・全SNS含む） */}
+            <FreeSnsBar profile={profile} theme={theme} />
 
             {/* 4. Koryu訴求（訪問者向け） */}
             <a href="https://koryu.app" target="_blank" rel="noopener noreferrer"
