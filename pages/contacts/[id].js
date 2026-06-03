@@ -285,6 +285,11 @@ export default function ContactDetail() {
   const [emailBody, setEmailBody] = useState('')
   const [emailGenerating, setEmailGenerating] = useState(false)
   const [emailSending, setEmailSending] = useState(false)
+  const [emailCc, setEmailCc] = useState([])
+  const [emailBcc, setEmailBcc] = useState([])
+  const [ccPickerQuery, setCcPickerQuery] = useState('')
+  const [bccPickerQuery, setBccPickerQuery] = useState('')
+  const [allContacts, setAllContacts] = useState([])
 
   // Visibility
   const [visibility, setVisibility] = useState('private')
@@ -880,7 +885,14 @@ export default function ContactDetail() {
       const r = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ to: toEmail, subject: emailSubject, body: emailBody, contact_id: id }),
+        body: JSON.stringify({
+          to: toEmail,
+          subject: emailSubject,
+          body: emailBody,
+          contact_id: id,
+          cc: emailCc.map(c => c.email),
+          bcc: emailBcc.map(c => c.email),
+        }),
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data.error)
@@ -1599,7 +1611,17 @@ export default function ContactDetail() {
                 <span className="section-label">{i18n.language === 'ja' ? 'メール' : 'Email'}</span>
               </div>
               <button
-                onClick={() => setEmailStep('situation')}
+                onClick={() => {
+                  setEmailStep('situation')
+                  setEmailCc([])
+                  setEmailBcc([])
+                  supabase.auth.getSession().then(({ data: { session } }) => {
+                    fetch('/api/contacts/list', { headers: { Authorization: `Bearer ${session.access_token}` } })
+                      .then(r => r.json())
+                      .then(data => setAllContacts((data.data || []).filter(c => c.id !== id)))
+                      .catch(() => {})
+                  })
+                }}
                 className="sns-link-btn"
                 style={{ width: '100%', '--sns-color': '#3a3a4a' }}
               >
@@ -1660,6 +1682,141 @@ export default function ContactDetail() {
             <div className="sheet-overlay" onClick={() => !emailSending && setEmailStep(null)}>
               <div className="sheet-box" onClick={e => e.stopPropagation()} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
                 <div className="sheet-title">{i18n.language === 'ja' ? 'メールを確認・編集' : 'Preview & edit'}</div>
+
+                {/* CC */}
+                <label className="field-label">CC（任意）</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                  {emailCc.map((c, i) => (
+                    <span key={i} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      background: 'rgba(255,255,255,0.1)', borderRadius: 20,
+                      padding: '3px 10px', fontSize: 12, color: '#fff'
+                    }}>
+                      {c.name || c.email}
+                      <button type="button" onClick={() => setEmailCc(emailCc.filter((_, j) => j !== i))}
+                        style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', padding: 0, fontSize: 14 }}>×</button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  className="text-input"
+                  placeholder={i18n.language === 'ja' ? 'コンタクトを検索して追加…' : 'Search contacts to add…'}
+                  value={ccPickerQuery}
+                  onChange={e => setCcPickerQuery(e.target.value)}
+                  style={{ marginBottom: 4 }}
+                />
+                {ccPickerQuery.length > 0 && (
+                  <div style={{
+                    background: '#1a1a2e', border: '1px solid #2e2e3a', borderRadius: 8,
+                    maxHeight: 150, overflowY: 'auto', marginBottom: 8
+                  }}>
+                    {allContacts
+                      .filter(c =>
+                        !emailCc.some(x => x.email === c.email) &&
+                        (c.name?.toLowerCase().includes(ccPickerQuery.toLowerCase()) ||
+                         c.company?.toLowerCase().includes(ccPickerQuery.toLowerCase()) ||
+                         c.email?.toLowerCase().includes(ccPickerQuery.toLowerCase()))
+                      )
+                      .slice(0, 8)
+                      .map(c => (
+                        <button key={c.id} type="button"
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '8px 12px', background: 'none', border: 'none',
+                            color: '#fff', cursor: 'pointer', fontSize: 13,
+                            borderBottom: '1px solid #2e2e3a'
+                          }}
+                          onClick={() => {
+                            setEmailCc([...emailCc, { name: c.name || '', email: c.email }])
+                            setCcPickerQuery('')
+                          }}
+                        >
+                          <span style={{ fontWeight: 600 }}>{c.name || c.email}</span>
+                          {c.company && <span style={{ color: '#999', marginLeft: 6, fontSize: 11 }}>{c.company}</span>}
+                        </button>
+                      ))
+                    }
+                    {allContacts.filter(c =>
+                      !emailCc.some(x => x.email === c.email) &&
+                      (c.name?.toLowerCase().includes(ccPickerQuery.toLowerCase()) ||
+                       c.company?.toLowerCase().includes(ccPickerQuery.toLowerCase()) ||
+                       c.email?.toLowerCase().includes(ccPickerQuery.toLowerCase()))
+                    ).length === 0 && (
+                      <div style={{ padding: '8px 12px', color: '#666', fontSize: 12 }}>
+                        {i18n.language === 'ja' ? '該当なし' : 'No results'}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* BCC */}
+                <label className="field-label" style={{ marginTop: 8 }}>BCC（任意）</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                  {emailBcc.map((c, i) => (
+                    <span key={i} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      background: 'rgba(255,255,255,0.1)', borderRadius: 20,
+                      padding: '3px 10px', fontSize: 12, color: '#fff'
+                    }}>
+                      {c.name || c.email}
+                      <button type="button" onClick={() => setEmailBcc(emailBcc.filter((_, j) => j !== i))}
+                        style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', padding: 0, fontSize: 14 }}>×</button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  className="text-input"
+                  placeholder={i18n.language === 'ja' ? 'コンタクトを検索して追加…' : 'Search contacts to add…'}
+                  value={bccPickerQuery}
+                  onChange={e => setBccPickerQuery(e.target.value)}
+                  style={{ marginBottom: 4 }}
+                />
+                {bccPickerQuery.length > 0 && (
+                  <div style={{
+                    background: '#1a1a2e', border: '1px solid #2e2e3a', borderRadius: 8,
+                    maxHeight: 150, overflowY: 'auto', marginBottom: 8
+                  }}>
+                    {allContacts
+                      .filter(c =>
+                        !emailBcc.some(x => x.email === c.email) &&
+                        (c.name?.toLowerCase().includes(bccPickerQuery.toLowerCase()) ||
+                         c.company?.toLowerCase().includes(bccPickerQuery.toLowerCase()) ||
+                         c.email?.toLowerCase().includes(bccPickerQuery.toLowerCase()))
+                      )
+                      .slice(0, 8)
+                      .map(c => (
+                        <button key={c.id} type="button"
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '8px 12px', background: 'none', border: 'none',
+                            color: '#fff', cursor: 'pointer', fontSize: 13,
+                            borderBottom: '1px solid #2e2e3a'
+                          }}
+                          onClick={() => {
+                            setEmailBcc([...emailBcc, { name: c.name || '', email: c.email }])
+                            setBccPickerQuery('')
+                          }}
+                        >
+                          <span style={{ fontWeight: 600 }}>{c.name || c.email}</span>
+                          {c.company && <span style={{ color: '#999', marginLeft: 6, fontSize: 11 }}>{c.company}</span>}
+                        </button>
+                      ))
+                    }
+                    {allContacts.filter(c =>
+                      !emailBcc.some(x => x.email === c.email) &&
+                      (c.name?.toLowerCase().includes(bccPickerQuery.toLowerCase()) ||
+                       c.company?.toLowerCase().includes(bccPickerQuery.toLowerCase()) ||
+                       c.email?.toLowerCase().includes(bccPickerQuery.toLowerCase()))
+                    ).length === 0 && (
+                      <div style={{ padding: '8px 12px', color: '#666', fontSize: 12 }}>
+                        {i18n.language === 'ja' ? '該当なし' : 'No results'}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <label className="field-label">{t('contact.subject')}</label>
                 <input
                   type="text"

@@ -16,9 +16,9 @@ No test framework is configured.
 
 **Koryu（交流）** is a mobile-first app that scans business cards, auto-generates a bento-grid profile page, and connects people via SNS. ドメイン: `koryu.app`。旧名: meishi-mailer。**PWA対応済み**（next-pwa + manifest.json + public/icons/）。**Google OAuth審査申請済み**（gmail.send スコープ、審査中）。**チーム機能は削除済み**（2026-05-09）。個人向けフリーミアムに方向転換。
 
-**Core flow (通常):** Photo capture → `/api/analyze` (Claude Vision OCR + email generation) → `/api/contacts/save` (Supabase Storage + `contacts` table + `encounters` テーブルに初回出会いを自動挿入) → `/api/send` (SendGrid) → mark `mail_sent_at`
+**Core flow (通常):** Photo capture → `/api/analyze` (Claude Vision OCR) → CONFIRM（内容確認・編集）→ CONTEXT（日時/場所/メモ入力）→ `/api/contacts/save` (Supabase Storage + `contacts` table + `encounters` テーブルに初回交流を自動挿入）→ コンタクト詳細へ遷移。メール送信はコンタクト詳細からのみ。
 
-**Core flow (重複時):** Photo capture → `/api/analyze` (重複検出: `duplicates` 配列返却) → DUPLICATE画面表示 → 「この交流を記録する」または「この名刺を追加する」 → CONTEXT入力 → `/api/encounters/save` (encountersテーブルに追記、必要に応じてメール送信)
+**Core flow (重複時):** Photo capture → `/api/analyze` (重複検出: `duplicates` 配列返却) → DUPLICATE画面表示 → 「この交流を記録する」または「この名刺を追加する」 → CONTEXT入力 → `/api/encounters/save` (encountersテーブルに追記) → コンタクト詳細へ遷移。
 
 ### Data access pattern
 
@@ -35,7 +35,7 @@ No test framework is configured.
 | `auth/confirm.js` | Password setup page for invited users (handles PKCE + implicit flows). パスワードリセット（type=recovery）も同フォームを再利用。 |
 | `auth/gmail-done.js` | Gmail OAuth ポップアップの中継ページ。`postMessage` で親ウィンドウに `{ type: 'gmail-oauth', status, email }` を送信してポップアップを閉じる。`window.opener` がない場合は `/settings/profile?gmail=...` にフォールバック遷移。 |
 | `settings/email.js` | メール設定（SendGrid/Gmail/SMTP）— プロフィール設定から独立した無料メニュー。戻るボタンは `/settings/profile` へ遷移。 |
-| `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / プロフィールページをデザイン / メール設定 / プラン・サブスクリプション。**FABプレビューボタン**（`position: fixed`、右下・ボトムナブ上）タップでプレビューモーダルを開く。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能。**デフォルトは `previewMode='pro'`**（Freeユーザーでもフルプレビュー表示でProへの動機づけ）。**プロフィール完成度バー**（`position: fixed`、ボトムナブ上部）: 7ステップ構成（顔写真15・表示名15・ひとこと10・所属15・SNS15・メール設定15・Proプラン15）合計100%。Proかつ全完了時に非表示。未完ステップをチップで表示しタップで該当セクションへジャンプ（Proチップはプランセクションを開く）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集（**bioフィールド下に文字数カウンター表示**: 「XX / 100文字 ※ Sサイズ約20文字・Mサイズ約50文字・L/XLフル表示」）、名刺スキャンによるプロフィール自動入力。**「プロフィールページをデザイン」セクション**：**テーマ選択（6種: dark/light/midnight/sunset/sakura/grape）**クリック時に即時 `/api/profile/update-theme` で自動保存（楽観的更新・失敗時ロールバック）・全ユーザー選択可能（ロック廃止）・背景画像をテーマスウォッチ7枚目（📷スウォッチ）に統合・ベントーブロック管理（追加・編集・削除・↑↓並び替え、ペイウォール廃止・設定は全員可・表示はProのみ）。**ブロックタイプ選択モーダル**に制約テキスト追加（写真「Sサイズはキャプションなし」、テキスト「Sサイズはタイトルのみ表示（入力必須）」、リンク「サムネイル/オーバーレイから選択可」、SNS「Sサイズはキャプションなし」）。**所属・連絡先**：最大5件、ボタン（↑↓・削除）をカード上部横並びに変更、削除ボタンは「○件目を削除」と番号付き。SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）。**プランセクション（Free表示）**：ヘッドライン「Freeで作って、Proで魅せる」・Free/Proプレビューリンク（`previewMode='free'`でモーダルを開く）・機能リスト（ベントーグリッド・テーマ背景画像反映）・月/年トグル・アップグレードボタン。メール署名プレビュー、Stripe Checkout/Portal。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
+| `settings/profile.js` | Profile settings — **アコーディオンセクション UI**（旧5タブ廃止）。全セクションデフォルト閉じ（`openSections` state + `toggleSection` 関数）。セクション順：SNSリンク / 所属・連絡先 / プロフィールページをデザイン / メール設定 / プラン・サブスクリプション。**FABプレビューボタン**（`position: fixed`、右下・ボトムナブ上）タップでプレビューモーダルを開く。`previewMode`（`'pro'`\|`'free'`）でモーダル内を Pro/無課金プレビューで切り替え可能。**デフォルトは `previewMode='pro'`**（Freeユーザーでもフルプレビュー表示でProへの動機づけ）。**プロフィール完成度バー**（`position: fixed`、ボトムナブ上部）: 7ステップ構成（顔写真15・表示名15・ひとこと10・所属15・SNS15・メール設定15・Proプラン15）合計100%。Proかつ全完了時に非表示。未完ステップをチップで表示しタップで該当セクションへジャンプ（Proチップはプランセクションを開く）。統一 top-bar + bottom-nav（プロフィール=active）。アバター写真アップロード（タップでカメラ選択→即時反映）、display name + bio インライン編集（**bioフィールド下に文字数カウンター表示**: 「XX / 100文字 ※ Sサイズ約20文字・Mサイズ約50文字・L/XLフル表示」）、名刺スキャンによるプロフィール自動入力。**「プロフィールページをデザイン」セクション**：**テーマ選択（6種: dark/light/midnight/sunset/sakura/grape）**クリック時に即時 `/api/profile/update-theme` で自動保存（楽観的更新・失敗時ロールバック）・全ユーザー選択可能（ロック廃止）・背景画像をテーマスウォッチ7枚目（📷スウォッチ）に統合・ベントーブロック管理（追加・編集・削除・↑↓並び替え、ペイウォール廃止・設定は全員可・表示はProのみ）。**ブロックタイプ選択モーダル**に制約テキスト追加（写真「Sサイズはキャプションなし」、テキスト「Sサイズはタイトルのみ表示（入力必須）」、リンク「サムネイル/オーバーレイから選択可」、SNS「Sサイズはキャプションなし」）。**所属・連絡先**：最大5件、ボタン（↑↓・削除）をカード上部横並びに変更、削除ボタンは「○件目を削除」と番号付き。SNS リンク（`lib/snsConfig.js` 定義、personal/business/cardapp の3カテゴリ、QR/username/url の3入力モード）。**プランセクション（Free表示）**：ヘッドライン「Freeで作って、Proで魅せる」・Free/Proプレビューリンク（`previewMode='free'`でモーダルを開く）・機能リスト（ベントーグリッド・テーマ背景画像反映）・月/年トグル・アップグレードボタン。メール署名プレビュー、Stripe Checkout/Portal。**統一フローティング保存ボタン**: 任意の編集を検知すると画面下部にポップアップ表示される保存ボタン（`position: fixed`）。SNSリンク・所属・ブロック・bio等、セクションをまたいで共通の保存UIを使用。編集検知は各フィールドの onChange/onBlur で `hasUnsavedChanges` フラグを立てる方式。ブロックの追加・編集・削除・並び替えもすべてこの保存ボタン経由で `/api/profile/blocks` に一括保存（Proチェックは保存APIではなく公開プロフィールへの反映側で行う。フリープランでも操作・保存は可能）。未保存変更の離脱防止（`router.events` + `window.onbeforeunload`）。完全i18n対応。|
 | `p/[userId].js` | Public profile page — **ベントーグリッド方式**。`profile_blocks` テーブルからブロックを取得してグリッド表示。**ハードコードヘッダー廃止済み**（全要素がブロックとして管理。`profile_card` ブロックがヘッダーの役割を担う）。ブロックタイプ: photo / text / link / sns / profile_card / affiliation。サイズ: **XS**（所属のみ・約80px）/ S / M / L / **XL**（`grid-row: span 2`）、`grid-auto-rows: minmax(144px, auto)`。**ブロックサイズ別アダプティブレイアウト**: 各ブロックタイプがサイズに応じて表示内容・レイアウトを自動変化（詳細は profile_blocks セクション参照）。**bioテキスト改行対応**: `dangerouslySetInnerHTML` で `\n` と `<br>` を改行として描画。**テーマ定数**: dark / light / midnight / sunset / sakura / grape の6種（warm / ocean 廃止）。**テーマ・背景画像**: `isPro` の場合のみ適用（`activeTheme` / `activeBgImage` 変数でガード）。**`?preview=1` クエリ**: isPro に関わらずテーマ・ベントーグリッドをフル表示（設定画面プレビューモーダルから参照）。**無課金ユーザー表示**: テキストのみのシンプルレイアウト（名前+bio+所属テキスト+SNSアイコン+Koryu招待）。変更なし・固定仕様。**フッター所属エリア（Proのみ）**: ベントーグリッド下に `profile_affiliations` 全件を縦並び表示（show_*フラグ尊重）。**`?simulate_free=1` クエリ対応**: Proユーザーでも無課金表示を確認可能（`showAsPro = (isPro || isPreview || isPreviewMode) && !simulateFree` で制御）。No auth。`getServerSideProps` + `supabaseAdmin`（profiles / profile_blocks / profile_affiliations を並列取得）。|
 | `_app.js` | Global auth safety net — intercepts `#type=invite` hash on any page |
 | `_document.js` | カスタムDocument。PWA manifest / theme-color / apple-touch-icon / `<link rel="icon" href="/favicon.svg" type="image/svg+xml" />`（32×32 SVG、黒丸角背景＋緑の「交」）を設定。 |
@@ -65,7 +65,7 @@ No test framework is configured.
 
 **Core**
 - `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。**meishi-mailerユーザー検出**: OCR抽出メールアドレスで `profiles` テーブルを検索し、自分以外のユーザーがヒットすれば `meishi_user: { user_id, name, avatar_url, profile_url }` をレスポンスに含める。クライアントはCONFIRM画面にバッジを表示。
-- `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured. `contact_id` が含まれる場合、送信成功後に `encounters` テーブルへ自動insert（`event_name='メール送信'`、`memo=件名`）。既存の動作は変えない（`contact_id` がない場合は従来通り）。
+- `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured. `contact_id` が含まれる場合、送信成功後に `encounters` テーブルへ自動insert（`event_name='メール送信'`、`memo=件名`）。`cc`/`bcc` に配列でメールアドレスを渡すと CC/BCC 送信に対応。**メール署名にQRコードなし**（スパムフィルター対策）—テキストリンク（プロフィールURL）のみ。
 
 **Billing**
 - `POST /api/billing/create-checkout-session` — creates Stripe Checkout session for Pro plan. Reuses existing `stripe_customer_id` if present. `success_url`/`cancel_url` built from request headers.
@@ -109,7 +109,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 
 **`organizations`** — `id, name, created_at`
 
-**`profiles`** — `id, email, name, bio, avatar_url, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id, profile_theme, profile_bg_image_url`
+**`profiles`** — `id, email, name, bio, avatar_url, current_organization_id (FK → organizations), sender_email, sendgrid_api_key, smtp_provider, smtp_host, smtp_port, smtp_user, smtp_password, gmail_refresh_token, gmail_email, sns_line, sns_whatsapp, sns_x, sns_instagram, sns_facebook, sns_linkedin, sns_tiktok, sns_youtube, sns_threads, sns_telegram, sns_wechat, sns_discord, sns_github, sns_bluesky, sns_pinterest, sns_sansan, sns_eight, sns_mybridge, sns_vercel, sns_wantedly, sns_note, phone, website, contact_email, show_phone, show_website, show_email, plan, scan_count_month, scan_count_reset_at, stripe_customer_id, stripe_subscription_id, profile_theme, profile_bg_image_url, username`
 - `current_organization_id` always points to the org where the user is `owner`
 - `sender_email` + `sendgrid_api_key` are set by the user via `/settings/profile`; `sendgrid_api_key` is never returned to the client
 - `smtp_provider`: `'sendgrid'` (default) | `'gmail'` | `'smtp'`
@@ -123,6 +123,7 @@ Email generation language follows the UI locale (`Accept-Language` header from c
 - `stripe_customer_id` / `stripe_subscription_id`: set on `checkout.session.completed`, cleared on subscription deletion
 - `profile_theme`: `'dark'` (default) | `'light'` | `'midnight'` | `'sunset'` | `'sakura'` | `'grape'`。`/p/[userId].js` の背景・カード・アクセント・テキスト色を決定。クリック時に `/api/profile/update-theme` で即時自動保存
 - `profile_bg_image_url`: Supabase Storage `avatars` バケットの公開URL（`{userId}/profile_bg.jpg`）。Proユーザーの公開プロフィールページ背景画像。`null` when not set
+- `username`: カスタムプロフィールURL用のユーザー名（例: `takukojin` → `/p/takukojin`）。**Proプランのみ設定可能**。未設定時はUUID（`/p/{userId}`）が使用される。`null` when not set。API・UI両方でProチェックを実施
 
 **`user_organizations`** — `user_id, organization_id, role (owner|member), created_at`
 - Junction table for many-to-many users ↔ orgs
@@ -334,3 +335,39 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - メール送信を交流履歴セクションに統合・旧collapsibleメールUIを削除
 - AIメール生成フロー実装（シチュエーション選択→`/api/contacts/generate-email`→プレビュー編集→送信）
 - メール送信後にencountersへ自動記録（`event_name='メール送信'`、✉アイコン付き特別表示）
+
+**2026-05-25 ドメイン・UI修正完了。**
+
+- `koryu.app` DNS問題解決: SquarespaceのDNSゾーンが機能不全だったためCloudflareへネームサーバー移行（`shane.ns.cloudflare.com` / `shaz.ns.cloudflare.com`）。Aレコード `@→216.198.79.1`、CNAME `www→69817e0149a8c53b.vercel-dns-017.com` をCloudflareに設定
+- `koryu.app` ICANN認証完了: ドメイン取得（2026-05-09）から15日以内に認証メールへの応答が必要だったが未応答でホールド状態になっていた。認証完了でドメイン復活
+- カスタムプロフィールURL（`username`）をProプランのみに制限: フリープランはUUID（`/p/{userId}`）固定。UIは「🔒 ProプランでカスタムURLを設定」ボタン表示、APIもProチェックを実施
+- ベントーブロック削除後に保存ボタンが表示されないバグ修正: `hasUnsavedChanges` フラグがブロック削除時に立っていなかった問題を修正。フリープランでもブロック操作・保存が可能に
+- ヘッダー・フッターの視認性改善: 非アクティブメニュー・ログインメールアドレス・ログアウト・言語切替ボタンのopacityを1段階引き上げ
+- 公開プロフィールページ（`/p/[userId].js`）に言語切り替えボタン（JA / EN）追加: **Proプランのみ**表示。デフォルトは訪問者の `navigator.language` で自動判定。UIテキストのみ切り替え（プロフィール中身はそのまま）
+- プロフィールプレビューモーダルの未翻訳箇所を修正: 「プロフィール プレビュー」→ "Profile Preview"、「× 閉じる」→ "× Close"、「無課金」→ "Free"
+- 各種UI未翻訳箇所をi18n対応: 「交流N回」→ "N encounters"、所属フォームのプレースホルダー、「編集」→ "Edit"、「変更を保存」→ "Save Changes"、「プロフィールURL」→ "Profile URL"等
+- `affiliation` ブロックをベントーグリッドから除外: `/p/[userId].js` で `type === 'affiliation'` をフィルタリング。所属は最下部フッターエリアのみに表示。`settings/profile.js` のブロック一覧にも注記追加（「所属・連絡先は別セクションで管理」）
+
+**2026-05-25 Pro/Free境界線の再設計・SNS表示リファクタリング完了。**
+
+- **Pro/Free SNS表示を明確に分離**:
+  - Free: 登録済みSNSをアイコン＋名前＋リンクのテキスト形式で縦羅列（選択・並び替え不可）
+  - Pro: SNSを `type: 'sns'` ベントーブロックとして管理。他ブロックと混在配置可能
+- **「つながりましょう」セクション刷新**:
+  - 緑ボタン形式を維持（アイコン左・名前中央・矢印→右）
+  - Proユーザーは表示するSNSを最大2つ選択可能（登録済みSNSから選択）
+  - セクション全体の位置をブロック一覧の↑↓で変更可能（Proのみ）
+  - Freeは登録済みSNSの先頭2つを自動表示・選択不可・位置固定
+  - セクションタイトルをユーザーが自由編集可能（デフォルト: 「つながりましょう」/ "Let's Connect"）
+- **`lib/snsConfig.js` に `connectText` フィールド追加**: 各SNSのボタン表示デフォルト文言（「LINEで友達追加」「Xでフォローする」等）。ユーザーが設定画面で編集可能
+- LINE/WhatsApp の特別扱い廃止: 他SNSと同じ扱いに統一
+
+次の候補: 「つながりましょう」設定UIの改善、SNSブロック編集UXの改善。
+
+**2026-06-03 スキャン後フロー刷新・メール機能強化完了。**
+
+- スキャン後フローからメール送信を分離: CONFIRM→CONTEXT→記録完了→コンタクト詳細へ遷移（メール送信ステップ廃止）
+- メール送信はコンタクト詳細の「✉ メールを送る」からのみ（AIメール生成フロー）
+- メール送信に CC/BCC 対応: 送信シートにCC/BCC欄を追加、登録済みコンタクトから名前検索でピッカー選択可能
+- メール署名からQRコード画像を削除（quishing対策・迷惑メールフォルダ回避）—プロフィールURLのテキストリンクのみに変更
+- `lib/sendEmail.js` / `pages/api/send.js`: SendGrid/Gmail/SMTP全プロバイダーでCC/BCC送信対応

@@ -61,7 +61,7 @@
     "mic_start": "Start voice input",
     "mic_stop": "Stop voice input",
     "send_now": "Send now →",
-    "save_later": "Save and send later",
+    "save_later": "Save & continue",
     "back": "← Back"
   },
   "sending": {

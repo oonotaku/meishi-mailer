@@ -61,7 +61,7 @@
     "mic_start": "音声入力を開始",
     "mic_stop": "音声入力を停止",
     "send_now": "今すぐ送信 →",
-    "save_later": "保存して後で送る",
+    "save_later": "記録して完了",
     "back": "← 戻る"
   },
   "sending": {

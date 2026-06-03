@@ -505,7 +505,7 @@ export default function Home() {
             temperature,
           }),
         })
-        setStep(STEPS.DONE)
+        router.push(`/contacts/${duplicateContactId}`)
       } catch (err) {
         setErrorMsg(err.message)
         setStep(STEPS.ERROR)
@@ -525,7 +525,7 @@ export default function Home() {
           body: JSON.stringify({ encounter_id: saved.encounter_id, photo_urls: encounter_photo_urls }),
         })
       }
-      setStep(STEPS.DONE)
+      router.push(`/contacts/${saved.id}`)
     } catch (err) {
       setErrorMsg(err.message)
       setStep(STEPS.ERROR)
@@ -1534,17 +1534,7 @@ export default function Home() {
               </div>
             )}
 
-            <div className="mail-section">
-              <label className="field-label">{t('confirm.subject')}</label>
-              <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="text-input" />
-              <label className="field-label" style={{ marginTop: 12 }}>{t('confirm.body')}</label>
-              <textarea value={body} onChange={e => setBody(e.target.value)} className="textarea" rows={7} />
-            </div>
-
-            <button className="send-btn" onClick={onSendNow} disabled={!email && !manualEmail}>
-              {t('context.send_now')}
-            </button>
-            <button className="save-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
+            <button className="send-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
             <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
           </div>
         )}
@@ -1631,11 +1621,7 @@ export default function Home() {
 
             {duplicateContactId ? (
               <>
-                <button className="send-btn" style={{ marginTop: 20 }} onClick={onSendNow}
-                  disabled={!email && !manualEmail}>
-                  {t('context.send_now')}
-                </button>
-                <button className="save-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
+                <button className="send-btn" style={{ marginTop: 20 }} onClick={onSaveOnly}>{t('context.save_later')}</button>
                 <button className="ghost-btn" onClick={() => setStep(duplicateType === 'name' ? STEPS.DUPLICATE_NAME : STEPS.DUPLICATE_EMAIL)}>{t('context.back')}</button>
               </>
             ) : (

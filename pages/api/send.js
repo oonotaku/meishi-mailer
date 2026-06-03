@@ -12,7 +12,7 @@ function escapeHtml(str) {
 }
 
 
-function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
+function buildHtmlEmail(body, senderName, company, title, profileUrl) {
   const htmlBody = body
     .split('\n')
     .map(line => `<p style="margin:0 0 8px 0">${escapeHtml(line)}</p>`)
@@ -22,29 +22,18 @@ function buildHtmlEmail(body, senderName, company, title, qrUrl, profileUrl) {
   const companyHtml = company ? `<div style="color:#555;font-size:12px">${escapeHtml(company)}</div>` : ''
   const titleHtml = title ? `<div style="color:#777;font-size:12px">${escapeHtml(title)}</div>` : ''
 
-
   return `
 <div style="font-family:sans-serif;font-size:13px;line-height:1.7;color:#333;max-width:600px">
   <div>${htmlBody}</div>
   <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0">
-  <table cellpadding="0" cellspacing="0" border="0">
-    <tr>
-      <td style="padding-right:16px;vertical-align:top">
-        <a href="${profileUrl}" target="_blank">
-          <img src="${qrUrl}" width="100" height="100" alt="Profile QR" style="display:block;border:0">
-        </a>
-        <div style="font-size:10px;color:#999;text-align:center;margin-top:4px">プロフィールを開く</div>
-      </td>
-      <td style="vertical-align:middle">
-        ${nameHtml}
-        ${companyHtml}
-        ${titleHtml}
-        <div style="margin-top:6px;font-size:11px;color:#aaa">
-          <a href="${profileUrl}" style="color:#aaa;text-decoration:none">${escapeHtml(profileUrl)}</a>
-        </div>
-      </td>
-    </tr>
-  </table>
+  <div>
+    ${nameHtml}
+    ${companyHtml}
+    ${titleHtml}
+    <div style="margin-top:6px;font-size:11px;color:#aaa">
+      <a href="${profileUrl}" style="color:#aaa;text-decoration:none">${escapeHtml(profileUrl)}</a>
+    </div>
+  </div>
 </div>`
 }
 
@@ -57,7 +46,7 @@ export default async function handler(req, res) {
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return res.status(401).json({ error: '認証が必要です' })
 
-  const { to, subject, body, selected_preset = 'business', contact_id } = req.body
+  const { to, subject, body, selected_preset = 'business', contact_id, cc, bcc } = req.body
   if (!to || !subject || !body) return res.status(400).json({ error: 'missing fields' })
 
   const { data: profile } = await supabaseAdmin
@@ -79,14 +68,15 @@ export default async function handler(req, res) {
   const primaryAffil = affiliations?.[0]
 
   const profileUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/p/${user.id}`
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(profileUrl)}&bgcolor=ffffff&color=000000&margin=2`
 
   try {
     await sendEmail(profile, {
       to,
       subject,
       text: body,
-      html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', qrUrl, profileUrl),
+      html: buildHtmlEmail(body, profile.name || '', primaryAffil?.company_name || '', primaryAffil?.title || '', profileUrl),
+      cc: cc?.length ? cc : undefined,
+      bcc: bcc?.length ? bcc : undefined,
     })
     if (contact_id) {
       supabaseAdmin.from('encounters').insert({
