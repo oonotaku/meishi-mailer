@@ -65,7 +65,7 @@ No test framework is configured.
 
 **Core**
 - `POST /api/analyze` — Claude Vision OCR + email generation (two sequential Claude calls). Requires Bearer token. Checks plan limits (Free: 10/mo, Pro: 100/mo), resets `scan_count_month` if new month, increments on success (重複時も increment). OCR後にメアドが抽出できた場合、`owner_id=user.id` の contacts を `.ilike()` で検索し、ヒットすれば `duplicates` 配列をレスポンスに含める。`duplicates` がある場合、クライアントはメール生成結果を捨てて DUPLICATE ステップへ遷移する。**meishi-mailerユーザー検出**: OCR抽出メールアドレスで `profiles` テーブルを検索し、自分以外のユーザーがヒットすれば `meishi_user: { user_id, name, avatar_url, profile_url }` をレスポンスに含める。クライアントはCONFIRM画面にバッジを表示。
-- `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured. `contact_id` が含まれる場合、送信成功後に `encounters` テーブルへ自動insert（`event_name='メール送信'`、`memo=件名`）。`cc`/`bcc` に配列でメールアドレスを渡すと CC/BCC 送信に対応。**メール署名にQRコードなし**（スパムフィルター対策）—テキストリンク（プロフィールURL）のみ。
+- `POST /api/send` — requires Bearer token. Fetches provider config from profile. Delegates to `lib/sendEmail.js` for actual sending. Returns 400 with setup instructions if not configured. `contact_id` が含まれる場合、送信成功後に `encounters` テーブルへ自動insert（`event_name='メール送信'`、`memo=件名`）。`cc`/`bcc` に配列でメールアドレスを渡すと CC/BCC 送信に対応。**メール署名にQRコードなし**（quishing対策・迷惑メールフォルダ回避）—テキストリンク（プロフィールURL）のみ。
 
 **Billing**
 - `POST /api/billing/create-checkout-session` — creates Stripe Checkout session for Pro plan. Reuses existing `stripe_customer_id` if present. `success_url`/`cancel_url` built from request headers.
@@ -368,6 +368,7 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 
 - スキャン後フローからメール送信を分離: CONFIRM→CONTEXT→記録完了→コンタクト詳細へ遷移（メール送信ステップ廃止）
 - メール送信はコンタクト詳細の「✉ メールを送る」からのみ（AIメール生成フロー）
-- メール送信に CC/BCC 対応: 送信シートにCC/BCC欄を追加、登録済みコンタクトから名前検索でピッカー選択可能
+- メール送信に CC/BCC 対応: 送信シートにCC/BCC欄を追加、登録済みコンタクトから名前検索でピッカー選択可能（PC・スマホ両対応）
+- CC/BCCピッカーはposition:absoluteドロップダウン実装（モバイルでシートのoverflow clippingを回避）
 - メール署名からQRコード画像を削除（quishing対策・迷惑メールフォルダ回避）—プロフィールURLのテキストリンクのみに変更
 - `lib/sendEmail.js` / `pages/api/send.js`: SendGrid/Gmail/SMTP全プロバイダーでCC/BCC送信対応
