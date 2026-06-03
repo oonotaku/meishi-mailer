@@ -1702,10 +1702,9 @@ export default function ContactDetail() {
                   type="text"
                   className="text-input"
                   placeholder={i18n.language === 'ja' ? 'コンタクトを検索して追加…' : 'Search contacts to add…'}
-                  value={ccPickerQuery}
-                  onChange={e => setCcPickerQuery(e.target.value)}
-                  onCompositionEnd={e => setCcPickerQuery(e.target.value)}
-                  onInput={e => setCcPickerQuery(e.target.value)}
+                  onInput={e => setCcPickerQuery(e.currentTarget.value)}
+                  onCompositionEnd={e => setCcPickerQuery(e.currentTarget.value)}
+                  onChange={e => setCcPickerQuery(e.currentTarget.value)}
                   style={{ marginBottom: 4 }}
                 />
                 {ccPickerQuery.length > 0 && (
@@ -1771,10 +1770,9 @@ export default function ContactDetail() {
                   type="text"
                   className="text-input"
                   placeholder={i18n.language === 'ja' ? 'コンタクトを検索して追加…' : 'Search contacts to add…'}
-                  value={bccPickerQuery}
-                  onChange={e => setBccPickerQuery(e.target.value)}
-                  onCompositionEnd={e => setBccPickerQuery(e.target.value)}
-                  onInput={e => setBccPickerQuery(e.target.value)}
+                  onInput={e => setBccPickerQuery(e.currentTarget.value)}
+                  onCompositionEnd={e => setBccPickerQuery(e.currentTarget.value)}
+                  onChange={e => setBccPickerQuery(e.currentTarget.value)}
                   style={{ marginBottom: 4 }}
                 />
                 {bccPickerQuery.length > 0 && (
