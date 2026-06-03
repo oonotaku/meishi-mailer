@@ -1704,12 +1704,14 @@ export default function ContactDetail() {
                   placeholder={i18n.language === 'ja' ? 'コンタクトを検索して追加…' : 'Search contacts to add…'}
                   value={ccPickerQuery}
                   onChange={e => setCcPickerQuery(e.target.value)}
+                  onCompositionEnd={e => setCcPickerQuery(e.target.value)}
+                  onInput={e => setCcPickerQuery(e.target.value)}
                   style={{ marginBottom: 4 }}
                 />
                 {ccPickerQuery.length > 0 && (
                   <div style={{
-                    background: '#1a1a2e', border: '1px solid #2e2e3a', borderRadius: 8,
-                    maxHeight: 150, overflowY: 'auto', marginBottom: 8
+                    background: '#2a2a3e', border: '1px solid #4a4a6a', borderRadius: 8,
+                    maxHeight: 200, overflowY: 'auto', marginBottom: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                   }}>
                     {allContacts
                       .filter(c =>
@@ -1723,17 +1725,17 @@ export default function ContactDetail() {
                         <button key={c.id} type="button"
                           style={{
                             display: 'block', width: '100%', textAlign: 'left',
-                            padding: '8px 12px', background: 'none', border: 'none',
-                            color: '#fff', cursor: 'pointer', fontSize: 13,
-                            borderBottom: '1px solid #2e2e3a'
+                            padding: '12px 14px', background: 'none', border: 'none',
+                            color: '#ffffff', cursor: 'pointer', fontSize: 14,
+                            borderBottom: '1px solid #3a3a5a', minHeight: 48
                           }}
                           onClick={() => {
                             setEmailCc([...emailCc, { name: c.name || '', email: c.email }])
                             setCcPickerQuery('')
                           }}
                         >
-                          <span style={{ fontWeight: 600 }}>{c.name || c.email}</span>
-                          {c.company && <span style={{ color: '#999', marginLeft: 6, fontSize: 11 }}>{c.company}</span>}
+                          <div style={{ fontWeight: 600 }}>{c.name || c.email}</div>
+                          {c.company && <div style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>{c.company}</div>}
                         </button>
                       ))
                     }
@@ -1743,7 +1745,7 @@ export default function ContactDetail() {
                        c.company?.toLowerCase().includes(ccPickerQuery.toLowerCase()) ||
                        c.email?.toLowerCase().includes(ccPickerQuery.toLowerCase()))
                     ).length === 0 && (
-                      <div style={{ padding: '8px 12px', color: '#666', fontSize: 12 }}>
+                      <div style={{ padding: '12px 14px', color: '#888', fontSize: 13 }}>
                         {i18n.language === 'ja' ? '該当なし' : 'No results'}
                       </div>
                     )}
@@ -1771,12 +1773,14 @@ export default function ContactDetail() {
                   placeholder={i18n.language === 'ja' ? 'コンタクトを検索して追加…' : 'Search contacts to add…'}
                   value={bccPickerQuery}
                   onChange={e => setBccPickerQuery(e.target.value)}
+                  onCompositionEnd={e => setBccPickerQuery(e.target.value)}
+                  onInput={e => setBccPickerQuery(e.target.value)}
                   style={{ marginBottom: 4 }}
                 />
                 {bccPickerQuery.length > 0 && (
                   <div style={{
-                    background: '#1a1a2e', border: '1px solid #2e2e3a', borderRadius: 8,
-                    maxHeight: 150, overflowY: 'auto', marginBottom: 8
+                    background: '#2a2a3e', border: '1px solid #4a4a6a', borderRadius: 8,
+                    maxHeight: 200, overflowY: 'auto', marginBottom: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                   }}>
                     {allContacts
                       .filter(c =>
@@ -1790,17 +1794,17 @@ export default function ContactDetail() {
                         <button key={c.id} type="button"
                           style={{
                             display: 'block', width: '100%', textAlign: 'left',
-                            padding: '8px 12px', background: 'none', border: 'none',
-                            color: '#fff', cursor: 'pointer', fontSize: 13,
-                            borderBottom: '1px solid #2e2e3a'
+                            padding: '12px 14px', background: 'none', border: 'none',
+                            color: '#ffffff', cursor: 'pointer', fontSize: 14,
+                            borderBottom: '1px solid #3a3a5a', minHeight: 48
                           }}
                           onClick={() => {
                             setEmailBcc([...emailBcc, { name: c.name || '', email: c.email }])
                             setBccPickerQuery('')
                           }}
                         >
-                          <span style={{ fontWeight: 600 }}>{c.name || c.email}</span>
-                          {c.company && <span style={{ color: '#999', marginLeft: 6, fontSize: 11 }}>{c.company}</span>}
+                          <div style={{ fontWeight: 600 }}>{c.name || c.email}</div>
+                          {c.company && <div style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>{c.company}</div>}
                         </button>
                       ))
                     }
@@ -1810,7 +1814,7 @@ export default function ContactDetail() {
                        c.company?.toLowerCase().includes(bccPickerQuery.toLowerCase()) ||
                        c.email?.toLowerCase().includes(bccPickerQuery.toLowerCase()))
                     ).length === 0 && (
-                      <div style={{ padding: '8px 12px', color: '#666', fontSize: 12 }}>
+                      <div style={{ padding: '12px 14px', color: '#888', fontSize: 13 }}>
                         {i18n.language === 'ja' ? '該当なし' : 'No results'}
                       </div>
                     )}
