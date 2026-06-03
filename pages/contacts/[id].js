@@ -1680,7 +1680,7 @@ export default function ContactDetail() {
           {/* ── メール送信シート: プレビュー・編集 ── */}
           {emailStep === 'preview' && (
             <div className="sheet-overlay" onClick={() => !emailSending && setEmailStep(null)}>
-              <div className="sheet-box" onClick={e => e.stopPropagation()} style={{ maxHeight: '82vh', overflowY: 'auto' }}>
+              <div className="sheet-box" onClick={e => e.stopPropagation()} style={{ maxHeight: '82vh', overflowY: 'auto', position: 'relative' }}>
                 <div className="sheet-title">{i18n.language === 'ja' ? 'メールを確認・編集' : 'Preview & edit'}</div>
 
                 {/* CC */}
@@ -1698,6 +1698,7 @@ export default function ContactDetail() {
                     </span>
                   ))}
                 </div>
+                <div style={{ position: 'relative' }}>
                 <input
                   type="text"
                   className="text-input"
@@ -1709,8 +1710,9 @@ export default function ContactDetail() {
                 />
                 {ccPickerQuery.length > 0 && (
                   <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
                     background: '#2a2a3e', border: '1px solid #4a4a6a', borderRadius: 8,
-                    maxHeight: 200, overflowY: 'auto', marginBottom: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                    maxHeight: 200, overflowY: 'auto', marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
                   }}>
                     {allContacts
                       .filter(c =>
@@ -1750,6 +1752,7 @@ export default function ContactDetail() {
                     )}
                   </div>
                 )}
+                </div>
 
                 {/* BCC */}
                 <label className="field-label" style={{ marginTop: 8 }}>BCC（任意）</label>
@@ -1766,6 +1769,7 @@ export default function ContactDetail() {
                     </span>
                   ))}
                 </div>
+                <div style={{ position: 'relative' }}>
                 <input
                   type="text"
                   className="text-input"
@@ -1777,8 +1781,9 @@ export default function ContactDetail() {
                 />
                 {bccPickerQuery.length > 0 && (
                   <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
                     background: '#2a2a3e', border: '1px solid #4a4a6a', borderRadius: 8,
-                    maxHeight: 200, overflowY: 'auto', marginBottom: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                    maxHeight: 200, overflowY: 'auto', marginTop: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.6)'
                   }}>
                     {allContacts
                       .filter(c =>
@@ -1818,6 +1823,7 @@ export default function ContactDetail() {
                     )}
                   </div>
                 )}
+                </div>
 
                 <label className="field-label">{t('contact.subject')}</label>
                 <input
