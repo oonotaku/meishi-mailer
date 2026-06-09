@@ -646,16 +646,18 @@ export default function Home() {
 
           {/* ── Hero ── */}
           <section style={{ padding: '88px 20px 40px' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#16a34a', marginBottom: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#16a34a', marginBottom: 8 }}>
               for ambitious professionals
             </p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 20, letterSpacing: '0.02em' }}>
+              名刺管理 × 人脈構築アプリ
+            </p>
             <h1 style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.45, marginBottom: 20, color: '#fff' }}>
-              名刺交換した人たちは、<br />
-              あなたの資産だ。<br />
-              眠らせるな。
+              名刺スキャン・SNS連携・<br />
+              交流履歴、全部ひとつで。
             </h1>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: 'rgba(255,255,255,0.65)', marginBottom: 32 }}>
-              名刺交換したその場でSNSで繋がり、交流履歴を残し、いざという時にメールできる。転職・独立・副業を決めたとき、人脈が武器になる。
+              名刺をスキャンしてその場でSNSで繋がり、交流履歴を残し、いざという時にメールできる。転職・独立・副業を決めたとき、人脈が武器になる。
             </p>
             <a href="/login" style={{ display: 'block', background: '#16a34a', color: '#fff', textAlign: 'center', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700, textDecoration: 'none', marginBottom: 12, boxShadow: '0 4px 20px rgba(22,163,74,0.35)' }}>
               今すぐ無料で始める
