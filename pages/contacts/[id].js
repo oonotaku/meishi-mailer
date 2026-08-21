@@ -1969,6 +1969,38 @@ export default function ContactDetail() {
           </div>
 
         </div>
+
+        <nav className="bottom-nav">
+          <button className="bn-item" onClick={() => router.push('/')}>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <span className="bn-label">{t('nav.scan')}</span>
+          </button>
+          <button className="bn-item bn-active" onClick={() => router.push('/contacts')}>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <span className="bn-label">{t('nav.contacts')}</span>
+          </button>
+          <button className="bn-item" onClick={() => router.push('/settings/profile')}>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <span className="bn-label">{t('nav.profile')}</span>
+          </button>
+        </nav>
       </div>
 
       <style jsx global>{`
@@ -1985,7 +2017,50 @@ export default function ContactDetail() {
           margin: 0 auto;
           display: flex;
           flex-direction: column;
+          padding-bottom: 72px;
         }
+
+        /* Bottom Nav */
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          display: flex;
+          align-items: stretch;
+          background: rgba(10,10,15,0.94);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(255,255,255,0.07);
+          padding: 8px 0;
+          padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+          z-index: 50;
+        }
+        .bn-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+          padding: 4px 0;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #5a5a6a;
+          font-family: 'Noto Sans JP', sans-serif;
+          transition: color .15s;
+        }
+        .bn-item:active { opacity: .7; }
+        .bn-icon {
+          display: flex; align-items: center; justify-content: center;
+        }
+        .bn-label {
+          font-size: 10px;
+          letter-spacing: .02em;
+        }
+        .bn-active { color: #7b9e87; cursor: default; }
 
         /* Header */
         .header {

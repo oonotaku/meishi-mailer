@@ -150,51 +150,10 @@ ${qrContext}`
       }
     }
 
-    // Step 2: メール生成（ロケール別プロンプト）
-    let mailPrompt
-    if (locale === 'en') {
-      const greeting = sameDay
-        ? 'Thank you for meeting with me earlier today'
-        : 'Thank you for meeting with me recently'
-      mailPrompt = `Create a professional, warm English business thank-you email for the following person.
-Name: ${contact.name || 'Unknown'} / Company: ${contact.company || ''} / Title: ${contact.title || ''}
-
-Rules:
-- First line: subject line only (no "Subject:" prefix)
-- Second line onwards: email body
-- Start the body with "${greeting}"
-- Professional, warm business English
-- 80–120 words
-- Include anticipation of future connection
-- Do not include a closing signature or sign-off line (e.g. "Warm regards, [Name]") — a signature block is appended automatically`
-      if (memo) mailPrompt += `\n- Conversation notes: "${memo}"\n- Naturally weave these notes into the email body without being pushy`
-    } else {
-      const greetingStart = sameDay ? '先ほどは' : '先日は'
-      mailPrompt = `以下の方への名刺交換お礼メールを作成してください。
-氏名: ${contact.name || '不明'} / 会社: ${contact.company || ''} / 役職: ${contact.title || ''}
-
-条件:
-- 1行目: 件名（「件名:」なしで件名のみ）
-- 2行目以降: 本文
-- 冒頭の挨拶は「${greetingStart}」で始める
-- 「。」の後は必ず改行する
-- 丁寧でビジネス的、温かみのある日本語
-- 本文100〜150字
-- 今後のお付き合いへの期待を含める
-- 末尾に「敬具」「よろしくお願いいたします」などの締め文や署名は入れない（署名は自動で付与される）`
-      if (memo) mailPrompt += `\n- 会話メモ：「${memo}」\n- このメモの内容を自然な形でメール本文に盛り込んでください。ただし押しつけがましくならないよう注意してください。`
-    }
-
-    const mailRes = await client.messages.create({
-      model: 'claude-opus-4-5',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: mailPrompt }]
-    })
-
-    const mailText = mailRes.content[0].text.trim()
-    const lines = mailText.split('\n')
-    const subject = lines[0].replace(/^(件名|subject)[:：]\s*/i, '').trim()
-    const body = lines.slice(1).join('\n').trim()
+    // メール文生成は廃止（スキャン後フローでは使われない。送信時はcontacts/[id].jsの
+    // AIメール生成フロー（/api/contacts/generate-email）で改めて生成される）
+    const subject = null
+    const body = null
 
     // SNSマッチング
     const cardSns = contact.sns || {}
