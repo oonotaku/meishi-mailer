@@ -1978,7 +1978,17 @@ export default function ContactDetail() {
                 <circle cx="12" cy="13" r="4"/>
               </svg>
             </div>
-            <span className="bn-label">{t('nav.scan')}</span>
+            <span className="bn-label">{i18n.language === 'en' ? 'Capture' : '撮影'}</span>
+          </button>
+          <button className="bn-item" onClick={() => router.push('/?qr=1')}>
+            <div className="bn-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+                <path d="M14 14h3v3m0 4h4v-4m-4 0h-3"/>
+              </svg>
+            </div>
+            <span className="bn-label">{i18n.language === 'en' ? 'Scan' : 'スキャン'}</span>
           </button>
           <button className="bn-item bn-active" onClick={() => router.push('/contacts')}>
             <div className="bn-icon">
