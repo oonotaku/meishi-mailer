@@ -46,6 +46,9 @@ export default function Home() {
   const [eventName, setEventName] = useState('')
   const [temperature, setTemperature] = useState('normal')
   const [memo, setMemo] = useState('')
+  const [sessionTags, setSessionTags] = useState([])
+  const [tagEditorOpen, setTagEditorOpen] = useState(false)
+  const [tagEditorValue, setTagEditorValue] = useState('')
   const [emailDuplicates, setEmailDuplicates] = useState([])
   const [nameDuplicates, setNameDuplicates] = useState([])
   const [cards, setCards] = useState([])
@@ -75,6 +78,13 @@ export default function Home() {
 
   useEffect(() => {
     setSpeechSupported(!!(window.SpeechRecognition || window.webkitSpeechRecognition))
+  }, [])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('koryu_session_tags')
+      if (saved) setSessionTags(JSON.parse(saved))
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -411,6 +421,7 @@ export default function Home() {
         extracted_sns: contact?.sns || null,
         cards: cards || [],
         koryu_user_id: meishiUser?.user_id ?? null,
+        tags: sessionTags,
       }),
     })
     const json = await r.json()
@@ -572,6 +583,21 @@ export default function Home() {
     recognitionRef.current = recognition
     recognition.start()
     setIsListening(true)
+  }
+
+  function openTagEditor() {
+    setTagEditorValue(sessionTags.join(', '))
+    setTagEditorOpen(true)
+  }
+
+  function applySessionTags() {
+    const next = tagEditorValue
+      .split(/[,、]/)
+      .map(s => s.trim())
+      .filter(Boolean)
+    setSessionTags(next)
+    try { localStorage.setItem('koryu_session_tags', JSON.stringify(next)) } catch {}
+    setTagEditorOpen(false)
   }
 
   function reset() {
@@ -784,6 +810,44 @@ export default function Home() {
                 <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
               </div>
             </div>
+
+            <button type="button" className="session-tag-bar" onClick={openTagEditor}>
+              <span className="session-tag-icon">🏷️</span>
+              {sessionTags.length > 0 ? (
+                <span className="session-tag-list">
+                  {sessionTags.map((tg, i) => (
+                    <span key={i} className="session-tag-chip">{tg}</span>
+                  ))}
+                </span>
+              ) : (
+                <span className="session-tag-empty">
+                  {i18n.language === 'en' ? 'Tap to set a tag for this batch (e.g. "Sep 22, Meetup")' : 'タップして今回のタグを設定（例: 9月22日, ○○会）'}
+                </span>
+              )}
+              <span className="session-tag-edit">{i18n.language === 'en' ? 'Edit' : '変更'}</span>
+            </button>
+
+            {tagEditorOpen && (
+              <div className="session-tag-editor">
+                <input
+                  type="text"
+                  autoFocus
+                  className="text-input"
+                  placeholder={i18n.language === 'en' ? 'e.g. Sep 22, Meetup (comma separated)' : '例: 9月22日, ○○会（カンマ区切りで複数可）'}
+                  value={tagEditorValue}
+                  onChange={e => setTagEditorValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') applySessionTags() }}
+                />
+                <div className="session-tag-editor-actions">
+                  <button type="button" className="send-btn" onClick={applySessionTags}>
+                    {i18n.language === 'en' ? 'Apply' : '設定する'}
+                  </button>
+                  <button type="button" className="ghost-btn" onClick={() => setTagEditorOpen(false)}>
+                    {i18n.language === 'en' ? 'Cancel' : 'キャンセル'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {cardImages.length === 0 ? (
               qrMode ? (
@@ -2618,6 +2682,40 @@ export default function Home() {
         .qr-sheet-cancel:active { background: #22222e; }
 
 
+
+        .session-tag-bar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          margin: 10px 0 4px;
+          padding: 10px 12px;
+          background: rgba(123,158,135,0.08);
+          border: 1px solid rgba(123,158,135,0.3);
+          border-radius: 10px;
+          color: #f0ede8;
+          font-family: inherit;
+          cursor: pointer;
+          text-align: left;
+        }
+        .session-tag-icon { flex-shrink: 0; }
+        .session-tag-list { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+        .session-tag-chip {
+          background: rgba(123,158,135,0.25);
+          color: #cfe3d6;
+          font-size: 12px;
+          padding: 3px 8px;
+          border-radius: 999px;
+        }
+        .session-tag-empty { flex: 1; font-size: 13px; color: #8a8690; }
+        .session-tag-edit { flex-shrink: 0; font-size: 12px; color: #7b9e87; }
+        .session-tag-editor {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .session-tag-editor-actions { display: flex; gap: 8px; }
 
         /* ── QUICK MEMO ── */
         .quick-memo-wrap {

@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     name, company, department, title, email, phone, website,
     card_image_urls, subject, body, mail_sent_at,
     location, event_name, met_at, temperature, memo,
-    extracted_sns, cards, koryu_user_id,
+    extracted_sns, cards, koryu_user_id, tags,
   } = req.body
 
   const { data, error } = await supabaseAdmin
@@ -39,6 +39,7 @@ export default async function handler(req, res) {
       extracted_sns: extracted_sns || null,
       cards: cards || [],
       koryu_user_id: koryu_user_id || null,
+      tags: Array.isArray(tags) ? tags : [],
     })
     .select()
     .single()
