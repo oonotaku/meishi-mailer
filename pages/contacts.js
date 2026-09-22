@@ -32,6 +32,11 @@ export default function Contacts() {
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState(null) // null = 検索未実行
   const [searching, setSearching] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [bulkTagValue, setBulkTagValue] = useState('')
+  const [showBulkTagInput, setShowBulkTagInput] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const debounceRef = useRef(null)
   const router = useRouter()
 
@@ -87,6 +92,62 @@ export default function Contacts() {
     return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
   }
 
+  function toggleSelect(id) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false)
+    setSelectedIds([])
+    setShowBulkTagInput(false)
+    setBulkTagValue('')
+  }
+
+  async function handleBulkAddTags() {
+    const tags = bulkTagValue.split(/[,、]/).map(s => s.trim()).filter(Boolean)
+    if (tags.length === 0 || selectedIds.length === 0) return
+    const { data: { session } } = await supabase.auth.getSession()
+    const r = await fetch('/api/contacts/bulk-add-tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ contact_ids: selectedIds, tags }),
+    })
+    if (r.ok) {
+      setContacts(prev => prev.map(c =>
+        selectedIds.includes(c.id)
+          ? { ...c, tags: Array.from(new Set([...(c.tags || []), ...tags])) }
+          : c
+      ))
+      exitSelectMode()
+    } else {
+      alert(i18n.language === 'en' ? 'Failed to add tags' : 'タグの追加に失敗しました')
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/export', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (!r.ok) throw new Error('export failed')
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `koryu_contacts_${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(i18n.language === 'en' ? 'Failed to export' : 'エクスポートに失敗しました')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (authLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0a0f' }}>
       <div style={{ width: 32, height: 32, border: '2px solid #1e1e2a', borderTopColor: '#7b9e87', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
@@ -132,6 +193,19 @@ export default function Contacts() {
           {searching && <div className="search-spinner" />}
         </div>
 
+        <div className="list-actions">
+          <button type="button" className="list-action-btn" onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}>
+            {selectMode
+              ? (i18n.language === 'en' ? 'Cancel' : 'キャンセル')
+              : (i18n.language === 'en' ? 'Select' : '選択')}
+          </button>
+          <button type="button" className="list-action-btn" onClick={handleExport} disabled={exporting}>
+            {exporting
+              ? (i18n.language === 'en' ? 'Exporting…' : '出力中…')
+              : (i18n.language === 'en' ? 'Export Excel' : 'Excelエクスポート')}
+          </button>
+        </div>
+
         {(loading || (query.trim() && searching)) && (
           <div className="center">
             <div className="spinner" />
@@ -156,29 +230,70 @@ export default function Contacts() {
             <div className="list">
               {displayContacts.map(c => {
                 const isSnsConnected = Object.keys(c.connected_sns || {}).length > 0
+                const isSelected = selectedIds.includes(c.id)
                 return (
                   <button
                     key={c.id}
                     className="card"
-                    onClick={() => router.push(`/contacts/${c.id}`)}
+                    onClick={() => selectMode ? toggleSelect(c.id) : router.push(`/contacts/${c.id}`)}
                     style={{
-                      background: isSnsConnected ? 'rgba(22,163,74,0.1)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${isSnsConnected ? 'rgba(22,163,74,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                      ...(isSnsConnected && { boxShadow: 'inset 3px 0 0 #16a34a' }),
+                      background: isSelected ? 'rgba(123,158,135,0.18)' : (isSnsConnected ? 'rgba(22,163,74,0.1)' : 'rgba(255,255,255,0.04)'),
+                      border: isSelected ? '1px solid #7b9e87' : `1px solid ${isSnsConnected ? 'rgba(22,163,74,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                      ...(isSnsConnected && !isSelected && { boxShadow: 'inset 3px 0 0 #16a34a' }),
                     }}
                   >
+                    {selectMode && (
+                      <div className={`select-checkbox ${isSelected ? 'checked' : ''}`}>
+                        {isSelected && '✓'}
+                      </div>
+                    )}
                     <div className="avatar">{initials(c.name)}</div>
                     <div className="info">
                       <div className="name">{c.name || t('contacts.no_name')}</div>
                       <div className="meta">{c.company || '—'}</div>
+                      {c.tags?.length > 0 && (
+                        <div className="tag-row">
+                          {c.tags.map((tg, i) => <span key={i} className="tag-chip">{tg}</span>)}
+                        </div>
+                      )}
                     </div>
-                    <ConnectionBadge contact={c} />
+                    {!selectMode && <ConnectionBadge contact={c} />}
                   </button>
                 )
               })}
             </div>
           )
         })()}
+        {selectMode && selectedIds.length > 0 && (
+          <div className="bulk-bar">
+            {showBulkTagInput ? (
+              <>
+                <input
+                  type="text"
+                  autoFocus
+                  className="text-input"
+                  placeholder={i18n.language === 'en' ? 'Tag name(s), comma separated' : 'タグ名（カンマ区切りで複数可）'}
+                  value={bulkTagValue}
+                  onChange={e => setBulkTagValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleBulkAddTags() }}
+                />
+                <button type="button" className="send-btn" onClick={handleBulkAddTags}>
+                  {i18n.language === 'en' ? 'Apply' : '追加する'}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="bulk-count">
+                  {i18n.language === 'en' ? `${selectedIds.length} selected` : `${selectedIds.length}件選択中`}
+                </span>
+                <button type="button" className="send-btn" onClick={() => setShowBulkTagInput(true)}>
+                  {i18n.language === 'en' ? 'Add tag' : 'タグを追加'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         <nav className="bottom-nav">
           <button className="bn-item" onClick={() => router.push('/')}>
             <div className="bn-icon">
@@ -452,6 +567,86 @@ export default function Contacts() {
           border-radius: 50%;
           animation: spin .7s linear infinite;
           flex-shrink: 0;
+        }
+        .list-actions {
+          display: flex;
+          gap: 8px;
+          margin: 4px 20px 10px;
+        }
+        .list-action-btn {
+          flex: 1;
+          padding: 8px 0;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 8px;
+          color: #f0ede8;
+          font-size: 12px;
+          font-family: inherit;
+          cursor: pointer;
+        }
+        .list-action-btn:disabled { opacity: .6; }
+        .select-checkbox {
+          flex-shrink: 0;
+          width: 20px;
+          height: 20px;
+          border-radius: 5px;
+          border: 1px solid rgba(255,255,255,0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          color: #0a0a0f;
+        }
+        .select-checkbox.checked { background: #7b9e87; border-color: #7b9e87; }
+        .tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .tag-chip {
+          font-size: 10px;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: rgba(123,158,135,0.18);
+          color: #a8c4af;
+        }
+        .bulk-bar {
+          position: fixed;
+          bottom: 72px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 16px;
+          background: rgba(20,20,28,0.96);
+          backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(255,255,255,0.08);
+          z-index: 49;
+        }
+        .bulk-count { flex-shrink: 0; font-size: 13px; color: #f0ede8; }
+        .text-input {
+          flex: 1;
+          padding: 8px 10px;
+          background: #12121a;
+          border: 1px solid #1e1e2a;
+          border-radius: 8px;
+          color: #f0ede8;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          outline: none;
+          -webkit-appearance: none;
+        }
+        .text-input:focus { border-color: #7b9e87; }
+        .send-btn {
+          flex-shrink: 0;
+          padding: 8px 14px;
+          background: #7b9e87;
+          color: #0a0a0f;
+          border: none;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
         }
       `}</style>
     </>

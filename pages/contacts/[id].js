@@ -300,6 +300,9 @@ export default function ContactDetail() {
   const [encForm, setEncForm] = useState({ event_name: '', location: '', met_at: '', temperature: 'normal', memo: '' })
   const [encSaving, setEncSaving] = useState(false)
 
+  const [tagInput, setTagInput] = useState('')
+  const [tagSaving, setTagSaving] = useState(false)
+
   // Expanded card image
   const [expandedImg, setExpandedImg] = useState(null)
 
@@ -438,6 +441,36 @@ export default function ContactDetail() {
       }
     } catch (e) { console.error(e) }
     finally { setEncSaving(false) }
+  }
+
+  async function updateTags(nextTags) {
+    setTagSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/contacts/update-tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ contact_id: id, tags: nextTags }),
+      })
+      if (r.ok) {
+        setContact(prev => ({ ...prev, tags: nextTags }))
+      }
+    } catch (e) { console.error(e) }
+    finally { setTagSaving(false) }
+  }
+
+  function handleAddTag(e) {
+    e.preventDefault()
+    const newTags = tagInput.split(/[,、]/).map(s => s.trim()).filter(Boolean)
+    if (newTags.length === 0) return
+    const merged = Array.from(new Set([...(contact?.tags || []), ...newTags]))
+    setTagInput('')
+    updateTags(merged)
+  }
+
+  function handleRemoveTag(tagToRemove) {
+    const next = (contact?.tags || []).filter(tg => tg !== tagToRemove)
+    updateTags(next)
   }
 
   async function handleAddSns(e) {
@@ -1381,6 +1414,26 @@ export default function ContactDetail() {
                 </a>
               )}
             </div>
+
+            {/* ── TAGS ── */}
+            <div className="tag-edit-block">
+              {(contact?.tags || []).map((tg, i) => (
+                <span key={i} className="tag-chip-editable">
+                  {tg}
+                  <button type="button" onClick={() => handleRemoveTag(tg)} aria-label="remove tag">×</button>
+                </span>
+              ))}
+              <form onSubmit={handleAddTag} className="tag-add-form">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  placeholder={i18n.language === 'en' ? '+ tag' : '+ タグ追加'}
+                  className="tag-add-input"
+                  disabled={tagSaving}
+                />
+              </form>
+            </div>
           </div>
 
           {/* ── 複数名刺バッジ（タップで切替）── */}
@@ -2236,6 +2289,42 @@ export default function ContactDetail() {
         .info-company { font-size: 14px; color: #8a8680; margin-bottom: 2px; }
         .info-sub { font-size: 12px; color: #5a5650; margin-bottom: 8px; }
         .info-contacts { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+        .tag-edit-block {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 10px;
+          align-items: center;
+        }
+        .tag-chip-editable {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          padding: 4px 6px 4px 10px;
+          border-radius: 999px;
+          background: rgba(123,158,135,0.18);
+          color: #a8c4af;
+        }
+        .tag-chip-editable button {
+          background: none;
+          border: none;
+          color: #a8c4af;
+          cursor: pointer;
+          font-size: 13px;
+          line-height: 1;
+          padding: 2px;
+        }
+        .tag-add-form { display: inline-block; }
+        .tag-add-input {
+          background: rgba(255,255,255,0.05);
+          border: 1px dashed rgba(255,255,255,0.2);
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-size: 12px;
+          color: #f0ede8;
+          width: 110px;
+        }
         .info-row { display: flex; align-items: center; gap: 8px; }
         .info-icon { font-size: 13px; color: #5a5650; width: 16px; flex-shrink: 0; }
         .info-val { font-size: 13px; color: #7b9e87; word-break: break-all; }
