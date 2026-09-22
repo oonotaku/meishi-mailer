@@ -92,8 +92,19 @@ export default function Contacts() {
     return name.split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?'
   }
 
+  const isSearchActive = query.trim() !== ''
+  const displayContacts = searchResults !== null ? searchResults : contacts
+
   function toggleSelect(id) {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length > 0 && selectedIds.length === displayContacts.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(displayContacts.map(c => c.id))
+    }
   }
 
   function exitSelectMode() {
@@ -199,6 +210,13 @@ export default function Contacts() {
               ? (i18n.language === 'en' ? 'Cancel' : 'キャンセル')
               : (i18n.language === 'en' ? 'Select' : '選択')}
           </button>
+          {selectMode && (
+            <button type="button" className="list-action-btn" onClick={toggleSelectAll}>
+              {selectedIds.length > 0 && selectedIds.length === displayContacts.length
+                ? (i18n.language === 'en' ? 'Deselect all' : 'すべて解除')
+                : (i18n.language === 'en' ? 'Select all' : 'すべて選択')}
+            </button>
+          )}
           <button type="button" className="list-action-btn" onClick={handleExport} disabled={exporting}>
             {exporting
               ? (i18n.language === 'en' ? 'Exporting…' : '出力中…')
@@ -213,8 +231,6 @@ export default function Contacts() {
         )}
 
         {!loading && !searching && (() => {
-          const isSearchActive = query.trim() !== ''
-          const displayContacts = searchResults !== null ? searchResults : contacts
           if (displayContacts.length === 0 && !isSearchActive) return (
             <div className="empty">
               <p>{t('contacts.empty')}</p>
