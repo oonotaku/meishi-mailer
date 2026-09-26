@@ -61,7 +61,8 @@
     "mic_start": "音声入力を開始",
     "mic_stop": "音声入力を停止",
     "send_now": "今すぐ送信 →",
-    "save_later": "記録して完了",
+    "save_next": "記録して次の名刺を撮影",
+    "save_view": "記録して詳細を見る",
     "back": "← 戻る"
   },
   "sending": {

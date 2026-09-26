@@ -67,6 +67,9 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false)
   const [interimText, setInterimText] = useState('')
   const [showMyQr, setShowMyQr] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [pendingSaves, setPendingSaves] = useState(0)
+  const toastTimerRef = useRef(null)
   const fileRef = useRef()
   const contextFileRef = useRef()
   const recognitionRef = useRef(null)
@@ -86,6 +89,13 @@ export default function Home() {
       if (saved) setSessionTags(JSON.parse(saved))
     } catch {}
   }, [])
+
+  useEffect(() => {
+    if (pendingSaves <= 0) return
+    const handler = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [pendingSaves])
 
   useEffect(() => {
     if (authLoading) return
@@ -495,52 +505,79 @@ export default function Home() {
     }
   }
 
+  // 保存本体（画面遷移しない）。戻り値: 遷移先の contact id
+  async function persistCurrent() {
+    // 重複コンタクトへの交流追記モード
+    if (duplicateContactId) {
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      const session = refreshed?.session || (await supabase.auth.getSession()).data.session
+      const r = await fetch('/api/encounters/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          contact_id: duplicateContactId,
+          met_at: new Date().toISOString().slice(0, 10),
+          event_name: eventName || null,
+          location: location || null,
+          memo: memo || null,
+          temperature,
+        }),
+      })
+      if (!r.ok) throw new Error((await r.json()).error || 'save failed')
+      return duplicateContactId
+    }
+
+    // 新規保存
+    const card_image_urls = await uploadImages(cardImages, 'cards')
+    const encounter_photo_urls = await uploadImages(contextImages, 'encounters')
+    const { data: { session } } = await supabase.auth.getSession()
+    const saved = await saveContact(card_image_urls, null)
+    if (saved?.encounter_id && encounter_photo_urls.length > 0) {
+      await fetch('/api/encounters/update-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ encounter_id: saved.encounter_id, photo_urls: encounter_photo_urls }),
+      })
+    }
+    return saved.id
+  }
+
+  // 記録して詳細を見る
   async function onSaveOnly() {
     setSaveOnly(true)
     setStep(STEPS.SENDING)
-
-    // 重複コンタクトへの出会い追記モード
-    if (duplicateContactId) {
-      try {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        const session = refreshed?.session || (await supabase.auth.getSession()).data.session
-        await fetch('/api/encounters/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({
-            contact_id: duplicateContactId,
-            met_at: new Date().toISOString().slice(0, 10),
-            event_name: eventName || null,
-            location: location || null,
-            memo: memo || null,
-            temperature,
-          }),
-        })
-        router.push(`/contacts/${duplicateContactId}`)
-      } catch (err) {
-        setErrorMsg(err.message)
-        setStep(STEPS.ERROR)
-      }
-      return
-    }
-
     try {
-      const card_image_urls = await uploadImages(cardImages, 'cards')
-      const encounter_photo_urls = await uploadImages(contextImages, 'encounters')
-      const { data: { session } } = await supabase.auth.getSession()
-      const saved = await saveContact(card_image_urls, null)
-      if (saved?.encounter_id && encounter_photo_urls.length > 0) {
-        await fetch('/api/encounters/update-photos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ encounter_id: saved.encounter_id, photo_urls: encounter_photo_urls }),
-        })
-      }
-      router.push(`/contacts/${saved.id}`)
+      const id = await persistCurrent()
+      router.push(`/contacts/${id}`)
     } catch (err) {
       setErrorMsg(err.message)
       setStep(STEPS.ERROR)
     }
+  }
+
+  function showToast(msg, type = 'ok') {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ msg, type })
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000)
+  }
+
+  // 記録して次の名刺を撮影（保存は裏で走らせ、タップと同じ処理内でカメラを起動する）
+  function onSaveAndNext() {
+    const label = contact?.name || contact?.company || (i18n.language === 'en' ? 'Contact' : '名刺')
+    // 1. 保存を開始（awaitしない）。reset() より前に呼ぶこと
+    const p = persistCurrent()
+    setPendingSaves(n => n + 1)
+    p.then(() => {
+      showToast(i18n.language === 'en' ? `✓ Saved ${label}` : `✓ ${label} さんを記録しました`)
+    }).catch(err => {
+      console.error('[saveAndNext]', err)
+      showToast(i18n.language === 'en' ? `⚠ Failed to save ${label}` : `⚠ ${label} の保存に失敗しました`, 'error')
+    }).finally(() => setPendingSaves(n => n - 1))
+
+    // 2. 画面をリセット（sessionTags は reset() で消えないので引き継がれる）
+    reset()
+    // 3. 同じ処理の中でカメラ起動（setTimeout や await を挟まない）
+    fileRef.current?.click()
   }
 
   function toggleVoice() {
@@ -782,18 +819,23 @@ export default function Home() {
       </Head>
 
       <div className="shell">
+        {/* カード撮影用 input は常時マウント（「記録して次の名刺を撮影」でタップ直後にclick()するため） */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={onCardFile}
+          style={{ display: 'none' }}
+        />
+
+        {toast && (
+          <div className={`toast ${toast.type === 'error' ? 'toast-error' : ''}`}>{toast.msg}</div>
+        )}
 
         {/* ── UPLOAD ── */}
         {step === STEPS.UPLOAD && (
           <div className="page upload-page">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={onCardFile}
-              style={{ display: 'none' }}
-            />
             <input ref={contextFileRef} type="file" accept="image/*"
               onChange={onContextFile} style={{ display: 'none' }} />
 
@@ -810,6 +852,12 @@ export default function Home() {
                 <button className="lang-btn" onClick={switchLocale}>{t('lang.switch')}</button>
               </div>
             </div>
+
+            {pendingSaves > 0 && (
+              <div className="saving-indicator">
+                {i18n.language === 'en' ? `Saving… (${pendingSaves})` : `保存中… (${pendingSaves})`}
+              </div>
+            )}
 
             <button type="button" className="session-tag-bar" onClick={openTagEditor}>
               <span className="session-tag-icon">🏷️</span>
@@ -1585,7 +1633,8 @@ export default function Home() {
               </div>
             )}
 
-            <button className="send-btn" onClick={onSaveOnly}>{t('context.save_later')}</button>
+            <button className="send-btn" onClick={onSaveAndNext}>{t('context.save_next')}</button>
+            <button className="sub-btn" onClick={onSaveOnly}>{t('context.save_view')}</button>
             <button className="ghost-btn" onClick={reset}>{t('home.redo')}</button>
           </div>
         )}
@@ -1672,7 +1721,8 @@ export default function Home() {
 
             {duplicateContactId ? (
               <>
-                <button className="send-btn" style={{ marginTop: 20 }} onClick={onSaveOnly}>{t('context.save_later')}</button>
+                <button className="send-btn" style={{ marginTop: 20 }} onClick={onSaveAndNext}>{t('context.save_next')}</button>
+                <button className="sub-btn" onClick={onSaveOnly}>{t('context.save_view')}</button>
                 <button className="ghost-btn" onClick={() => setStep(duplicateType === 'name' ? STEPS.DUPLICATE_NAME : STEPS.DUPLICATE_EMAIL)}>{t('context.back')}</button>
               </>
             ) : (
@@ -2204,6 +2254,46 @@ export default function Home() {
           transition: background .15s;
         }
         .save-btn:active { background: #0d1f15; }
+
+        .sub-btn {
+          width: 100%;
+          padding: 14px;
+          background: transparent;
+          color: #a8c4b2;
+          border: 1px solid #3d6b50;
+          border-radius: 12px;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          cursor: pointer;
+          margin-top: 8px;
+        }
+        .sub-btn:active { background: #0d1f15; }
+
+        .toast {
+          position: fixed;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: calc(env(safe-area-inset-bottom) + 80px);
+          max-width: min(430px, calc(100vw - 32px));
+          padding: 12px 18px;
+          background: #1a3525;
+          color: #d8efe0;
+          border: 1px solid #3d6b50;
+          border-radius: 12px;
+          font-size: 14px;
+          font-family: 'Noto Sans JP', sans-serif;
+          z-index: 200;
+          box-shadow: 0 4px 16px rgba(0,0,0,.4);
+        }
+        .toast-error { background: #3a1616; color: #ffd6d6; border-color: #7a2a2a; }
+
+        .saving-indicator {
+          font-size: 12px;
+          color: #a8c4b2;
+          text-align: center;
+          padding: 4px 0;
+          font-family: 'DM Mono', monospace;
+        }
 
         .ghost-btn {
           width: 100%;

@@ -372,3 +372,12 @@ Supabase Auth → Email → SMTP Settings にカスタムSMTPを設定済み（2
 - CC/BCCピッカーはposition:absoluteドロップダウン実装（モバイルでシートのoverflow clippingを回避）
 - メール署名からQRコード画像を削除（quishing対策・迷惑メールフォルダ回避）—プロフィールURLのテキストリンクのみに変更
 - `lib/sendEmail.js` / `pages/api/send.js`: SendGrid/Gmail/SMTP全プロバイダーでCC/BCC送信対応
+
+**連続スキャン高速化（記録して次の名刺を撮影）。**
+
+- `pages/index.js` の CONFIRM画面／CONTEXT画面（重複時）を2択に変更: 「記録して次の名刺を撮影」（`onSaveAndNext`・メイン）と「記録して詳細を見る」（`onSaveOnly`・`sub-btn`）
+- 保存本体を `persistCurrent()` に切り出し。`onSaveAndNext` は保存をawaitせず裏で実行 → `reset()` → 同じ処理内で `fileRef.current.click()`（iOS Safariのユーザー操作制約対策）。`sessionTags` は引き継がれる
+- カード撮影用 `<input ref={fileRef}>` を `.shell` 直下に常時マウント（UPLOAD外）
+- トースト（`showToast`）＋保存中インジケーター（`pendingSaves`）を追加。保存中は `beforeunload` で離脱警告
+- 重複モードの `/api/encounters/save` 失敗を `r.ok` でチェックするよう修正
+- i18n: `context.save_later` を廃止し `context.save_next` / `context.save_view` を追加
